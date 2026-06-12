@@ -1,0 +1,21 @@
+{
+  "name": "baseball-manager-backend",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js",
+    "seed": "node seeders/run.js",
+    "postinstall": "prisma generate --schema=prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
+  }
+}
