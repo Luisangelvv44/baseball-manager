@@ -2,4 +2,5 @@
 // (id=1, gracias a RESTART IDENTITY en el TRUNCATE).
 module.exports = {
   USER_TEAM_ID: 1,
+  PRE_SEASON_DAYS: 15,
 };

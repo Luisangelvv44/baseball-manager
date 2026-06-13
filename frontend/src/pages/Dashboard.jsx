@@ -112,9 +112,19 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {season && (
+      {season && season.current_day <= season.preSeasonDays && (
+        <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
+          <p className="font-semibold text-yellow-800">Pre-temporada</p>
+          <p className="text-yellow-700 text-sm">
+            Quedan {season.preSeasonDays - season.current_day + 1} dias para el inicio de la temporada.
+            Aprovecha para firmar jugadores y armar tu equipo.
+          </p>
+        </div>
+      )}
+
+      {season && season.current_day > season.preSeasonDays && (
         <div className="bg-white rounded-lg shadow p-4 text-sm text-gray-600">
-          Temporada {season.year} · Dia {season.current_day} de {season.total_days} · Estado: {season.status}
+          Temporada {season.year} · Dia {season.current_day - season.preSeasonDays} de {season.total_days - season.preSeasonDays} · Estado: {season.status}
         </div>
       )}
 

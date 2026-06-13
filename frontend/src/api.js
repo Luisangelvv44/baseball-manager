@@ -38,6 +38,7 @@ export const api = {
 
   // Temporada
   getSeason: () => request('/season'),
+  getSchedule: () => request('/season/schedule'),
   startSeason: () => request('/season/start', { method: 'POST' }),
   advanceDay: () => request('/season/advance-day', { method: 'POST' }),
 

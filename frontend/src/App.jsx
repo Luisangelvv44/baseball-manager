@@ -8,6 +8,7 @@ import Stadium from './pages/Stadium.jsx';
 import Scouts from './pages/Scouts.jsx';
 import Finances from './pages/Finances.jsx';
 import GameView from './pages/GameView.jsx';
+import Schedule from './pages/Schedule.jsx';
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/stadium" element={<Stadium />} />
           <Route path="/scouts" element={<Scouts />} />
           <Route path="/finances" element={<Finances />} />
+          <Route path="/schedule" element={<Schedule />} />
           <Route path="/game/:id" element={<GameView />} />
         </Routes>
       </div>

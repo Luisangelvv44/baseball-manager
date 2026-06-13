@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID } = require('../config');
+const { USER_TEAM_ID, PRE_SEASON_DAYS } = require('../config');
 const { generateSchedule } = require('../services/scheduleGenerator');
 const { playGame } = require('../services/gamePlay');
 const {
@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
       where: { status: 'active' },
       orderBy: { id: 'desc' },
     });
-    res.json(season || null);
+    res.json(season ? { ...season, preSeasonDays: PRE_SEASON_DAYS } : null);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener temporada' });
@@ -48,7 +48,7 @@ router.post('/start', async (req, res) => {
     await prisma.gameSchedule.createMany({
       data: games.map((g) => ({
         season_id: season.id,
-        day_number: g.day_number,
+        day_number: g.day_number + PRE_SEASON_DAYS,
         home_team_id: g.home_team_id,
         away_team_id: g.away_team_id,
         status: 'scheduled',
@@ -190,6 +190,26 @@ router.post('/advance-day', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al avanzar el dia' });
+  }
+});
+
+// GET /api/season/schedule -> calendario completo de la temporada activa
+router.get('/schedule', async (req, res) => {
+  try {
+    const season = await prisma.season.findFirst({ where: { status: 'active' } });
+    if (!season) return res.json([]);
+    const games = await prisma.gameSchedule.findMany({
+      where: { season_id: season.id },
+      orderBy: [{ day_number: 'asc' }, { id: 'asc' }],
+      include: {
+        home_team: { select: { id: true, name: true } },
+        away_team: { select: { id: true, name: true } },
+      },
+    });
+    res.json(games);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener el calendario' });
   }
 });
 

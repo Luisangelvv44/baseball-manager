@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 
 const LINKS = [
   { to: '/', label: 'Dashboard' },
+  { to: '/schedule', label: 'Calendario' },
   { to: '/roster', label: 'Roster' },
   { to: '/market', label: 'Mercado' },
   { to: '/stadium', label: 'Estadio' },
