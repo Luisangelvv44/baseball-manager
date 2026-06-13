@@ -111,7 +111,7 @@ function advanceInning(state) {
   state.outs = 0;
   state.bases = [false, false, false];
   if (state.half === 'top') {
-    state.half = 'bottom';
+    state.half = 'bot';
   } else {
     state.half = 'top';
     state.inning++;
@@ -125,7 +125,7 @@ function isGameOver(state) {
       // se va a jugar la baja solo si visitante no quedo arriba... simplificamos:
       return state.homeScore > state.awayScore;
     }
-    if (state.half === 'bottom' && state.homeScore !== state.awayScore) {
+    if (state.half === 'bot' && state.homeScore !== state.awayScore) {
       return true;
     }
   }
@@ -136,7 +136,7 @@ function isGameOver(state) {
 function checkWalkOff(state) {
   return (
     state.inning >= 9 &&
-    state.half === 'bottom' &&
+    state.half === 'bot' &&
     state.homeScore > state.awayScore &&
     state.outs < 3
   );
