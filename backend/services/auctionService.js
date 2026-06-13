@@ -18,7 +18,7 @@ async function createAuctionsForFreeAgents(tx, season) {
   const playerIds = freeAgents.map((p) => p.id);
 
   const existing = await client.freeAgentAuction.findMany({
-    where: { status: 'active', player_id: { in: playerIds } },
+    where: { status: 'active', season_id: season.id, player_id: { in: playerIds } },
     select: { player_id: true },
   });
   const alreadyAuctioned = new Set(existing.map((a) => a.player_id));

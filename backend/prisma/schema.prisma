@@ -55,7 +55,7 @@ model Player {
   status                   String  @default("active") @db.VarChar(20)
 
   team         Team?            @relation(fields: [team_id], references: [id])
-  auction      FreeAgentAuction?
+  auctions     FreeAgentAuction[]
   game_lineups GameLineup[]
   game_events  GameEvent[]      @relation("PlayerEvent")
 
@@ -179,7 +179,7 @@ model GameEvent {
 
 model FreeAgentAuction {
   id              Int      @id @default(autoincrement())
-  player_id       Int      @unique
+  player_id       Int
   season_id       Int
   status          String   @default("active") @db.VarChar(20)
   start_day       Int
