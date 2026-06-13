@@ -3,7 +3,7 @@ const router = express.Router();
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID } = require('../config');
 
-// GET /api/lineup — returns user's saved lineup with player details
+// GET /api/lineup — returns user's saved lineup with pitcher rotation
 router.get('/', async (req, res) => {
   try {
     const rows = await prisma.teamLineup.findMany({
@@ -21,17 +21,31 @@ router.get('/', async (req, res) => {
       },
     });
 
-    if (rows.length === 0) return res.json({ saved: false, pitcher: null, batters: [] });
+    if (rows.length === 0) return res.json({ saved: false, pitchers: [], batters: [], nextPitcherIdx: 0 });
 
-    const pitcherRow = rows.find((r) => r.is_pitcher);
+    const pitcherRows = rows
+      .filter((r) => r.is_pitcher)
+      .sort((a, b) => a.rotation_slot - b.rotation_slot);
     const batterRows = rows
       .filter((r) => !r.is_pitcher)
       .sort((a, b) => a.batting_order - b.batting_order);
 
+    let nextPitcherIdx = 0;
+    if (pitcherRows.length > 1) {
+      const season = await prisma.season.findFirst({ where: { status: 'active' } });
+      if (season) {
+        const finished = await prisma.gameSchedule.count({
+          where: { season_id: season.id, is_user_game: true, status: 'finished' },
+        });
+        nextPitcherIdx = finished % pitcherRows.length;
+      }
+    }
+
     res.json({
       saved: true,
-      pitcher: pitcherRow ? pitcherRow.player : null,
+      pitchers: pitcherRows.map((r) => ({ ...r.player, rotation_slot: r.rotation_slot })),
       batters: batterRows.map((r) => r.player),
+      nextPitcherIdx,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -39,21 +53,23 @@ router.get('/', async (req, res) => {
 });
 
 // PUT /api/lineup — save user's lineup
-// Body: { pitcherId: int, batterIds: [int x9] }
+// Body: { pitcherIds: [int, ...] (1–4), batterIds: [int x9] }
 router.put('/', async (req, res) => {
-  const { pitcherId, batterIds } = req.body;
+  const { pitcherIds, batterIds } = req.body;
 
-  if (!pitcherId || !Array.isArray(batterIds) || batterIds.length !== 9) {
-    return res.status(400).json({ error: 'Se requiere pitcherId y exactamente 9 bateadores.' });
+  if (!Array.isArray(pitcherIds) || pitcherIds.length < 1 || pitcherIds.length > 4) {
+    return res.status(400).json({ error: 'Se requieren entre 1 y 4 pitchers en la rotacion.' });
+  }
+  if (!Array.isArray(batterIds) || batterIds.length !== 9) {
+    return res.status(400).json({ error: 'Se requieren exactamente 9 bateadores.' });
   }
 
-  const allIds = [pitcherId, ...batterIds];
+  const allIds = [...pitcherIds, ...batterIds];
   if (new Set(allIds).size !== allIds.length) {
     return res.status(400).json({ error: 'No se pueden repetir jugadores en el lineup.' });
   }
 
   try {
-    // Validate all players belong to user's team
     const players = await prisma.player.findMany({
       where: { id: { in: allIds }, team_id: USER_TEAM_ID },
       select: { id: true, position: true },
@@ -63,25 +79,41 @@ router.put('/', async (req, res) => {
       return res.status(400).json({ error: 'Todos los jugadores deben pertenecer a tu equipo.' });
     }
 
-    const pitcherPlayer = players.find((p) => p.id === pitcherId);
-    if (!pitcherPlayer || pitcherPlayer.position !== 'P') {
-      return res.status(400).json({ error: 'El pitcher debe tener posicion P.' });
+    const playerMap = new Map(players.map((p) => [p.id, p]));
+
+    for (const id of pitcherIds) {
+      if (playerMap.get(id)?.position !== 'P') {
+        return res.status(400).json({ error: 'Los pitchers deben tener posicion P.' });
+      }
+    }
+    for (const id of batterIds) {
+      if (playerMap.get(id)?.position === 'P') {
+        return res.status(400).json({ error: 'Los bateadores no pueden ser pitchers.' });
+      }
     }
 
-    const nonPitcherBatters = players.filter((p) => p.id !== pitcherId);
-    if (nonPitcherBatters.some((p) => p.position === 'P')) {
-      return res.status(400).json({ error: 'Los bateadores no pueden ser pitchers.' });
-    }
-
-    // Replace lineup atomically
     await prisma.$transaction([
       prisma.teamLineup.deleteMany({ where: { team_id: USER_TEAM_ID } }),
-      prisma.teamLineup.create({
-        data: { team_id: USER_TEAM_ID, player_id: pitcherId, is_pitcher: true, batting_order: null },
-      }),
+      ...pitcherIds.map((id, idx) =>
+        prisma.teamLineup.create({
+          data: {
+            team_id: USER_TEAM_ID,
+            player_id: id,
+            is_pitcher: true,
+            rotation_slot: idx + 1,
+            batting_order: null,
+          },
+        })
+      ),
       ...batterIds.map((id, idx) =>
         prisma.teamLineup.create({
-          data: { team_id: USER_TEAM_ID, player_id: id, is_pitcher: false, batting_order: idx + 1 },
+          data: {
+            team_id: USER_TEAM_ID,
+            player_id: id,
+            is_pitcher: false,
+            rotation_slot: null,
+            batting_order: idx + 1,
+          },
         })
       ),
     ]);

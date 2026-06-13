@@ -1,7 +1,7 @@
 const prisma = require('../db/prisma');
 const { FIELD_POSITIONS } = require('../seeders/generators/playerGenerator');
 
-async function getSavedLineup(teamId) {
+async function getSavedLineup(teamId, gameRow) {
   const rows = await prisma.teamLineup.findMany({
     where: { team_id: teamId },
     include: { player: { select: { id: true, current_skill: true, position: true, team_id: true } } },
@@ -9,23 +9,31 @@ async function getSavedLineup(teamId) {
 
   if (rows.length === 0) return null;
 
-  const pitcherRow = rows.find((r) => r.is_pitcher);
+  const pitcherRows = rows
+    .filter((r) => r.is_pitcher)
+    .sort((a, b) => a.rotation_slot - b.rotation_slot);
   const batterRows = rows
     .filter((r) => !r.is_pitcher)
     .sort((a, b) => a.batting_order - b.batting_order);
 
-  if (!pitcherRow || batterRows.length < 9) return null;
+  if (pitcherRows.length === 0 || batterRows.length < 9) return null;
 
-  // Validate all saved players still belong to this team
-  const allValid =
-    pitcherRow.player.team_id === teamId &&
-    batterRows.every((r) => r.player.team_id === teamId);
-
+  const allValid = [...pitcherRows, ...batterRows].every((r) => r.player.team_id === teamId);
   if (!allValid) return null;
+
+  let selectedPitcher;
+  if (pitcherRows.length > 1 && gameRow) {
+    const finished = await prisma.gameSchedule.count({
+      where: { season_id: gameRow.season_id, is_user_game: true, status: 'finished' },
+    });
+    selectedPitcher = pitcherRows[finished % pitcherRows.length].player;
+  } else {
+    selectedPitcher = pitcherRows[0].player;
+  }
 
   return {
     teamId,
-    pitcher: { id: pitcherRow.player.id, current_skill: pitcherRow.player.current_skill },
+    pitcher: { id: selectedPitcher.id, current_skill: selectedPitcher.current_skill },
     players: batterRows.slice(0, 9).map((r) => ({
       id: r.player.id,
       current_skill: r.player.current_skill,
@@ -82,8 +90,8 @@ async function autoGenerateLineup(teamId) {
   };
 }
 
-async function getLineup(teamId) {
-  const saved = await getSavedLineup(teamId);
+async function getLineup(teamId, gameRow = null) {
+  const saved = await getSavedLineup(teamId, gameRow);
   if (saved) return saved;
   return autoGenerateLineup(teamId);
 }

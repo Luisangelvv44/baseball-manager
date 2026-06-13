@@ -58,8 +58,8 @@ export const api = {
 
   // Lineup
   getLineup: () => request('/lineup'),
-  saveLineup: (pitcherId, batterIds) =>
-    request('/lineup', { method: 'PUT', body: JSON.stringify({ pitcherId, batterIds }) }),
+  saveLineup: (pitcherIds, batterIds) =>
+    request('/lineup', { method: 'PUT', body: JSON.stringify({ pitcherIds, batterIds }) }),
 
   // Subastas
   getAuctions: () => request('/auctions'),

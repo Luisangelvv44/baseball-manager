@@ -185,6 +185,7 @@ model TeamLineup {
   player_id     Int
   batting_order Int?
   is_pitcher    Boolean @default(false)
+  rotation_slot Int?
 
   team   Team   @relation(fields: [team_id], references: [id])
   player Player @relation(fields: [player_id], references: [id])

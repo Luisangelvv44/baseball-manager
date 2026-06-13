@@ -6,8 +6,8 @@ const { simulateGame } = require('./gameSimulator');
 // y opcionalmente guarda el play-by-play en game_events.
 // Devuelve { homeScore, awayScore, events, homeTeam, awayTeam }
 async function playGame(gameRow, saveEvents = false) {
-  const homeLineup = await getLineup(gameRow.home_team_id);
-  const awayLineup = await getLineup(gameRow.away_team_id);
+  const homeLineup = await getLineup(gameRow.home_team_id, gameRow);
+  const awayLineup = await getLineup(gameRow.away_team_id, gameRow);
 
   if (!homeLineup || !awayLineup) {
     const err = new Error('ROSTER_INCOMPLETO');
