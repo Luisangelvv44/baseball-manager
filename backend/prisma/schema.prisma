@@ -14,26 +14,30 @@ model Division {
 }
 
 model Team {
-  id           Int     @id @default(autoincrement())
-  name         String  @db.VarChar(100)
-  division_id  Int?
-  is_user_team Boolean @default(false)
-  budget       Decimal @default(0) @db.Decimal(14, 2)
-  reputation   Int     @default(50)
-  wins         Int     @default(0)
-  losses       Int     @default(0)
-  runs_scored  Int     @default(0)
-  runs_allowed Int     @default(0)
+  id                   Int     @id @default(autoincrement())
+  name                 String  @db.VarChar(100)
+  division_id          Int?
+  is_user_team         Boolean @default(false)
+  budget               Decimal @default(0) @db.Decimal(14, 2)
+  reputation           Int     @default(50)
+  wins                 Int     @default(0)
+  losses               Int     @default(0)
+  runs_scored          Int     @default(0)
+  runs_allowed         Int     @default(0)
+  bid_aggressiveness   Float   @default(0.10)
+  min_growth_threshold Float   @default(1.5)
 
-  division         Division?      @relation(fields: [division_id], references: [id])
+  division         Division?         @relation(fields: [division_id], references: [id])
   players          Player[]
   finances         Finance[]
   scouts           Scout[]
   stadium_sections StadiumSection[]
-  home_games       GameSchedule[] @relation("HomeTeam")
-  away_games       GameSchedule[] @relation("AwayTeam")
+  home_games       GameSchedule[]    @relation("HomeTeam")
+  away_games       GameSchedule[]    @relation("AwayTeam")
   game_lineups     GameLineup[]
-  batting_events   GameEvent[]    @relation("BattingTeam")
+  batting_events   GameEvent[]       @relation("BattingTeam")
+  won_auctions     FreeAgentAuction[] @relation("AuctionWinner")
+  auction_bids     AuctionBid[]
 }
 
 model Player {
@@ -50,9 +54,10 @@ model Player {
   team_id                  Int?
   status                   String  @default("active") @db.VarChar(20)
 
-  team         Team?       @relation(fields: [team_id], references: [id])
+  team         Team?            @relation(fields: [team_id], references: [id])
+  auction      FreeAgentAuction?
   game_lineups GameLineup[]
-  game_events  GameEvent[] @relation("PlayerEvent")
+  game_events  GameEvent[]      @relation("PlayerEvent")
 
   @@index([team_id])
   @@index([status])
@@ -66,7 +71,9 @@ model Season {
   status      String @default("active") @db.VarChar(20)
 
   schedule GameSchedule[]
+  auctions FreeAgentAuction[]
 }
+
 
 model GameSchedule {
   id           Int     @id @default(autoincrement())
@@ -168,4 +175,40 @@ model GameEvent {
 
   @@map("game_events")
   @@index([game_id])
+}
+
+model FreeAgentAuction {
+  id              Int      @id @default(autoincrement())
+  player_id       Int      @unique
+  season_id       Int
+  status          String   @default("active") @db.VarChar(20)
+  start_day       Int
+  last_bid_day    Int?
+  closes_on_day   Int?
+  winning_team_id Int?
+  created_at      DateTime @default(now())
+
+  player       Player     @relation(fields: [player_id], references: [id])
+  season       Season     @relation(fields: [season_id], references: [id])
+  winning_team Team?      @relation("AuctionWinner", fields: [winning_team_id], references: [id])
+  bids         AuctionBid[]
+
+  @@map("free_agent_auctions")
+  @@index([status])
+  @@index([closes_on_day])
+}
+
+model AuctionBid {
+  id         Int      @id @default(autoincrement())
+  auction_id Int
+  team_id    Int
+  amount     Decimal  @db.Decimal(14, 2)
+  season_day Int
+  created_at DateTime @default(now())
+
+  auction FreeAgentAuction @relation(fields: [auction_id], references: [id])
+  team    Team             @relation(fields: [team_id], references: [id])
+
+  @@map("auction_bids")
+  @@index([auction_id])
 }

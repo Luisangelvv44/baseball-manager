@@ -52,4 +52,10 @@ export const api = {
   assignScout: (id, budget) =>
     request(`/scouts/${id}/assign`, { method: 'POST', body: JSON.stringify({ budget }) }),
   collectScout: (id) => request(`/scouts/${id}/collect`, { method: 'POST' }),
+
+  // Subastas
+  getAuctions: () => request('/auctions'),
+  getAuction: (id) => request(`/auctions/${id}`),
+  placeBid: (id, amount) =>
+    request(`/auctions/${id}/bid`, { method: 'POST', body: JSON.stringify({ amount }) }),
 };

@@ -11,6 +11,10 @@ function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function randomFloat(min, max) {
+  return parseFloat((Math.random() * (max - min) + min).toFixed(3));
+}
+
 async function seed() {
   await prisma.$transaction(
     async (tx) => {
@@ -41,8 +45,11 @@ async function seed() {
         const budget = isUser ? USER_STARTING_BUDGET : randomInt(2000000, 8000000);
         const reputation = isUser ? 50 : randomInt(40, 60);
 
+        const bid_aggressiveness   = isUser ? 0.12 : randomFloat(0.05, 0.25);
+        const min_growth_threshold = isUser ? 1.5  : randomFloat(0.5, 5.0);
+
         const team = await tx.team.create({
-          data: { name, division_id: divisionId, is_user_team: isUser, budget, reputation },
+          data: { name, division_id: divisionId, is_user_team: isUser, budget, reputation, bid_aggressiveness, min_growth_threshold },
         });
 
         teamIds.push({ id: team.id, isUser });

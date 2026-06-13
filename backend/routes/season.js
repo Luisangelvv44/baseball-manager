@@ -4,6 +4,12 @@ const prisma = require('../db/prisma');
 const { USER_TEAM_ID } = require('../config');
 const { generateSchedule } = require('../services/scheduleGenerator');
 const { playGame } = require('../services/gamePlay');
+const {
+  createAuctionsForFreeAgents,
+  runCpuBidding,
+  closeExpiredAuctions,
+  cancelAllActiveAuctions,
+} = require('../services/auctionService');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
@@ -75,7 +81,9 @@ router.post('/start', async (req, res) => {
       });
     }
 
-    res.json({ success: true, season, totalGames: games.length, totalDays, totalSeasonSalary });
+    const auctionsCreated = await createAuctionsForFreeAgents(null, season);
+
+    res.json({ success: true, season, totalGames: games.length, totalDays, totalSeasonSalary, auctionsCreated });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al iniciar la temporada' });
@@ -124,6 +132,9 @@ router.post('/advance-day', async (req, res) => {
       }
     }
 
+    await runCpuBidding(null, season);
+    const auctionsClosed = await closeExpiredAuctions(null, season);
+
     const newDay = day + 1;
     const finished = newDay > season.total_days;
 
@@ -154,6 +165,10 @@ router.post('/advance-day', async (req, res) => {
       await prisma.team.updateMany({
         data: { wins: 0, losses: 0, runs_scored: 0, runs_allowed: 0 },
       });
+
+      await cancelAllActiveAuctions(null);
+      const updatedSeason = await prisma.season.findUnique({ where: { id: season.id } });
+      await createAuctionsForFreeAgents(null, updatedSeason);
     }
 
     let userGameToday = null;
@@ -169,6 +184,7 @@ router.post('/advance-day', async (req, res) => {
       day: finished ? season.total_days : newDay,
       seasonFinished: finished,
       expiredContracts,
+      auctionsClosed,
       userGameId: userGameToday ? userGameToday.id : null,
     });
   } catch (err) {

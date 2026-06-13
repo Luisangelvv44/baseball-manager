@@ -14,6 +14,7 @@ app.use('/api/season', require('./routes/season'));
 app.use('/api/games', require('./routes/games'));
 app.use('/api/finances', require('./routes/finances'));
 app.use('/api/scouts', require('./routes/scouts'));
+app.use('/api/auctions', require('./routes/auctions'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
