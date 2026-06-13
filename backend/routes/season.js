@@ -50,7 +50,32 @@ router.post('/start', async (req, res) => {
       })),
     });
 
-    res.json({ success: true, season, totalGames: games.length, totalDays });
+    // Cobrar salarios de la temporada completa al inicio
+    const rosterPlayers = await prisma.player.findMany({
+      where: { team_id: USER_TEAM_ID },
+      select: { salary: true },
+    });
+    const totalSeasonSalary = Math.round(
+      rosterPlayers.reduce((sum, p) => sum + Number(p.salary), 0)
+    );
+
+    if (totalSeasonSalary > 0) {
+      await prisma.team.update({
+        where: { id: USER_TEAM_ID },
+        data: { budget: { decrement: totalSeasonSalary } },
+      });
+      await prisma.finance.create({
+        data: {
+          team_id: USER_TEAM_ID,
+          season_day: 1,
+          type: 'salaries',
+          amount: -totalSeasonSalary,
+          description: `Salarios de la temporada ${new Date().getFullYear()}`,
+        },
+      });
+    }
+
+    res.json({ success: true, season, totalGames: games.length, totalDays, totalSeasonSalary });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al iniciar la temporada' });
@@ -59,7 +84,7 @@ router.post('/start', async (req, res) => {
 
 // POST /api/season/advance-day
 // Simula automaticamente todos los partidos del dia donde NO participa el usuario,
-// cobra salarios diarios, y devuelve si hoy hay partido del usuario por jugar.
+// y devuelve si hoy hay partido del usuario por jugar.
 router.post('/advance-day', async (req, res) => {
   try {
     const season = await prisma.season.findFirst({ where: { status: 'active' } });
@@ -99,31 +124,6 @@ router.post('/advance-day', async (req, res) => {
       }
     }
 
-    // Cobrar salarios diarios del usuario (salario anual / 162 dias)
-    const players = await prisma.player.findMany({
-      where: { team_id: USER_TEAM_ID },
-      select: { salary: true },
-    });
-    const dailySalaries = Math.round(
-      players.reduce((sum, p) => sum + Number(p.salary), 0) / 162
-    );
-
-    if (dailySalaries > 0) {
-      await prisma.team.update({
-        where: { id: USER_TEAM_ID },
-        data: { budget: { decrement: dailySalaries } },
-      });
-      await prisma.finance.create({
-        data: {
-          team_id: USER_TEAM_ID,
-          season_day: day,
-          type: 'salaries',
-          amount: -dailySalaries,
-          description: 'Salarios del dia',
-        },
-      });
-    }
-
     const newDay = day + 1;
     const finished = newDay > season.total_days;
 
@@ -134,6 +134,27 @@ router.post('/advance-day', async (req, res) => {
         status: finished ? 'finished' : 'active',
       },
     });
+
+    let expiredContracts = 0;
+    if (finished) {
+      // Descontar un año de contrato a todos los jugadores activos
+      await prisma.player.updateMany({
+        where: { status: 'active' },
+        data: { contract_years_remaining: { decrement: 1 } },
+      });
+
+      // Los contratos expirados pasan a agentes libres
+      const expired = await prisma.player.updateMany({
+        where: { status: 'active', contract_years_remaining: { lte: 0 } },
+        data: { status: 'free_agent', team_id: null },
+      });
+      expiredContracts = expired.count;
+
+      // Resetear standings de todos los equipos
+      await prisma.team.updateMany({
+        data: { wins: 0, losses: 0, runs_scored: 0, runs_allowed: 0 },
+      });
+    }
 
     let userGameToday = null;
     if (!finished) {
@@ -147,8 +168,8 @@ router.post('/advance-day', async (req, res) => {
       simulated,
       day: finished ? season.total_days : newDay,
       seasonFinished: finished,
+      expiredContracts,
       userGameId: userGameToday ? userGameToday.id : null,
-      dailySalaries,
     });
   } catch (err) {
     console.error(err);

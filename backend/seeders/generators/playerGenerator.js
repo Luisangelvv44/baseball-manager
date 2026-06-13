@@ -41,7 +41,7 @@ function calculateSalary(potential, currentSkill, age) {
 
 function generatePlayer(overrides = {}) {
   const potential = overrides.potential_coefficient ?? generatePotentialCoefficient();
-  const age = overrides.age ?? randomInt(18, 35);
+  const age = overrides.age ?? randomInt(18, 40);
   const growthAge = calculateGrowthAge(potential);
   const currentSkill = overrides.current_skill ?? generateInitialSkill(potential, age, growthAge);
 

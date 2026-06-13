@@ -1,5 +1,5 @@
 const prisma = require('../db/prisma');
-const { generateRoster } = require('./generators/playerGenerator');
+const { generateRoster, generatePlayer } = require('./generators/playerGenerator');
 const { generateTeamNames } = require('./generators/teamGenerator');
 const { generateStadiumSections } = require('./generators/stadiumGenerator');
 
@@ -14,12 +14,12 @@ function randomInt(min, max) {
 async function seed() {
   await prisma.$transaction(
     async (tx) => {
-      console.log('Limpiando tablas...');
-      await tx.$executeRaw`
-        TRUNCATE game_events, game_lineups, schedule, scouts, finances,
-        stadium_sections, players, seasons, teams, divisions
-        RESTART IDENTITY CASCADE
-      `;
+      // console.log('Limpiando tablas...');
+      // await tx.$executeRaw`
+      //   TRUNCATE game_events, game_lineups, schedule, scouts, finances,
+      //   stadium_sections, players, seasons, teams, divisions
+      //   RESTART IDENTITY CASCADE
+      // `;
 
       // ---------- Divisiones ----------
       console.log('Creando divisiones...');
@@ -62,6 +62,13 @@ async function seed() {
       console.log('Generando estadio inicial...');
       const sections = generateStadiumSections(userTeamId);
       await tx.stadiumSection.createMany({ data: sections });
+
+      // ---------- Agentes libres ----------
+      console.log('Generando agentes libres...');
+      const freeAgents = Array.from({ length: 100 }, () =>
+        generatePlayer({ status: 'free_agent' })
+      );
+      await tx.player.createMany({ data: freeAgents });
 
       console.log('Seed completado.');
       console.log(`Tu equipo ID: ${userTeamId} | Presupuesto: $${USER_STARTING_BUDGET.toLocaleString()}`);

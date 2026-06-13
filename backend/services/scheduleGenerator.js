@@ -1,22 +1,17 @@
-// Round-robin simple (metodo del circulo): con 16 equipos, da 15 rondas
-// de 8 partidos cada una = 120 partidos en total, donde cada equipo
-// juega exactamente una vez contra cada uno de los otros 15.
+// Double round-robin: cada par de equipos se enfrenta dos veces (local y visitante).
+// Con 16 equipos: 30 dias, 240 partidos, cada equipo juega 30 (15 en casa, 15 fuera).
 //
-// Recibe un array de equipos [{id, division_id}, ...] (16 items)
-// Devuelve [{day_number, home_team_id, away_team_id}, ...]
+// La primera vuelta usa el metodo del circulo (15 rondas).
+// La segunda vuelta invierte local/visitante y corre en los dias 16-30.
 
-function generateSchedule(teams) {
+function generateRoundRobin(teams) {
   const n = teams.length;
   const games = [];
-
-  // Copia de IDs; si n es impar se agregaria un "bye" (null) - no aplica aqui (16)
   const ids = teams.map((t) => t.id);
-
   const half = n / 2;
   const rounds = n - 1;
 
-  // Arreglo rotativo: fijamos ids[0], rotamos el resto
-  let arr = ids.slice(1); // n-1 elementos
+  let arr = ids.slice(1);
 
   for (let round = 0; round < rounds; round++) {
     const dayNumber = round + 1;
@@ -26,7 +21,6 @@ function generateSchedule(teams) {
       const teamA = roundIds[i];
       const teamB = roundIds[n - 1 - i];
 
-      // Alternar local/visitante segun la ronda para repartir partidos en casa
       const homeFirst = (round + i) % 2 === 0;
       const home = homeFirst ? teamA : teamB;
       const away = homeFirst ? teamB : teamA;
@@ -34,11 +28,23 @@ function generateSchedule(teams) {
       games.push({ day_number: dayNumber, home_team_id: home, away_team_id: away });
     }
 
-    // Rotar: el ultimo elemento pasa al frente
     arr = [arr[arr.length - 1], ...arr.slice(0, arr.length - 1)];
   }
 
   return games;
+}
+
+function generateSchedule(teams) {
+  const firstLeg = generateRoundRobin(teams);
+  const offset = firstLeg[firstLeg.length - 1].day_number;
+
+  const secondLeg = firstLeg.map((g) => ({
+    day_number: g.day_number + offset,
+    home_team_id: g.away_team_id,
+    away_team_id: g.home_team_id,
+  }));
+
+  return [...firstLeg, ...secondLeg];
 }
 
 module.exports = { generateSchedule };
