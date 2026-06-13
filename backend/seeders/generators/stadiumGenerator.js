@@ -10,8 +10,9 @@
 const GRID_SIZE = 3;
 
 const BASE_PRICE = 15.0;
-const CAPACITY_PER_LEVEL = 500;
-const BUILD_COST = 10000; // costo de construir una grada nueva en una celda vacia
+const BASE_CAPACITY = 100;       // nivel 1 = 100; fórmula: 100 * 2^(level-1)
+const BUILD_COST = 500000;       // costo de construir una nueva sección en celda vacía
+const UPGRADE_BASE_COST = 20000; // nivel 1→2 = $20,000; fórmula: 20000 * 2^(currentLevel-1)
 
 const INITIAL_LAYOUT = [
   { row: 1, col: 1, type: 'empty' },
@@ -36,7 +37,7 @@ function generateStadiumSections(teamId) {
         label: cell.label,
         price_per_ticket: BASE_PRICE,
         upgrade_level: cell.level,
-        capacity: cell.level * CAPACITY_PER_LEVEL,
+        capacity: BASE_CAPACITY * Math.pow(2, cell.level - 1),
       };
     }
     if (cell.type === 'field') {
@@ -65,11 +66,9 @@ function generateStadiumSections(teamId) {
   });
 }
 
-// Costo para subir de upgrade_level actual -> +1 (escala 2x)
-// nivel 1 -> 2 cuesta BUILD_COST/2 (5000), 2->3 cuesta 10000, 3->4 cuesta 20000, etc.
+// nivel 1→2 = $20,000, 2→3 = $40,000, 3→4 = $80,000, etc.
 function getUpgradeCost(currentLevel) {
-  const base = BUILD_COST / 2; // 5000
-  return base * Math.pow(2, Math.max(0, currentLevel - 1));
+  return UPGRADE_BASE_COST * Math.pow(2, Math.max(0, currentLevel - 1));
 }
 
 module.exports = {
@@ -77,6 +76,6 @@ module.exports = {
   getUpgradeCost,
   GRID_SIZE,
   BASE_PRICE,
-  CAPACITY_PER_LEVEL,
+  BASE_CAPACITY,
   BUILD_COST,
 };

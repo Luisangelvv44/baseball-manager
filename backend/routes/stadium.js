@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID } = require('../config');
-const { getUpgradeCost, CAPACITY_PER_LEVEL, BUILD_COST, BASE_PRICE } = require('../seeders/generators/stadiumGenerator');
+const { getUpgradeCost, BUILD_COST, BASE_PRICE } = require('../seeders/generators/stadiumGenerator');
 
 // GET /api/stadium -> grid 3x3 de secciones del estadio del usuario
 router.get('/', async (req, res) => {
@@ -64,7 +64,7 @@ router.post('/:id/upgrade', async (req, res) => {
     }
 
     const newLevel = section.upgrade_level + 1;
-    const newCapacity = newLevel * CAPACITY_PER_LEVEL;
+    const newCapacity = 100 * Math.pow(2, newLevel - 1);
 
     await prisma.stadiumSection.update({
       where: { id: Number(req.params.id) },
@@ -119,7 +119,7 @@ router.post('/:id/build', async (req, res) => {
         label: `Grada (${section.row_pos},${section.col_pos})`,
         price_per_ticket: BASE_PRICE,
         upgrade_level: 1,
-        capacity: CAPACITY_PER_LEVEL,
+        capacity: 100,
       },
     });
 

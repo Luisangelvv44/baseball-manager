@@ -12,13 +12,13 @@ export default function SectionModal({ section, onClose, onSavePrice, onUpgrade,
           <>
             <h3 className="font-bold text-lg mb-2">Celda vacia ({section.row_pos},{section.col_pos})</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Construye una grada nueva nivel 1 aqui por <b>$10,000</b>.
+              Construye una grada nueva nivel 1 aqui por <b>$500,000</b>.
             </p>
             <button
               onClick={() => onBuild(section.id)}
               className="w-full bg-green-600 text-white rounded py-2 font-semibold hover:bg-green-700"
             >
-              Construir grada ($10,000)
+              Construir grada ($500,000)
             </button>
           </>
         ) : (
