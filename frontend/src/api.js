@@ -56,6 +56,11 @@ export const api = {
     request(`/scouts/${id}/assign`, { method: 'POST', body: JSON.stringify({ budget }) }),
   collectScout: (id) => request(`/scouts/${id}/collect`, { method: 'POST' }),
 
+  // Lineup
+  getLineup: () => request('/lineup'),
+  saveLineup: (pitcherId, batterIds) =>
+    request('/lineup', { method: 'PUT', body: JSON.stringify({ pitcherId, batterIds }) }),
+
   // Subastas
   getAuctions: () => request('/auctions'),
   getAuction: (id) => request(`/auctions/${id}`),

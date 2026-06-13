@@ -1,10 +1,40 @@
 const prisma = require('../db/prisma');
 const { FIELD_POSITIONS } = require('../seeders/generators/playerGenerator');
 
-// Arma un lineup simple: 1 pitcher (mejor current_skill) + 9 bateadores
-// (intenta cubrir cada posicion de campo, rellena con lo que haya).
-// Devuelve null si el equipo no tiene suficientes jugadores.
-async function getLineup(teamId) {
+async function getSavedLineup(teamId) {
+  const rows = await prisma.teamLineup.findMany({
+    where: { team_id: teamId },
+    include: { player: { select: { id: true, current_skill: true, position: true, team_id: true } } },
+  });
+
+  if (rows.length === 0) return null;
+
+  const pitcherRow = rows.find((r) => r.is_pitcher);
+  const batterRows = rows
+    .filter((r) => !r.is_pitcher)
+    .sort((a, b) => a.batting_order - b.batting_order);
+
+  if (!pitcherRow || batterRows.length < 9) return null;
+
+  // Validate all saved players still belong to this team
+  const allValid =
+    pitcherRow.player.team_id === teamId &&
+    batterRows.every((r) => r.player.team_id === teamId);
+
+  if (!allValid) return null;
+
+  return {
+    teamId,
+    pitcher: { id: pitcherRow.player.id, current_skill: pitcherRow.player.current_skill },
+    players: batterRows.slice(0, 9).map((r) => ({
+      id: r.player.id,
+      current_skill: r.player.current_skill,
+      position: r.player.position,
+    })),
+  };
+}
+
+async function autoGenerateLineup(teamId) {
   const players = await prisma.player.findMany({
     where: { team_id: teamId },
     select: { id: true, first_name: true, last_name: true, position: true, current_skill: true },
@@ -23,7 +53,6 @@ async function getLineup(teamId) {
   const used = new Set();
   const battingOrder = [];
 
-  // 1. intenta cubrir cada posicion de campo con un jugador de esa posicion
   for (const pos of FIELD_POSITIONS) {
     const candidate = nonPitchers.find((p) => p.position === pos && !used.has(p.id));
     if (candidate) {
@@ -32,7 +61,6 @@ async function getLineup(teamId) {
     }
   }
 
-  // 2. rellena huecos con cualquier jugador no usado, hasta 9
   for (const p of nonPitchers) {
     if (battingOrder.length >= 9) break;
     if (!used.has(p.id)) {
@@ -52,6 +80,12 @@ async function getLineup(teamId) {
       position: p.assigned_position,
     })),
   };
+}
+
+async function getLineup(teamId) {
+  const saved = await getSavedLineup(teamId);
+  if (saved) return saved;
+  return autoGenerateLineup(teamId);
 }
 
 module.exports = { getLineup };

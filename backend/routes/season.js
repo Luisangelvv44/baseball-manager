@@ -42,7 +42,7 @@ router.post('/start', async (req, res) => {
     const totalDays = Math.max(...games.map((g) => g.day_number));
 
     const season = await prisma.season.create({
-      data: { year: new Date().getFullYear(), current_day: 1, total_days: totalDays, status: 'active' },
+      data: { year: new Date().getFullYear(), current_day: 1, total_days: totalDays + PRE_SEASON_DAYS, status: 'active' },
     });
 
     await prisma.gameSchedule.createMany({

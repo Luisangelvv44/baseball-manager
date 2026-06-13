@@ -4,6 +4,7 @@ const LINKS = [
   { to: '/', label: 'Dashboard' },
   { to: '/schedule', label: 'Calendario' },
   { to: '/roster', label: 'Roster' },
+  { to: '/lineup', label: 'Lineup' },
   { to: '/market', label: 'Mercado' },
   { to: '/stadium', label: 'Estadio' },
   { to: '/scouts', label: 'Scouts' },
