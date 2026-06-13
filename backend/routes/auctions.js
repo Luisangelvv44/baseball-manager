@@ -34,7 +34,11 @@ router.get('/', async (req, res) => {
       bids: undefined,
     }));
 
-    res.json(result);
+    const userRosterCount = await prisma.player.count({
+      where: { team_id: USER_TEAM_ID, status: 'active' },
+    });
+
+    res.json({ auctions: result, userRosterCount });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener subastas' });
@@ -103,6 +107,13 @@ router.post('/:id/bid', async (req, res) => {
         error: `La puja mínima es $${minimumBid.toLocaleString()}`,
         minimumBid,
       });
+    }
+
+    const userRosterCount = await prisma.player.count({
+      where: { team_id: USER_TEAM_ID, status: 'active' },
+    });
+    if (userRosterCount >= 20) {
+      return res.status(400).json({ error: 'Tu roster está lleno (máximo 20 jugadores)' });
     }
 
     const userTeam = await prisma.team.findUnique({ where: { id: USER_TEAM_ID } });

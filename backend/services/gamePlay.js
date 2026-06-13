@@ -55,6 +55,8 @@ async function playGame(gameRow, saveEvents = false) {
 }
 
 async function updateStandings(teamId, runsFor, runsAgainst, won) {
+  const team = await prisma.team.findUnique({ where: { id: teamId }, select: { reputation: true } });
+  const newRep = Math.min(100, Math.max(1, team.reputation + (won ? 1 : -1)));
   await prisma.team.update({
     where: { id: teamId },
     data: {
@@ -62,6 +64,7 @@ async function updateStandings(teamId, runsFor, runsAgainst, won) {
       losses: { increment: won ? 0 : 1 },
       runs_scored: { increment: runsFor },
       runs_allowed: { increment: runsAgainst },
+      reputation: newRep,
     },
   });
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 
-function PlayerTable({ players, onSign }) {
+function PlayerTable({ players, onSign, rosterFull }) {
   const [years, setYears] = useState({});
 
   if (players.length === 0) {
@@ -24,41 +24,45 @@ function PlayerTable({ players, onSign }) {
         </tr>
       </thead>
       <tbody>
-        {players.map((p) => (
-          <tr key={p.id} className="border-t">
-            <td className="p-2 font-medium">{p.first_name} {p.last_name}</td>
-            <td className="p-2">{p.position}</td>
-            <td className="p-2">{p.age}</td>
-            <td className="p-2">{p.current_skill}</td>
-            <td className="p-2 font-semibold text-amber-700">{p.potential_coefficient}</td>
-            <td className="p-2">{p.growth_age}</td>
-            <td className="p-2">${Number(p.salary).toLocaleString()}</td>
-            <td className="p-2">
-              <input
-                type="number"
-                min="1"
-                max="10"
-                value={years[p.id] || 1}
-                onChange={(e) => setYears({ ...years, [p.id]: e.target.value })}
-                className="border rounded w-16 px-1 py-0.5"
-              />
-            </td>
-            <td className="p-2">
-              <button
-                onClick={() => onSign(p.id, years[p.id] || 1)}
-                className="bg-green-600 text-white rounded px-3 py-1 hover:bg-green-700"
-              >
-                Fichar
-              </button>
-            </td>
-          </tr>
-        ))}
+        {players.map((p) => {
+          const maxYears = Math.max(1, 40 - p.age);
+          return (
+            <tr key={p.id} className="border-t">
+              <td className="p-2 font-medium">{p.first_name} {p.last_name}</td>
+              <td className="p-2">{p.position}</td>
+              <td className="p-2">{p.age}</td>
+              <td className="p-2">{p.current_skill}</td>
+              <td className="p-2 font-semibold text-amber-700">{p.potential_coefficient}</td>
+              <td className="p-2">{p.growth_age}</td>
+              <td className="p-2">${Number(p.salary).toLocaleString()}</td>
+              <td className="p-2">
+                <input
+                  type="number"
+                  min="1"
+                  max={maxYears}
+                  value={Math.min(years[p.id] || 1, maxYears)}
+                  onChange={(e) => setYears({ ...years, [p.id]: Math.min(Number(e.target.value), maxYears) })}
+                  className="border rounded w-16 px-1 py-0.5"
+                />
+              </td>
+              <td className="p-2">
+                <button
+                  onClick={() => onSign(p.id, Math.min(years[p.id] || 1, maxYears))}
+                  disabled={rosterFull}
+                  className="bg-green-600 text-white rounded px-3 py-1 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Fichar
+                </button>
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
 }
 
-function AuctionCard({ auction, season, onBidPlaced }) {
+function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
   const [bidAmount, setBidAmount] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -145,24 +149,28 @@ function AuctionCard({ auction, season, onBidPlaced }) {
         )}
       </div>
 
-      <div className="flex gap-2">
-        <input
-          type="number"
-          min={minBid}
-          step={10000}
-          value={bidAmount}
-          onChange={(e) => setBidAmount(e.target.value)}
-          placeholder={`Mín $${minBid.toLocaleString()}`}
-          className="border rounded px-2 py-1 flex-1 text-sm"
-        />
-        <button
-          onClick={handleBid}
-          disabled={loading}
-          className="bg-blue-600 text-white rounded px-3 py-1 text-sm hover:bg-blue-700 disabled:opacity-50"
-        >
-          Pujar
-        </button>
-      </div>
+      {rosterFull ? (
+        <p className="text-center text-sm text-red-600 font-medium py-1">Roster lleno (máx. 20)</p>
+      ) : (
+        <div className="flex gap-2">
+          <input
+            type="number"
+            min={minBid}
+            step={10000}
+            value={bidAmount}
+            onChange={(e) => setBidAmount(e.target.value)}
+            placeholder={`Mín $${minBid.toLocaleString()}`}
+            className="border rounded px-2 py-1 flex-1 text-sm"
+          />
+          <button
+            onClick={handleBid}
+            disabled={loading}
+            className="bg-blue-600 text-white rounded px-3 py-1 text-sm hover:bg-blue-700 disabled:opacity-50"
+          >
+            Pujar
+          </button>
+        </div>
+      )}
       {error && <p className="text-red-600 text-xs">{error}</p>}
     </div>
   );
@@ -170,17 +178,19 @@ function AuctionCard({ auction, season, onBidPlaced }) {
 
 export default function Market() {
   const [auctions, setAuctions] = useState([]);
+  const [userRosterCount, setUserRosterCount] = useState(0);
   const [scouted, setScouted] = useState([]);
   const [season, setSeason] = useState(null);
   const [message, setMessage] = useState('');
 
   async function load() {
-    const [auc, sc, se] = await Promise.all([
+    const [aucData, sc, se] = await Promise.all([
       api.getAuctions(),
       api.getScoutedPlayers(),
       api.getSeason(),
     ]);
-    setAuctions(auc);
+    setAuctions(aucData.auctions);
+    setUserRosterCount(aucData.userRosterCount);
     setScouted(sc);
     setSeason(se);
   }
@@ -209,12 +219,21 @@ export default function Market() {
         </div>
       )}
 
+      {userRosterCount >= 20 && (
+        <div className="bg-red-50 border border-red-200 text-red-800 rounded p-3 text-sm font-medium">
+          Roster lleno ({userRosterCount}/20). Libera o pierde jugadores para poder fichar o pujar.
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow p-4">
-        <h3 className="font-bold mb-1">Prospectos de Scouts</h3>
+        <h3 className="font-bold mb-1">
+          Prospectos de Scouts
+          <span className="ml-2 text-xs font-normal text-gray-500">{userRosterCount}/20 jugadores</span>
+        </h3>
         <p className="text-xs text-gray-500 mb-3">
           Fichaje directo — exclusivos de tu red de scouts. Alto potencial, destreza baja: riesgo/recompensa.
         </p>
-        <PlayerTable players={scouted} onSign={handleSign} />
+        <PlayerTable players={scouted} onSign={handleSign} rosterFull={userRosterCount >= 20} />
       </div>
 
       <div>
@@ -235,6 +254,7 @@ export default function Market() {
                 auction={a}
                 season={season}
                 onBidPlaced={load}
+                rosterFull={userRosterCount >= 20}
               />
             ))}
           </div>

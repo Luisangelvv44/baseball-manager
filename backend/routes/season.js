@@ -81,6 +81,25 @@ router.post('/start', async (req, res) => {
       });
     }
 
+    // Cobrar salarios de temporada a equipos CPU
+    const cpuTeams = await prisma.team.findMany({
+      where: { is_user_team: false },
+      select: { id: true },
+    });
+    for (const cpuTeam of cpuTeams) {
+      const cpuPlayers = await prisma.player.findMany({
+        where: { team_id: cpuTeam.id },
+        select: { salary: true },
+      });
+      const cpuSalary = Math.round(cpuPlayers.reduce((s, p) => s + Number(p.salary), 0));
+      if (cpuSalary > 0) {
+        await prisma.team.update({
+          where: { id: cpuTeam.id },
+          data: { budget: { decrement: cpuSalary } },
+        });
+      }
+    }
+
     const auctionsCreated = await createAuctionsForFreeAgents(null, season);
 
     res.json({ success: true, season, totalGames: games.length, totalDays, totalSeasonSalary, auctionsCreated });
@@ -164,6 +183,16 @@ router.post('/advance-day', async (req, res) => {
       // Resetear standings de todos los equipos
       await prisma.team.updateMany({
         data: { wins: 0, losses: 0, runs_scored: 0, runs_allowed: 0 },
+      });
+
+      // Envejecer a todos los jugadores un año
+      await prisma.player.updateMany({
+        data: { age: { increment: 1 } },
+      });
+
+      // Eliminar agentes libres con 40+ años (no pueden ser contratados)
+      await prisma.player.deleteMany({
+        where: { status: 'free_agent', age: { gte: 40 } },
       });
 
       await cancelAllActiveAuctions(null);

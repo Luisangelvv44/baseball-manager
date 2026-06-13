@@ -46,6 +46,21 @@ router.post('/:id/sign', async (req, res) => {
       return res.status(400).json({ error: 'Este jugador ya pertenece a un equipo' });
     }
 
+    const maxYears = Math.max(0, 40 - player.age);
+    if (maxYears === 0) {
+      return res.status(400).json({ error: 'Este jugador tiene 40 años o más y no puede ser contratado' });
+    }
+    if (years > maxYears) {
+      return res.status(400).json({ error: `Este jugador solo puede contratarse por un máximo de ${maxYears} año(s)` });
+    }
+
+    const rosterCount = await prisma.player.count({
+      where: { team_id: USER_TEAM_ID, status: 'active' },
+    });
+    if (rosterCount >= 20) {
+      return res.status(400).json({ error: 'Tu roster está lleno (máximo 20 jugadores)' });
+    }
+
     if (!salary) salary = player.salary;
     salary = Math.round(Number(salary));
 
@@ -102,6 +117,14 @@ router.post('/:id/renew', async (req, res) => {
     if (player.contract_years_remaining > 2) return res.status(400).json({ error: 'El jugador debe tener 2 años o menos restantes para renovar' });
     if (newSalary <= Number(player.salary)) return res.status(400).json({ error: 'El nuevo salario debe ser mayor al salario actual' });
     if (!years || years < 1) return res.status(400).json({ error: 'Años de contrato inválidos' });
+
+    const maxYears = Math.max(0, 40 - player.age);
+    if (maxYears === 0) {
+      return res.status(400).json({ error: 'El jugador ya no puede renovar (tiene 40 años o más)' });
+    }
+    if (years > maxYears) {
+      return res.status(400).json({ error: `Máximo ${maxYears} año(s) de contrato para este jugador` });
+    }
 
     const updated = await prisma.player.update({
       where: { id: Number(id) },

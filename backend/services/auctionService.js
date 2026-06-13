@@ -70,6 +70,14 @@ async function runCpuBidding(tx, season) {
   // Shuffle CPU teams so bidding order varies each day
   cpuTeams.sort(() => Math.random() - 0.5);
 
+  // Pre-fetch roster counts so we can skip full teams (max 20 players)
+  const rosterCounts = await client.player.groupBy({
+    by: ['team_id'],
+    where: { team_id: { in: cpuTeams.map((t) => t.id) }, status: 'active' },
+    _count: { id: true },
+  });
+  const countMap = Object.fromEntries(rosterCounts.map((r) => [r.team_id, r._count.id]));
+
   for (const auction of activeAuctions) {
     const player = auction.player;
     const growthCoeff = calculateGrowthCoefficient(player);
@@ -81,6 +89,7 @@ async function runCpuBidding(tx, season) {
     for (const team of cpuTeams) {
       if (team.id === currentLeaderId) continue;
       if (growthCoeff < team.min_growth_threshold) continue;
+      if ((countMap[team.id] ?? 0) >= 20) continue;
 
       const maxWilling = Number(team.budget) * team.bid_aggressiveness;
       if (maxWilling < Number(player.salary)) continue;
