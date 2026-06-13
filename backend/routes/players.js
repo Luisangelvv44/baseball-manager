@@ -88,4 +88,31 @@ router.post('/:id/sign', async (req, res) => {
   }
 });
 
+// POST /api/players/:id/renew  { salary, years }
+// Renueva el contrato de un jugador propio con <= 2 años restantes, ofreciendo mayor salario.
+router.post('/:id/renew', async (req, res) => {
+  const { id } = req.params;
+  const newSalary = Math.round(Number(req.body.salary));
+  const years = parseInt(req.body.years, 10);
+
+  try {
+    const player = await prisma.player.findUnique({ where: { id: Number(id) } });
+    if (!player) return res.status(404).json({ error: 'Jugador no encontrado' });
+    if (player.team_id !== USER_TEAM_ID) return res.status(400).json({ error: 'Este jugador no pertenece a tu equipo' });
+    if (player.contract_years_remaining > 2) return res.status(400).json({ error: 'El jugador debe tener 2 años o menos restantes para renovar' });
+    if (newSalary <= Number(player.salary)) return res.status(400).json({ error: 'El nuevo salario debe ser mayor al salario actual' });
+    if (!years || years < 1) return res.status(400).json({ error: 'Años de contrato inválidos' });
+
+    const updated = await prisma.player.update({
+      where: { id: Number(id) },
+      data: { salary: newSalary, contract_years_remaining: years },
+    });
+
+    res.json({ success: true, player: updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al renovar contrato' });
+  }
+});
+
 module.exports = router;

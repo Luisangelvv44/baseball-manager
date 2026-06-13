@@ -26,6 +26,8 @@ export const api = {
   getScoutedPlayers: () => request('/players/scouted'),
   signPlayer: (id, years, salary) =>
     request(`/players/${id}/sign`, { method: 'POST', body: JSON.stringify({ years, salary }) }),
+  renewContract: (id, salary, years) =>
+    request(`/players/${id}/renew`, { method: 'POST', body: JSON.stringify({ salary, years }) }),
 
   // Estadio
   getStadium: () => request('/stadium'),
