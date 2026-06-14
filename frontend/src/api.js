@@ -35,6 +35,7 @@ export const api = {
     request(`/stadium/${id}/price`, { method: 'PUT', body: JSON.stringify({ price }) }),
   upgradeSection: (id) => request(`/stadium/${id}/upgrade`, { method: 'POST' }),
   buildSection: (id) => request(`/stadium/${id}/build`, { method: 'POST' }),
+  expandStadiumFloor: () => request('/stadium/expand-floor', { method: 'POST' }),
 
   // Temporada
   getSeason: () => request('/season'),

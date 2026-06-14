@@ -27,6 +27,7 @@ model Team {
   bid_aggressiveness   Float   @default(0.10)
   min_growth_threshold Float   @default(1.5)
   fan_base             Int     @default(0)
+  stadium_floors       Int     @default(1)
 
   division            Division?          @relation(fields: [division_id], references: [id])
   players             Player[]

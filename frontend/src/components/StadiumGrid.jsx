@@ -1,9 +1,11 @@
-export default function StadiumGrid({ sections, onCellClick }) {
-  // mapa rapido por (row,col)
+export default function StadiumGrid({ sections, floors, onCellClick }) {
   const map = {};
   sections.forEach((s) => {
     map[`${s.row_pos}-${s.col_pos}`] = s;
   });
+
+  const size = floors * 2 + 2;
+  const indices = Array.from({ length: size }, (_, i) => i + 1);
 
   const cellStyle = (section) => {
     if (!section) return 'bg-gray-200';
@@ -29,13 +31,17 @@ export default function StadiumGrid({ sections, onCellClick }) {
     return '';
   };
 
-  const rows = [1, 2, 3];
-  const cols = [1, 2, 3];
-
   return (
-    <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
-      {rows.map((r) =>
-        cols.map((c) => {
+    <div
+      className="gap-1 mx-auto"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
+        maxWidth: `${size * 72}px`,
+      }}
+    >
+      {indices.map((r) =>
+        indices.map((c) => {
           const section = map[`${r}-${c}`];
           return (
             <div
@@ -45,7 +51,8 @@ export default function StadiumGrid({ sections, onCellClick }) {
                   onCellClick(section);
                 }
               }}
-              className={`aspect-square rounded-lg border-2 border-gray-300 flex items-center justify-center text-center text-xs font-semibold p-2 whitespace-pre-line ${cellStyle(section)}`}
+              className={`aspect-square rounded border-2 border-gray-300 flex items-center justify-center text-center font-semibold p-1 whitespace-pre-line ${cellStyle(section)}`}
+              style={{ fontSize: size <= 4 ? '0.75rem' : size <= 6 ? '0.65rem' : '0.55rem' }}
             >
               {cellLabel(section)}
             </div>
