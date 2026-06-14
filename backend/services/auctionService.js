@@ -78,6 +78,16 @@ async function runCpuBidding(tx, season) {
   });
   const countMap = Object.fromEntries(rosterCounts.map((r) => [r.team_id, r._count.id]));
 
+  // Pre-fetch total annual salary per CPU team to check long-term affordability
+  const salaryTotals = await client.player.groupBy({
+    by: ['team_id'],
+    where: { team_id: { in: cpuTeams.map((t) => t.id) }, status: 'active' },
+    _sum: { salary: true },
+  });
+  const salaryMap = Object.fromEntries(
+    salaryTotals.map((r) => [r.team_id, Number(r._sum.salary ?? 0)])
+  );
+
   for (const auction of activeAuctions) {
     const player = auction.player;
     const growthCoeff = calculateGrowthCoefficient(player);
@@ -90,6 +100,9 @@ async function runCpuBidding(tx, season) {
       if (team.id === currentLeaderId) continue;
       if (growthCoeff < team.min_growth_threshold) continue;
       if ((countMap[team.id] ?? 0) >= 20) continue;
+
+      const existingSalary = salaryMap[team.id] ?? 0;
+      if (existingSalary + Number(player.salary) > Number(team.budget)) continue;
 
       const maxWilling = Number(team.budget) * team.bid_aggressiveness;
       if (maxWilling < Number(player.salary)) continue;

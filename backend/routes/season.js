@@ -18,7 +18,7 @@ const {
   decrementContractSeasons,
   OFFER_WINDOW_END_DAY,
 } = require('../services/broadcastService');
-const { calculateSalary } = require('../seeders/generators/playerGenerator');
+const { calculateSalary, generatePlayer } = require('../seeders/generators/playerGenerator');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
@@ -277,29 +277,24 @@ router.post('/advance-day', async (req, res) => {
           rosterSize--;
         }
 
-        // Relleno rookie: contratar agentes libres a 1/10 del salario, max 3 años
+        // Relleno rookie: generar jugadores jóvenes nuevos para cubrir huecos de roster
         const slotsToFill = Math.max(0, CPU_TARGET_ROSTER - rosterSize);
-        if (slotsToFill > 0) {
-          const candidates = await prisma.player.findMany({
-            where: { status: 'free_agent' },
-            orderBy: { current_skill: 'desc' },
-            take: slotsToFill,
-            select: { id: true, salary: true },
+        for (let i = 0; i < slotsToFill; i++) {
+          const rookieAge = Math.floor(Math.random() * 5) + 18; // 18–22 años
+          const rookie = generatePlayer({ age: rookieAge });
+          const rookieSalary = Math.max(5000, Math.round(
+            calculateSalary(rookie.potential_coefficient, rookie.current_skill, rookieAge) / 10 / 100
+          ) * 100);
+          await prisma.player.create({
+            data: {
+              ...rookie,
+              team_id: cpuTeam.id,
+              status: 'active',
+              salary: rookieSalary,
+              contract_years_remaining: Math.floor(Math.random() * 3) + 1,
+              rookie_contract: true,
+            },
           });
-
-          for (const fa of candidates) {
-            const rookieSalary = Math.max(5000, Math.round(Number(fa.salary) / 10 / 100) * 100);
-            await prisma.player.update({
-              where: { id: fa.id },
-              data: {
-                team_id: cpuTeam.id,
-                status: 'active',
-                salary: rookieSalary,
-                contract_years_remaining: Math.floor(Math.random() * 3) + 1,
-                rookie_contract: true,
-              },
-            });
-          }
         }
       }
 
