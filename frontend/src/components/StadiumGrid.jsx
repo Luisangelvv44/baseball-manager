@@ -37,7 +37,7 @@ export default function StadiumGrid({ sections, floors, onCellClick }) {
       style={{
         display: 'grid',
         gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
-        maxWidth: `${size * 72}px`,
+        maxWidth: `${size * 108}px`,
       }}
     >
       {indices.map((r) =>
