@@ -55,6 +55,7 @@ function generatePlayer(overrides = {}) {
     current_skill: currentSkill,
     salary: overrides.salary ?? calculateSalary(potential, currentSkill, age),
     contract_years_remaining: overrides.contract_years_remaining ?? randomInt(1, 4),
+    rookie_contract: overrides.rookie_contract ?? false,
     team_id: overrides.team_id ?? null,
     status: overrides.status ?? 'active',
   };
@@ -89,12 +90,16 @@ function generateScoutedPlayer(scoutSkillLevel) {
   const growthAge = calculateGrowthAge(potential);
   const currentSkill = randomInt(15, 35); // sin pulir todavia
 
+  const marketSalary = calculateSalary(potential, currentSkill, age);
+  const rookieSalary = Math.max(5000, Math.round(marketSalary / 10 / 100) * 100);
+
   return generatePlayer({
     potential_coefficient: potential,
     age,
     current_skill: currentSkill,
-    salary: calculateSalary(potential, currentSkill, age),
-    contract_years_remaining: 1,
+    salary: rookieSalary,
+    contract_years_remaining: randomInt(1, 3),
+    rookie_contract: true,
     status: 'scouted',
   });
 }

@@ -25,7 +25,7 @@ function PlayerTable({ players, onSign, rosterFull }) {
       </thead>
       <tbody>
         {players.map((p) => {
-          const maxYears = Math.max(1, 40 - p.age);
+          const maxYears = Math.max(1, p.rookie_contract ? Math.min(3, 40 - p.age) : 40 - p.age);
           return (
             <tr key={p.id} className="border-t">
               <td className="p-2 font-medium">{p.first_name} {p.last_name}</td>

@@ -18,6 +18,7 @@ const {
   decrementContractSeasons,
   OFFER_WINDOW_END_DAY,
 } = require('../services/broadcastService');
+const { calculateSalary } = require('../seeders/generators/playerGenerator');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
@@ -193,6 +194,19 @@ router.post('/advance-day', async (req, res) => {
         data: { contract_years_remaining: { decrement: 1 } },
       });
 
+      // Restaurar salario de mercado a contratos rookie que expiran antes de liberarlos
+      const expiringRookies = await prisma.player.findMany({
+        where: { status: 'active', rookie_contract: true, contract_years_remaining: { lte: 0 } },
+        select: { id: true, potential_coefficient: true, current_skill: true, age: true },
+      });
+      for (const p of expiringRookies) {
+        const realSalary = calculateSalary(p.potential_coefficient, p.current_skill, p.age);
+        await prisma.player.update({
+          where: { id: p.id },
+          data: { salary: realSalary, rookie_contract: false },
+        });
+      }
+
       // Los contratos expirados pasan a agentes libres
       const expired = await prisma.player.updateMany({
         where: { status: 'active', contract_years_remaining: { lte: 0 } },
@@ -229,6 +243,64 @@ router.post('/advance-day', async (req, res) => {
           where: { id: p.id },
           data: { current_skill: newSkill },
         });
+      }
+
+      // Gestion de plantilla CPU: recorte + relleno con contratos rookie
+      const CPU_TARGET_ROSTER = 16;
+      const ROOKIE_SLOT_BUFFER = 50000;
+
+      const cpuTeamsList = await prisma.team.findMany({
+        where: { is_user_team: false },
+        select: { id: true, budget: true },
+      });
+
+      for (const cpuTeam of cpuTeamsList) {
+        // Recorte: liberar jugadores (mayor salario primero) hasta cubrir nómina + margen
+        const cpuRoster = await prisma.player.findMany({
+          where: { team_id: cpuTeam.id, status: 'active' },
+          orderBy: { salary: 'desc' },
+          select: { id: true, salary: true },
+        });
+
+        let totalSalary = cpuRoster.reduce((s, p) => s + Number(p.salary), 0);
+        let rosterSize = cpuRoster.length;
+        const budget = Number(cpuTeam.budget);
+
+        for (const player of cpuRoster) {
+          const buffer = Math.max(0, CPU_TARGET_ROSTER - rosterSize) * ROOKIE_SLOT_BUFFER;
+          if (budget >= totalSalary + buffer) break;
+          await prisma.player.update({
+            where: { id: player.id },
+            data: { status: 'free_agent', team_id: null },
+          });
+          totalSalary -= Number(player.salary);
+          rosterSize--;
+        }
+
+        // Relleno rookie: contratar agentes libres a 1/10 del salario, max 3 años
+        const slotsToFill = Math.max(0, CPU_TARGET_ROSTER - rosterSize);
+        if (slotsToFill > 0) {
+          const candidates = await prisma.player.findMany({
+            where: { status: 'free_agent' },
+            orderBy: { current_skill: 'desc' },
+            take: slotsToFill,
+            select: { id: true, salary: true },
+          });
+
+          for (const fa of candidates) {
+            const rookieSalary = Math.max(5000, Math.round(Number(fa.salary) / 10 / 100) * 100);
+            await prisma.player.update({
+              where: { id: fa.id },
+              data: {
+                team_id: cpuTeam.id,
+                status: 'active',
+                salary: rookieSalary,
+                contract_years_remaining: Math.floor(Math.random() * 3) + 1,
+                rookie_contract: true,
+              },
+            });
+          }
+        }
       }
 
       await decrementContractSeasons();

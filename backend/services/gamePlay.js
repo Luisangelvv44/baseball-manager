@@ -61,10 +61,11 @@ async function updateStandings(teamId, runsFor, runsAgainst, won) {
   });
   const newRep = Math.min(100, Math.max(1, team.reputation + (won ? 1 : -1)));
 
-  // rep > 50 → fans crecen; rep < 50 → fans menguan; rep == 50 → sin cambio
-  const randomMagnitude = Math.random() * 3000;
-  const factor = (team.reputation - 50) / 50;
-  const change = Math.round(randomMagnitude * factor);
+  // Victorias: hasta +20 000 fans; derrotas: hasta −2 000 fans. Rep amplifica/amortigua (±25%).
+  const repMult = 0.75 + 0.5 * (team.reputation / 100);
+  const change = won
+    ? Math.round(Math.random() * 20000 * repMult)
+    : -Math.round(Math.random() * 2000 / repMult);
   const newFanBase = Math.max(0, team.fan_base + change);
 
   await prisma.team.update({

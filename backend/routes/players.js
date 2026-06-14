@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID } = require('../config');
+const { calculateSalary } = require('../seeders/generators/playerGenerator');
 
 // GET /api/players/free-agents -> jugadores sin equipo (status = free_agent)
 router.get('/free-agents', async (req, res) => {
@@ -50,8 +51,9 @@ router.post('/:id/sign', async (req, res) => {
     if (maxYears === 0) {
       return res.status(400).json({ error: 'Este jugador tiene 40 años o más y no puede ser contratado' });
     }
-    if (years > maxYears) {
-      return res.status(400).json({ error: `Este jugador solo puede contratarse por un máximo de ${maxYears} año(s)` });
+    const contractCap = player.rookie_contract ? Math.min(maxYears, 3) : maxYears;
+    if (years > contractCap) {
+      return res.status(400).json({ error: `Contrato rookie: máximo ${contractCap} año(s)` });
     }
 
     const rosterCount = await prisma.player.count({
@@ -115,7 +117,6 @@ router.post('/:id/renew', async (req, res) => {
     if (!player) return res.status(404).json({ error: 'Jugador no encontrado' });
     if (player.team_id !== USER_TEAM_ID) return res.status(400).json({ error: 'Este jugador no pertenece a tu equipo' });
     if (player.contract_years_remaining > 2) return res.status(400).json({ error: 'El jugador debe tener 2 años o menos restantes para renovar' });
-    if (newSalary <= Number(player.salary)) return res.status(400).json({ error: 'El nuevo salario debe ser mayor al salario actual' });
     if (!years || years < 1) return res.status(400).json({ error: 'Años de contrato inválidos' });
 
     const maxYears = Math.max(0, 40 - player.age);
@@ -126,9 +127,30 @@ router.post('/:id/renew', async (req, res) => {
       return res.status(400).json({ error: `Máximo ${maxYears} año(s) de contrato para este jugador` });
     }
 
+    // Renovar un rookie convierte el contrato a precio de mercado real
+    const isRookie = player.rookie_contract;
+    const marketSalary = isRookie
+      ? calculateSalary(player.potential_coefficient, player.current_skill, player.age)
+      : null;
+
+    if (isRookie && newSalary < marketSalary) {
+      return res.status(400).json({
+        error: `Al renovar un rookie el salario mínimo es su valor de mercado: $${marketSalary.toLocaleString()}`,
+        marketSalary,
+      });
+    }
+
+    if (!isRookie && newSalary <= Number(player.salary)) {
+      return res.status(400).json({ error: 'El nuevo salario debe ser mayor al salario actual' });
+    }
+
     const updated = await prisma.player.update({
       where: { id: Number(id) },
-      data: { salary: newSalary, contract_years_remaining: years },
+      data: {
+        salary: newSalary,
+        contract_years_remaining: years,
+        ...(isRookie && { rookie_contract: false }),
+      },
     });
 
     res.json({ success: true, player: updated });
