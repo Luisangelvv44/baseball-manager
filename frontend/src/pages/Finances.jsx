@@ -9,6 +9,7 @@ const TYPE_LABELS = {
   scouting: 'Scouting',
   signing: 'Fichajes',
   operating_cost: 'Costos operativos',
+  broadcast_revenue: 'Ingresos Transmisión',
 };
 
 export default function Finances() {

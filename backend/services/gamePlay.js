@@ -55,8 +55,18 @@ async function playGame(gameRow, saveEvents = false) {
 }
 
 async function updateStandings(teamId, runsFor, runsAgainst, won) {
-  const team = await prisma.team.findUnique({ where: { id: teamId }, select: { reputation: true } });
+  const team = await prisma.team.findUnique({
+    where: { id: teamId },
+    select: { reputation: true, fan_base: true },
+  });
   const newRep = Math.min(100, Math.max(1, team.reputation + (won ? 1 : -1)));
+
+  // rep > 50 → fans crecen; rep < 50 → fans menguan; rep == 50 → sin cambio
+  const randomMagnitude = Math.random() * 3000;
+  const factor = (team.reputation - 50) / 50;
+  const change = Math.round(randomMagnitude * factor);
+  const newFanBase = Math.max(0, team.fan_base + change);
+
   await prisma.team.update({
     where: { id: teamId },
     data: {
@@ -65,6 +75,7 @@ async function updateStandings(teamId, runsFor, runsAgainst, won) {
       runs_scored: { increment: runsFor },
       runs_allowed: { increment: runsAgainst },
       reputation: newRep,
+      fan_base: newFanBase,
     },
   });
 }

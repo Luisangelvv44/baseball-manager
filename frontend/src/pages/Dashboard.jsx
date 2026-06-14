@@ -87,6 +87,7 @@ export default function Dashboard() {
             Presupuesto: <span className="font-semibold text-green-700">${Number(myTeam.budget).toLocaleString()}</span>
             {' · '}Reputacion: {myTeam.reputation}
             {' · '}Record: {myTeam.wins}-{myTeam.losses}
+            {' · '}Base de fans: <span className="font-semibold text-blue-700">{(myTeam.fan_base ?? 0).toLocaleString()}</span>
           </p>
         </div>
 

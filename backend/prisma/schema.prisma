@@ -26,19 +26,22 @@ model Team {
   runs_allowed         Int     @default(0)
   bid_aggressiveness   Float   @default(0.10)
   min_growth_threshold Float   @default(1.5)
+  fan_base             Int     @default(0)
 
-  division         Division?         @relation(fields: [division_id], references: [id])
-  players          Player[]
-  finances         Finance[]
-  scouts           Scout[]
-  stadium_sections StadiumSection[]
-  home_games       GameSchedule[]    @relation("HomeTeam")
-  away_games       GameSchedule[]    @relation("AwayTeam")
-  game_lineups     GameLineup[]
-  team_lineups     TeamLineup[]
-  batting_events   GameEvent[]       @relation("BattingTeam")
-  won_auctions     FreeAgentAuction[] @relation("AuctionWinner")
-  auction_bids     AuctionBid[]
+  division            Division?          @relation(fields: [division_id], references: [id])
+  players             Player[]
+  finances            Finance[]
+  scouts              Scout[]
+  stadium_sections    StadiumSection[]
+  home_games          GameSchedule[]     @relation("HomeTeam")
+  away_games          GameSchedule[]     @relation("AwayTeam")
+  game_lineups        GameLineup[]
+  team_lineups        TeamLineup[]
+  batting_events      GameEvent[]        @relation("BattingTeam")
+  won_auctions        FreeAgentAuction[] @relation("AuctionWinner")
+  auction_bids        AuctionBid[]
+  broadcast_offers    BroadcastOffer[]
+  broadcast_contracts BroadcastContract[]
 }
 
 model Player {
@@ -72,8 +75,10 @@ model Season {
   total_days  Int    @default(0)
   status      String @default("active") @db.VarChar(20)
 
-  schedule GameSchedule[]
-  auctions FreeAgentAuction[]
+  schedule            GameSchedule[]
+  auctions            FreeAgentAuction[]
+  broadcast_offers    BroadcastOffer[]
+  broadcast_contracts BroadcastContract[]
 }
 
 
@@ -228,4 +233,54 @@ model AuctionBid {
 
   @@map("auction_bids")
   @@index([auction_id])
+}
+
+model BroadcastCompany {
+  id            Int     @id @default(autoincrement())
+  name          String  @db.VarChar(100)
+  type          String  @db.VarChar(5)
+  price_per_fan Decimal @db.Decimal(6, 4)
+
+  offers    BroadcastOffer[]
+  contracts BroadcastContract[]
+
+  @@map("broadcast_companies")
+}
+
+model BroadcastOffer {
+  id            Int      @id @default(autoincrement())
+  company_id    Int
+  team_id       Int
+  season_id     Int
+  seasons       Int
+  price_per_fan Decimal  @db.Decimal(6, 4)
+  status        String   @db.VarChar(20)
+  expires_day   Int
+  created_at    DateTime @default(now())
+
+  company BroadcastCompany @relation(fields: [company_id], references: [id])
+  team    Team             @relation(fields: [team_id], references: [id])
+  season  Season           @relation(fields: [season_id], references: [id])
+
+  @@map("broadcast_offers")
+  @@index([team_id])
+  @@index([status])
+}
+
+model BroadcastContract {
+  id                Int      @id @default(autoincrement())
+  company_id        Int
+  team_id           Int
+  seasons_total     Int
+  seasons_remaining Int
+  price_per_fan     Decimal  @db.Decimal(6, 4)
+  signed_season_id  Int
+  created_at        DateTime @default(now())
+
+  company BroadcastCompany @relation(fields: [company_id], references: [id])
+  team    Team             @relation(fields: [team_id], references: [id])
+  season  Season           @relation(fields: [signed_season_id], references: [id])
+
+  @@map("broadcast_contracts")
+  @@index([team_id])
 }

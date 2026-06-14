@@ -48,8 +48,10 @@ async function seed() {
         const bid_aggressiveness   = isUser ? 0.12 : randomFloat(0.05, 0.25);
         const min_growth_threshold = isUser ? 1.5  : randomFloat(0.5, 5.0);
 
+        const fan_base = isUser ? 100000 : reputation * 1000;
+
         const team = await tx.team.create({
-          data: { name, division_id: divisionId, is_user_team: isUser, budget, reputation, bid_aggressiveness, min_growth_threshold },
+          data: { name, division_id: divisionId, is_user_team: isUser, budget, reputation, bid_aggressiveness, min_growth_threshold, fan_base },
         });
 
         teamIds.push({ id: team.id, isUser });
@@ -76,6 +78,39 @@ async function seed() {
         generatePlayer({ status: 'free_agent' })
       );
       await tx.player.createMany({ data: freeAgents });
+
+      // ---------- Empresas de transmisión ----------
+      console.log('Creando empresas de transmisión...');
+      const TV_COMPANIES = [
+        { name: 'ESPN Baseball',     price_per_fan: 0.5000 },
+        { name: 'Fox Sports',        price_per_fan: 0.4200 },
+        { name: 'TNT Sports',        price_per_fan: 0.3600 },
+        { name: 'MLB Network',       price_per_fan: 0.3000 },
+        { name: 'NBC Sports',        price_per_fan: 0.2500 },
+        { name: 'CBS Sports',        price_per_fan: 0.2000 },
+        { name: 'TBS',               price_per_fan: 0.1700 },
+        { name: 'Bally Sports',      price_per_fan: 0.1400 },
+        { name: 'NESN',              price_per_fan: 0.1200 },
+        { name: 'Regional Sports TV',price_per_fan: 0.1000 },
+      ];
+      const RADIO_COMPANIES = [
+        { name: 'SiriusXM Baseball', price_per_fan: 0.0800 },
+        { name: 'ESPN Radio',        price_per_fan: 0.0670 },
+        { name: 'CBS Sports Radio',  price_per_fan: 0.0560 },
+        { name: 'iHeart Baseball',   price_per_fan: 0.0470 },
+        { name: 'Fox Sports Radio',  price_per_fan: 0.0400 },
+        { name: 'The Sports Hub',    price_per_fan: 0.0340 },
+        { name: 'AM 680 KNBR',       price_per_fan: 0.0280 },
+        { name: 'Sports Radio 1050', price_per_fan: 0.0240 },
+        { name: 'The Fan Network',   price_per_fan: 0.0200 },
+        { name: 'Local Diamond Radio',price_per_fan: 0.0200 },
+      ];
+      for (const c of TV_COMPANIES) {
+        await tx.broadcastCompany.create({ data: { ...c, type: 'TV' } });
+      }
+      for (const c of RADIO_COMPANIES) {
+        await tx.broadcastCompany.create({ data: { ...c, type: 'RADIO' } });
+      }
 
       console.log('Seed completado.');
       console.log(`Tu equipo ID: ${userTeamId} | Presupuesto: $${USER_STARTING_BUDGET.toLocaleString()}`);

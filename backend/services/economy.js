@@ -1,19 +1,15 @@
 // Calcula ingresos por entradas + merch para un partido EN CASA,
-// segun las gradas (capacidad/precio) y la reputacion del equipo.
-function computeHomeGameRevenue(grandstandSections, reputation) {
+// segun las gradas (capacidad/precio), la reputacion y la base de fans del equipo.
+function computeHomeGameRevenue(grandstandSections, reputation, fanBase) {
   const totalCapacity = grandstandSections.reduce((sum, s) => sum + s.capacity, 0);
 
   if (totalCapacity === 0) {
     return { attendance: 0, ticketRevenue: 0, merchRevenue: 0, operatingCost: 0, total: 0 };
   }
 
-  // factor de ocupacion: base 40% + hasta 50% extra segun reputacion (0-100), +/-10% random
-  const occupancyBase = 0.4 + (reputation / 100) * 0.5;
-  const randomFactor = 0.9 + Math.random() * 0.2; // 0.9 - 1.1
-  let occupancy = occupancyBase * randomFactor;
-  occupancy = Math.max(0.05, Math.min(1, occupancy));
-
-  const attendance = Math.round(totalCapacity * occupancy);
+  // Asistencia: porcentaje aleatorio de la fan_base, tope = capacidad del estadio
+  const fanAttendanceRate = 0.10 + Math.random() * 0.40; // 10-50% de la base de fans
+  const attendance = Math.min(totalCapacity, Math.floor((fanBase || 0) * fanAttendanceRate));
 
   // precio promedio ponderado por capacidad
   const weightedPrice = grandstandSections.reduce(

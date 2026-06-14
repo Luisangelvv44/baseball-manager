@@ -57,7 +57,7 @@ router.post('/:id/simulate', async (req, res) => {
       const sections = await prisma.stadiumSection.findMany({
         where: { team_id: USER_TEAM_ID, section_type: 'grandstand' },
       });
-      economy = computeHomeGameRevenue(sections, userTeam.reputation);
+      economy = computeHomeGameRevenue(sections, userTeam.reputation, userTeam.fan_base);
 
       await prisma.team.update({
         where: { id: USER_TEAM_ID },

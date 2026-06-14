@@ -10,6 +10,14 @@ const {
   closeExpiredAuctions,
   cancelAllActiveAuctions,
 } = require('../services/auctionService');
+const {
+  generateOffersForSeason,
+  processCpuTeamResponses,
+  finalizeContracts,
+  payBroadcastRevenue,
+  decrementContractSeasons,
+  OFFER_WINDOW_END_DAY,
+} = require('../services/broadcastService');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
@@ -102,6 +110,13 @@ router.post('/start', async (req, res) => {
 
     const auctionsCreated = await createAuctionsForFreeAgents(null, season);
 
+    // Pagar contratos de transmisión vigentes (temporadas siguientes del contrato)
+    await payBroadcastRevenue(season);
+
+    // Generar nuevas ofertas de transmisoras y respuesta automática de equipos CPU
+    await generateOffersForSeason(season);
+    await processCpuTeamResponses(season);
+
     res.json({ success: true, season, totalGames: games.length, totalDays, totalSeasonSalary, auctionsCreated });
   } catch (err) {
     console.error(err);
@@ -154,6 +169,11 @@ router.post('/advance-day', async (req, res) => {
     await runCpuBidding(null, season);
     const auctionsClosed = await closeExpiredAuctions(null, season);
 
+    // Finalizar negociaciones de transmisión al cruzar el día 3
+    if (day === OFFER_WINDOW_END_DAY) {
+      await finalizeContracts(season);
+    }
+
     const newDay = day + 1;
     const finished = newDay > season.total_days;
 
@@ -195,6 +215,7 @@ router.post('/advance-day', async (req, res) => {
         where: { status: 'free_agent', age: { gte: 40 } },
       });
 
+      await decrementContractSeasons();
       await cancelAllActiveAuctions(null);
       const updatedSeason = await prisma.season.findUnique({ where: { id: season.id } });
       await createAuctionsForFreeAgents(null, updatedSeason);

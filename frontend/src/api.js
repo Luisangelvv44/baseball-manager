@@ -66,4 +66,11 @@ export const api = {
   getAuction: (id) => request(`/auctions/${id}`),
   placeBid: (id, amount) =>
     request(`/auctions/${id}/bid`, { method: 'POST', body: JSON.stringify({ amount }) }),
+
+  // Transmisión
+  getBroadcastOffers: () => request('/broadcast/offers'),
+  acceptOffer: (id) => request(`/broadcast/offers/${id}/accept`, { method: 'POST' }),
+  rejectOffer: (id) => request(`/broadcast/offers/${id}/reject`, { method: 'POST' }),
+  getBroadcastContract: () => request('/broadcast/contract'),
+  getBroadcastCompanies: () => request('/broadcast/companies'),
 };
