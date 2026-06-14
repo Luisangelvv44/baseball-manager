@@ -303,6 +303,22 @@ router.post('/advance-day', async (req, res) => {
         }
       }
 
+      // Ingresos de fin de temporada para equipos CPU según su fan_base
+      const cpuTeamsRevenue = await prisma.team.findMany({
+        where: { is_user_team: false },
+        select: { id: true, fan_base: true },
+      });
+      for (const ct of cpuTeamsRevenue) {
+        const revenuePerFan = Math.floor(Math.random() * 11) + 5; // $5–$15 entero por fan
+        const revenue = ct.fan_base * revenuePerFan;
+        if (revenue > 0) {
+          await prisma.team.update({
+            where: { id: ct.id },
+            data: { budget: { increment: revenue } },
+          });
+        }
+      }
+
       await decrementContractSeasons();
       await cancelAllActiveAuctions(null);
       const updatedSeason = await prisma.season.findUnique({ where: { id: season.id } });
