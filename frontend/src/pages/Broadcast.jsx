@@ -18,16 +18,20 @@ export default function Broadcast() {
   const [loading, setLoading] = useState(true);
 
   async function load() {
+    // Cargar equipo de forma independiente para que el estimado siempre sea visible
     try {
-      const [s, team, c, o, comp] = await Promise.all([
+      const team = await api.getMyTeam();
+      setMyTeam(team);
+    } catch (_) {}
+
+    try {
+      const [s, c, o, comp] = await Promise.all([
         api.getSeason(),
-        api.getMyTeam(),
         api.getBroadcastContract(),
         api.getBroadcastOffers(),
         api.getBroadcastCompanies(),
       ]);
       setSeason(s);
-      setMyTeam(team);
       setContract(c);
       setOffers(o);
       setCompanies(comp);

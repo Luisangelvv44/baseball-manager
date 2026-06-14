@@ -4,6 +4,16 @@ const OFFER_WINDOW_END_DAY = 3;
 const MAX_CONTRACTS_PER_COMPANY = 2;
 const GAMES_PER_SEASON = 30;
 
+// Umbral mínimo de reputación para recibir oferta de una empresa.
+// Proporcional al precio de la empresa dentro de su tipo.
+function computeMinReputation(company) {
+  const price = Number(company.price_per_fan);
+  if (company.type === 'TV') {
+    return Math.round((price / 0.5) * 75);
+  }
+  return Math.round((price / 0.08) * 50);
+}
+
 // Genera ofertas de todas las empresas para los equipos elegibles
 // y procesa las respuestas automáticas de equipos CPU.
 async function generateOffersForSeason(season) {
@@ -16,7 +26,6 @@ async function generateOffersForSeason(season) {
     const slotsAvailable = MAX_CONTRACTS_PER_COMPANY - activeCount;
     if (slotsAvailable <= 0) continue;
 
-    // Equipos elegibles: sin contrato activo y sin oferta de esta empresa esta temporada
     const teamsWithContract = await prisma.broadcastContract.findMany({
       where: { seasons_remaining: { gt: 0 } },
       select: { team_id: true },
@@ -31,12 +40,17 @@ async function generateOffersForSeason(season) {
 
     const excludedIds = [...new Set([...contractedTeamIds, ...offeredTeamIds])];
 
+    const minReputation = computeMinReputation(company);
+
     const eligibleTeams = await prisma.team.findMany({
-      where: excludedIds.length > 0 ? { id: { notIn: excludedIds } } : {},
+      where: {
+        ...(excludedIds.length > 0 ? { id: { notIn: excludedIds } } : {}),
+        reputation: { gte: minReputation },
+      },
     });
 
     for (const team of eligibleTeams) {
-      const seasons = Math.floor(Math.random() * 3) + 1; // 1-3 temporadas
+      const seasons = Math.floor(Math.random() * 3) + 1;
       await prisma.broadcastOffer.create({
         data: {
           company_id: company.id,
@@ -62,16 +76,14 @@ async function processCpuTeamResponses(season) {
     },
   });
 
-  // Precio máximo por tipo para calcular probabilidad relativa
   const maxTvPrice = 0.5000;
   const maxRadioPrice = 0.0800;
 
   for (const offer of pendingOffers) {
-    if (offer.team.is_user_team) continue; // el usuario decide manualmente
+    if (offer.team.is_user_team) continue;
 
     const maxPrice = offer.company.type === 'TV' ? maxTvPrice : maxRadioPrice;
     let prob = 0.3 + (Number(offer.company.price_per_fan) / maxPrice) * 0.5;
-    // Equipos con alta reputación son más exigentes
     if (offer.team.reputation > 70) prob *= 0.8;
 
     const accept = Math.random() < prob;
@@ -86,6 +98,8 @@ async function processCpuTeamResponses(season) {
 // Se llama cuando el día avanza de OFFER_WINDOW_END_DAY a OFFER_WINDOW_END_DAY+1.
 async function finalizeContracts(season) {
   const companies = await prisma.broadcastCompany.findMany();
+  // Evita que múltiples empresas firmen al mismo equipo en la misma ronda
+  const signedTeamIds = new Set();
 
   for (const company of companies) {
     const activeCount = await prisma.broadcastContract.count({
@@ -97,11 +111,10 @@ async function finalizeContracts(season) {
     const acceptedOffers = await prisma.broadcastOffer.findMany({
       where: { company_id: company.id, season_id: season.id, status: 'ACCEPTED' },
       include: {
-        team: { select: { fan_base: true, reputation: true } },
+        team: { select: { fan_base: true, reputation: true, is_user_team: true } },
       },
     });
 
-    // Ordenar por score: más fans + buena reputación
     const scored = acceptedOffers.map((offer) => ({
       ...offer,
       score: offer.team.fan_base * (Number(offer.price_per_fan) / Number(company.price_per_fan))
@@ -109,11 +122,11 @@ async function finalizeContracts(season) {
     }));
     scored.sort((a, b) => b.score - a.score);
 
-    const toSign = scored.slice(0, slotsAvailable);
-    const signedTeamIds = new Set();
+    // Filtrar equipos que ya fueron firmados en esta ronda
+    const eligible = scored.filter((o) => !signedTeamIds.has(o.team_id));
+    const toSign = eligible.slice(0, slotsAvailable);
 
     for (const offer of toSign) {
-      // Crear contrato
       await prisma.broadcastContract.create({
         data: {
           company_id: company.id,
@@ -129,11 +142,34 @@ async function finalizeContracts(season) {
         data: { status: 'SIGNED' },
       });
       signedTeamIds.add(offer.team_id);
+
+      // Pago inmediato de la primera temporada cubierta por el contrato
+      const lumpSum = Math.round(offer.team.fan_base * Number(offer.price_per_fan) * GAMES_PER_SEASON);
+      if (lumpSum > 0) {
+        await prisma.team.update({
+          where: { id: offer.team_id },
+          data: { budget: { increment: lumpSum } },
+        });
+
+        if (offer.team.is_user_team) {
+          await prisma.finance.create({
+            data: {
+              team_id: offer.team_id,
+              season_day: season.current_day,
+              type: 'broadcast_revenue',
+              amount: lumpSum,
+              description: `Contrato de transmisión - ${company.name} (temporada actual)`,
+            },
+          });
+        }
+      }
     }
 
     // Expirar las aceptadas no seleccionadas
-    const notSigned = scored.slice(slotsAvailable);
-    for (const offer of notSigned) {
+    const notSigned = eligible.slice(slotsAvailable);
+    // También expirar las filtradas por ya haber firmado con otra empresa
+    const alreadySigned = scored.filter((o) => signedTeamIds.has(o.team_id) && !toSign.includes(o));
+    for (const offer of [...notSigned, ...alreadySigned]) {
       await prisma.broadcastOffer.update({
         where: { id: offer.id },
         data: { status: 'EXPIRED' },
@@ -148,11 +184,7 @@ async function finalizeContracts(season) {
   });
 
   // Para equipos que firmaron contrato, expirar sus demás ofertas pendientes/aceptadas
-  const signedContracts = await prisma.broadcastContract.findMany({
-    where: { signed_season_id: season.id },
-    select: { team_id: true },
-  });
-  const signedTeamIdsList = signedContracts.map((c) => c.team_id);
+  const signedTeamIdsList = [...signedTeamIds];
   if (signedTeamIdsList.length > 0) {
     await prisma.broadcastOffer.updateMany({
       where: {
@@ -165,8 +197,7 @@ async function finalizeContracts(season) {
   }
 }
 
-// Paga ingresos de transmisión a todos los equipos con contrato activo.
-// Se llama al inicio de cada temporada cubierta.
+// Paga ingresos de transmisión a todos los equipos con contrato activo al inicio de cada temporada.
 async function payBroadcastRevenue(season) {
   const contracts = await prisma.broadcastContract.findMany({
     where: { seasons_remaining: { gt: 0 } },
@@ -182,7 +213,6 @@ async function payBroadcastRevenue(season) {
       data: { budget: { increment: lumpSum } },
     });
 
-    // Solo registrar finanza para el equipo del usuario
     const team = await prisma.team.findUnique({
       where: { id: contract.team_id },
       select: { is_user_team: true },

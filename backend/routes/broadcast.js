@@ -47,6 +47,14 @@ router.post('/offers/:id/accept', async (req, res) => {
       return res.status(400).json({ error: 'Ya tienes un contrato de transmisión activo' });
     }
 
+    // Verificar que no haya aceptado ya otra oferta esta temporada
+    const alreadyAccepted = await prisma.broadcastOffer.findFirst({
+      where: { team_id: USER_TEAM_ID, season_id: season.id, status: 'ACCEPTED' },
+    });
+    if (alreadyAccepted) {
+      return res.status(400).json({ error: 'Ya aceptaste una oferta esta temporada. Solo puedes aceptar una.' });
+    }
+
     await prisma.broadcastOffer.update({
       where: { id: offer.id },
       data: { status: 'ACCEPTED' },
