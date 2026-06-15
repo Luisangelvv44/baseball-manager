@@ -53,8 +53,10 @@ export default function Dashboard() {
         navigate(`/game/${result.userGameId}`);
         return;
       }
-      if (result.seasonFinished) {
-        setMessage('¡La temporada ha terminado!');
+      if (result.playoffs) {
+        setMessage('¡La temporada regular terminó! Los playoffs han comenzado.');
+        navigate('/playoffs');
+        return;
       } else if (result.userGameId) {
         setMessage(`Dia ${result.day}. Tienes un partido hoy.`);
         navigate(`/game/${result.userGameId}`);
@@ -110,6 +112,14 @@ export default function Dashboard() {
               Avanzar Dia
             </button>
           )}
+          {season && season.status === 'playoffs' && (
+            <button
+              onClick={() => navigate('/playoffs')}
+              className="bg-yellow-500 text-white px-4 py-2 rounded font-semibold hover:bg-yellow-600"
+            >
+              Ver Playoffs
+            </button>
+          )}
         </div>
       </div>
 
@@ -123,9 +133,15 @@ export default function Dashboard() {
         </div>
       )}
 
-      {season && season.current_day > season.preSeasonDays && (
+      {season && season.status === 'playoffs' && (
+        <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
+          <p className="font-semibold text-yellow-800">¡Temporada regular terminada — Playoffs en curso!</p>
+          <p className="text-yellow-700 text-sm">Temporada {season.year} · Ve a la sección de Playoffs para jugar.</p>
+        </div>
+      )}
+      {season && season.status === 'active' && season.current_day > season.preSeasonDays && (
         <div className="bg-white rounded-lg shadow p-4 text-sm text-gray-600">
-          Temporada {season.year} · Dia {season.current_day - season.preSeasonDays} de {season.total_days - season.preSeasonDays} · Estado: {season.status}
+          Temporada {season.year} · Dia {season.current_day - season.preSeasonDays} de {season.total_days - season.preSeasonDays}
         </div>
       )}
 

@@ -43,6 +43,9 @@ model Team {
   auction_bids        AuctionBid[]
   broadcast_offers    BroadcastOffer[]
   broadcast_contracts BroadcastContract[]
+  playoff_home        PlayoffSeries[]     @relation("PlayoffHome")
+  playoff_away        PlayoffSeries[]     @relation("PlayoffAway")
+  playoff_won         PlayoffSeries[]     @relation("PlayoffWinner")
 }
 
 model Player {
@@ -81,28 +84,53 @@ model Season {
   auctions            FreeAgentAuction[]
   broadcast_offers    BroadcastOffer[]
   broadcast_contracts BroadcastContract[]
+  playoff_series      PlayoffSeries[]
 }
 
 
 model GameSchedule {
-  id           Int     @id @default(autoincrement())
-  season_id    Int?
-  day_number   Int
-  home_team_id Int?
-  away_team_id Int?
-  home_score   Int?
-  away_score   Int?
-  status       String  @default("scheduled") @db.VarChar(20)
-  is_user_game Boolean @default(false)
+  id                Int     @id @default(autoincrement())
+  season_id         Int?
+  day_number        Int
+  home_team_id      Int?
+  away_team_id      Int?
+  home_score        Int?
+  away_score        Int?
+  status            String  @default("scheduled") @db.VarChar(20)
+  is_user_game      Boolean @default(false)
+  playoff_series_id Int?
 
-  season       Season?     @relation(fields: [season_id], references: [id])
-  home_team    Team?       @relation("HomeTeam", fields: [home_team_id], references: [id])
-  away_team    Team?       @relation("AwayTeam", fields: [away_team_id], references: [id])
-  game_lineups GameLineup[]
-  game_events  GameEvent[]
+  season         Season?       @relation(fields: [season_id], references: [id])
+  home_team      Team?         @relation("HomeTeam", fields: [home_team_id], references: [id])
+  away_team      Team?         @relation("AwayTeam", fields: [away_team_id], references: [id])
+  playoff_series PlayoffSeries? @relation(fields: [playoff_series_id], references: [id])
+  game_lineups   GameLineup[]
+  game_events    GameEvent[]
 
   @@map("schedule")
   @@index([season_id, day_number])
+}
+
+model PlayoffSeries {
+  id           Int    @id @default(autoincrement())
+  season_id    Int
+  round        Int
+  series_order Int
+  home_team_id Int
+  away_team_id Int
+  home_wins    Int    @default(0)
+  away_wins    Int    @default(0)
+  wins_needed  Int    @default(2)
+  status       String @default("active")
+  winner_id    Int?
+
+  season    Season        @relation(fields: [season_id], references: [id])
+  home_team Team          @relation("PlayoffHome", fields: [home_team_id], references: [id])
+  away_team Team          @relation("PlayoffAway", fields: [away_team_id], references: [id])
+  winner    Team?         @relation("PlayoffWinner", fields: [winner_id], references: [id])
+  games     GameSchedule[]
+
+  @@map("playoff_series")
 }
 
 model StadiumSection {

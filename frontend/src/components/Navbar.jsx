@@ -10,6 +10,7 @@ const LINKS = [
   { to: '/scouts', label: 'Scouts' },
   { to: '/finances', label: 'Finanzas' },
   { to: '/broadcast', label: 'Transmisión' },
+  { to: '/playoffs', label: 'Playoffs' },
 ];
 
 export default function Navbar() {

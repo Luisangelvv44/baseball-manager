@@ -5,7 +5,7 @@ const { simulateGame } = require('./gameSimulator');
 // Simula un partido (schedule row), actualiza marcador/standings,
 // y opcionalmente guarda el play-by-play en game_events.
 // Devuelve { homeScore, awayScore, events, homeTeam, awayTeam }
-async function playGame(gameRow, saveEvents = false) {
+async function playGame(gameRow, saveEvents = false, skipStandings = false) {
   const homeLineup = await getLineup(gameRow.home_team_id, gameRow);
   const awayLineup = await getLineup(gameRow.away_team_id, gameRow);
 
@@ -22,9 +22,11 @@ async function playGame(gameRow, saveEvents = false) {
     data: { home_score: result.homeScore, away_score: result.awayScore, status: 'finished' },
   });
 
-  const homeWon = result.homeScore > result.awayScore;
-  await updateStandings(gameRow.home_team_id, result.homeScore, result.awayScore, homeWon);
-  await updateStandings(gameRow.away_team_id, result.awayScore, result.homeScore, !homeWon);
+  if (!skipStandings) {
+    const homeWon = result.homeScore > result.awayScore;
+    await updateStandings(gameRow.home_team_id, result.homeScore, result.awayScore, homeWon);
+    await updateStandings(gameRow.away_team_id, result.awayScore, result.homeScore, !homeWon);
+  }
 
   if (saveEvents) {
     await prisma.gameEvent.createMany({

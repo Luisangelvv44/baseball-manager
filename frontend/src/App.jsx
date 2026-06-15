@@ -11,6 +11,7 @@ import GameView from './pages/GameView.jsx';
 import Schedule from './pages/Schedule.jsx';
 import Lineup from './pages/Lineup.jsx';
 import Broadcast from './pages/Broadcast.jsx';
+import Playoffs from './pages/Playoffs.jsx';
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/lineup" element={<Lineup />} />
           <Route path="/broadcast" element={<Broadcast />} />
+          <Route path="/playoffs" element={<Playoffs />} />
           <Route path="/game/:id" element={<GameView />} />
         </Routes>
       </div>

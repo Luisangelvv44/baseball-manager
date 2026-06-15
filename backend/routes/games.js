@@ -4,6 +4,7 @@ const prisma = require('../db/prisma');
 const { USER_TEAM_ID } = require('../config');
 const { playGame } = require('../services/gamePlay');
 const { computeHomeGameRevenue, computeAwayGameRevenue } = require('../services/economy');
+const { updateSeriesAfterGame } = require('../services/playoffService');
 
 // GET /api/games/:id -> info basica del partido + eventos guardados (si ya se jugo)
 router.get('/:id', async (req, res) => {
@@ -36,9 +37,10 @@ router.post('/:id/simulate', async (req, res) => {
       return res.status(400).json({ error: 'Este partido ya fue jugado' });
     }
 
+    const isPlayoff = !!game.playoff_series_id;
     let result;
     try {
-      result = await playGame(game, true);
+      result = await playGame(game, true, isPlayoff);
     } catch (err) {
       if (err.code === 'ROSTER_INCOMPLETO') {
         return res.status(400).json({
@@ -64,7 +66,7 @@ router.post('/:id/simulate', async (req, res) => {
         data: { budget: { increment: economy.total } },
       });
 
-      const season = await prisma.season.findFirst({ where: { status: 'active' } });
+      const season = await prisma.season.findFirst({ where: { status: { in: ['active', 'playoffs'] } } });
       const day = season?.current_day ?? 0;
 
       if (economy.ticketRevenue > 0) {
@@ -108,7 +110,7 @@ router.post('/:id/simulate', async (req, res) => {
         data: { budget: { increment: economy.total } },
       });
 
-      const season = await prisma.season.findFirst({ where: { status: 'active' } });
+      const season = await prisma.season.findFirst({ where: { status: { in: ['active', 'playoffs'] } } });
       const day = season?.current_day ?? 0;
 
       await prisma.finance.create({
@@ -122,6 +124,10 @@ router.post('/:id/simulate', async (req, res) => {
       });
     }
 
+    if (isPlayoff) {
+      await updateSeriesAfterGame(game, result);
+    }
+
     res.json({
       homeScore: result.homeScore,
       awayScore: result.awayScore,
@@ -130,6 +136,7 @@ router.post('/:id/simulate', async (req, res) => {
       awayTeam: result.awayTeam,
       isUserHome,
       economy,
+      isPlayoff,
     });
   } catch (err) {
     console.error(err);

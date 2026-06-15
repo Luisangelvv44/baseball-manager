@@ -19,12 +19,13 @@ const {
   OFFER_WINDOW_END_DAY,
 } = require('../services/broadcastService');
 const { calculateSalary, generatePlayer } = require('../seeders/generators/playerGenerator');
+const { generatePlayoffBracket } = require('../services/playoffService');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
   try {
     const season = await prisma.season.findFirst({
-      where: { status: 'active' },
+      where: { status: { in: ['active', 'playoffs'] } },
       orderBy: { id: 'desc' },
     });
     res.json(season ? { ...season, preSeasonDays: PRE_SEASON_DAYS } : null);
@@ -37,9 +38,11 @@ router.get('/', async (req, res) => {
 // POST /api/season/start -> genera el calendario (round-robin simple) y crea la temporada
 router.post('/start', async (req, res) => {
   try {
-    const existing = await prisma.season.findFirst({ where: { status: 'active' } });
+    const existing = await prisma.season.findFirst({
+      where: { status: { in: ['active', 'playoffs'] } },
+    });
     if (existing) {
-      return res.status(400).json({ error: 'Ya hay una temporada activa' });
+      return res.status(400).json({ error: 'Ya hay una temporada activa o playoffs en curso' });
     }
 
     const teams = await prisma.team.findMany({
@@ -182,12 +185,14 @@ router.post('/advance-day', async (req, res) => {
       where: { id: season.id },
       data: {
         current_day: finished ? season.total_days : newDay,
-        status: finished ? 'finished' : 'active',
+        status: finished ? 'playoffs' : 'active',
       },
     });
 
     let expiredContracts = 0;
     if (finished) {
+      // Generate playoff bracket before resetting standings
+      await generatePlayoffBracket(season.id);
       // Descontar un año de contrato a todos los jugadores activos
       await prisma.player.updateMany({
         where: { status: 'active' },
@@ -331,7 +336,8 @@ router.post('/advance-day', async (req, res) => {
       advanced: true,
       simulated,
       day: finished ? season.total_days : newDay,
-      seasonFinished: finished,
+      seasonFinished: false,
+      playoffs: finished,
       expiredContracts,
       auctionsClosed,
       userGameId: userGameToday ? userGameToday.id : null,
@@ -345,7 +351,9 @@ router.post('/advance-day', async (req, res) => {
 // GET /api/season/schedule -> calendario completo de la temporada activa
 router.get('/schedule', async (req, res) => {
   try {
-    const season = await prisma.season.findFirst({ where: { status: 'active' } });
+    const season = await prisma.season.findFirst({
+      where: { status: { in: ['active', 'playoffs'] } },
+    });
     if (!season) return res.json([]);
     const games = await prisma.gameSchedule.findMany({
       where: { season_id: season.id },

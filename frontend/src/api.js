@@ -68,6 +68,12 @@ export const api = {
   placeBid: (id, amount) =>
     request(`/auctions/${id}/bid`, { method: 'POST', body: JSON.stringify({ amount }) }),
 
+  // Playoffs
+  getPlayoffs: () => request('/playoffs'),
+  simulatePlayoffGame: (seriesId) => request(`/playoffs/simulate-game/${seriesId}`, { method: 'POST' }),
+  simulatePlayoffRound: () => request('/playoffs/simulate-round', { method: 'POST' }),
+  advancePlayoffRound: () => request('/playoffs/advance-round', { method: 'POST' }),
+
   // Transmisión
   getBroadcastOffers: () => request('/broadcast/offers'),
   acceptOffer: (id) => request(`/broadcast/offers/${id}/accept`, { method: 'POST' }),

@@ -17,6 +17,7 @@ app.use('/api/scouts', require('./routes/scouts'));
 app.use('/api/auctions', require('./routes/auctions'));
 app.use('/api/lineup', require('./routes/lineup'));
 app.use('/api/broadcast', require('./routes/broadcast'));
+app.use('/api/playoffs', require('./routes/playoffs'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
