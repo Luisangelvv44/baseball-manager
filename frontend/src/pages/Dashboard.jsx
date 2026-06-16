@@ -54,8 +54,8 @@ export default function Dashboard() {
         return;
       }
       if (result.seasonFinished) {
-        setMessage('¡La temporada ha terminado! Ya hay un campeón.');
-        navigate('/playoffs');
+        setMessage('¡La temporada ha terminado! Toca hacer el Draft anual.');
+        navigate('/draft');
         return;
       }
       if (result.playoffs) {
@@ -99,7 +99,7 @@ export default function Dashboard() {
         </div>
 
         <div className="flex gap-2">
-          {!season && (
+          {(!season || season.status === 'completed') && (
             <button
               onClick={handleStartSeason}
               disabled={loading}
@@ -125,6 +125,14 @@ export default function Dashboard() {
               Ver Playoffs
             </button>
           )}
+          {season && season.status === 'draft' && (
+            <button
+              onClick={() => navigate('/draft')}
+              className="bg-purple-600 text-white px-4 py-2 rounded font-semibold hover:bg-purple-700"
+            >
+              Ir al Draft
+            </button>
+          )}
         </div>
       </div>
 
@@ -147,6 +155,20 @@ export default function Dashboard() {
       {season && season.status === 'active' && season.current_day > season.preSeasonDays && (
         <div className="bg-white rounded-lg shadow p-4 text-sm text-gray-600">
           Temporada {season.year} · Dia {season.current_day - season.preSeasonDays} de {season.total_days - season.preSeasonDays}
+        </div>
+      )}
+      {season && season.status === 'draft' && (
+        <div className="bg-purple-50 border border-purple-300 rounded-lg p-4">
+          <p className="font-semibold text-purple-800">Draft Anual — Temporada {season.year}</p>
+          <p className="text-purple-700 text-sm">
+            Los playoffs terminaron. Cada equipo elige un prospecto en orden inverso de la tabla. Ve al Draft para tu pick.
+          </p>
+        </div>
+      )}
+      {season && season.status === 'completed' && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <p className="font-semibold text-gray-700">Temporada {season.year} completada</p>
+          <p className="text-gray-500 text-sm">El draft terminó. Puedes iniciar la siguiente temporada.</p>
         </div>
       )}
 

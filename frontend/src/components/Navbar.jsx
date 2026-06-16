@@ -8,9 +8,11 @@ const LINKS = [
   { to: '/market', label: 'Mercado' },
   { to: '/stadium', label: 'Estadio' },
   { to: '/scouts', label: 'Scouts' },
+  { to: '/coaches', label: 'Coaches' },
   { to: '/finances', label: 'Finanzas' },
   { to: '/broadcast', label: 'Transmisión' },
   { to: '/playoffs', label: 'Playoffs' },
+  { to: '/draft', label: 'Draft' },
 ];
 
 export default function Navbar() {

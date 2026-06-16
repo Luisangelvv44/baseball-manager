@@ -18,6 +18,8 @@ app.use('/api/auctions', require('./routes/auctions'));
 app.use('/api/lineup', require('./routes/lineup'));
 app.use('/api/broadcast', require('./routes/broadcast'));
 app.use('/api/playoffs', require('./routes/playoffs'));
+app.use('/api/coaches', require('./routes/coaches'));
+app.use('/api/draft', require('./routes/draft'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

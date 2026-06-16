@@ -33,6 +33,7 @@ model Team {
   players             Player[]
   finances            Finance[]
   scouts              Scout[]
+  coaches             Coach[]
   stadium_sections    StadiumSection[]
   home_games          GameSchedule[]     @relation("HomeTeam")
   away_games          GameSchedule[]     @relation("AwayTeam")
@@ -64,6 +65,7 @@ model Player {
   status                   String  @default("active") @db.VarChar(20)
 
   team         Team?            @relation(fields: [team_id], references: [id])
+  coach        Coach?
   auctions     FreeAgentAuction[]
   game_lineups GameLineup[]
   team_lineups TeamLineup[]
@@ -85,6 +87,7 @@ model Season {
   broadcast_offers    BroadcastOffer[]
   broadcast_contracts BroadcastContract[]
   playoff_series      PlayoffSeries[]
+  draft               Draft?
 }
 
 
@@ -313,4 +316,51 @@ model BroadcastContract {
 
   @@map("broadcast_contracts")
   @@index([team_id])
+}
+
+model Coach {
+  id                 Int     @id @default(autoincrement())
+  team_id            Int
+  name               String  @db.VarChar(100)
+  specialty          String  @db.VarChar(20)
+  skill_level        Int
+  salary             Int
+  assigned_player_id Int?    @unique
+
+  team            Team    @relation(fields: [team_id], references: [id])
+  assigned_player Player? @relation(fields: [assigned_player_id], references: [id])
+
+  @@map("coaches")
+  @@index([team_id])
+}
+
+model Draft {
+  id           Int             @id @default(autoincrement())
+  season_id    Int             @unique
+  status       String          @default("active") @db.VarChar(20)
+  current_pick Int             @default(1)
+  pick_order   Json
+
+  season    Season          @relation(fields: [season_id], references: [id])
+  prospects DraftProspect[]
+
+  @@map("drafts")
+}
+
+model DraftProspect {
+  id                   Int    @id @default(autoincrement())
+  draft_id             Int
+  name                 String @db.VarChar(100)
+  position             String @db.VarChar(10)
+  age                  Int
+  current_skill        Int
+  potential_coefficient Int
+  growth_age           Int
+  picked_by_team_id    Int?
+  pick_number          Int?
+
+  draft Draft @relation(fields: [draft_id], references: [id])
+
+  @@map("draft_prospects")
+  @@index([draft_id])
 }

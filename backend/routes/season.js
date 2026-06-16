@@ -23,12 +23,14 @@ const { generatePlayoffBracket, updateSeriesAfterGame, advancePlayoffRound } = r
 const { retireOldPlayers } = require('../services/retiredPlayer');
 const { fluctuatePlayerSkills, updatePlayersContracts } = require('../services/playerService');
 const { giveCpuTeamsRevenue } = require('../services/cpuTeamManagement');
+const { applyCoachBonuses, deductCoachSalaries } = require('../services/coachService');
+const { createDraft } = require('../services/draftService');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
   try {
     const season = await prisma.season.findFirst({
-      where: { status: { in: ['active', 'playoffs'] } },
+      where: { status: { in: ['active', 'playoffs', 'draft', 'completed'] } },
       orderBy: { id: 'desc' },
     });
     res.json(season ? { ...season, preSeasonDays: PRE_SEASON_DAYS } : null);
@@ -115,6 +117,9 @@ router.post('/start', async (req, res) => {
       }
     }
 
+    // Cobrar salarios de coaches al inicio de temporada
+    await deductCoachSalaries(1);
+
     const auctionsCreated = await createAuctionsForFreeAgents(null, season);
 
     // Pagar contratos de transmisión vigentes (temporadas siguientes del contrato)
@@ -160,6 +165,7 @@ async function endOfSeasonCleanup(season) {
   await prisma.player.updateMany({ data: { age: { increment: 1 } } });
   await retireOldPlayers();
   await fluctuatePlayerSkills();
+  await applyCoachBonuses();
   await giveCpuTeamsRevenue();
 
   const CPU_TARGET_ROSTER = 16;
@@ -199,6 +205,10 @@ async function endOfSeasonCleanup(season) {
   const updatedSeason = await prisma.season.findUnique({ where: { id: season.id } });
   await createAuctionsForFreeAgents(null, updatedSeason);
 
+  // Create annual draft and switch season to 'draft' phase
+  await createDraft(season.id);
+  await prisma.season.update({ where: { id: season.id }, data: { status: 'draft' } });
+
   return expired.count;
 }
 
@@ -207,7 +217,7 @@ async function endOfSeasonCleanup(season) {
 // Durante playoffs: simula el siguiente partido de cada serie CPU activa y avanza la ronda si corresponde.
 router.post('/advance-day', async (req, res) => {
   try {
-    const season = await prisma.season.findFirst({ where: { status: { in: ['active', 'playoffs'] } } });
+    const season = await prisma.season.findFirst({ where: { status: { in: ['active', 'playoffs'] } }, orderBy: { id: 'desc' } });
     if (!season) return res.status(400).json({ error: 'No hay temporada activa' });
     const day = season.current_day;
 

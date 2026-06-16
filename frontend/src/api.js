@@ -74,6 +74,18 @@ export const api = {
   simulatePlayoffRound: () => request('/playoffs/simulate-round', { method: 'POST' }),
   advancePlayoffRound: () => request('/playoffs/advance-round', { method: 'POST' }),
 
+  // Coaches
+  getCoaches: () => request('/coaches'),
+  hireCoach: () => request('/coaches/hire', { method: 'POST' }),
+  assignCoach: (id, playerId) =>
+    request(`/coaches/${id}/assign`, { method: 'POST', body: JSON.stringify({ playerId }) }),
+  fireCoach: (id) => request(`/coaches/${id}/fire`, { method: 'DELETE' }),
+
+  // Draft
+  getDraft: () => request('/draft/current'),
+  advanceDraftPick: () => request('/draft/advance', { method: 'POST' }),
+  draftPick: (prospectId) => request('/draft/pick', { method: 'POST', body: JSON.stringify({ prospectId }) }),
+
   // Transmisión
   getBroadcastOffers: () => request('/broadcast/offers'),
   acceptOffer: (id) => request(`/broadcast/offers/${id}/accept`, { method: 'POST' }),
