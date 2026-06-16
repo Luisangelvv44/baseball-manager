@@ -67,7 +67,7 @@ async function updateStandings(teamId, runsFor, runsAgainst, won) {
   const repMult = 0.75 + 0.5 * (team.reputation / 100);
   const change = won
     ? Math.round(Math.random() * 20000 * repMult)
-    : -Math.round(Math.random() * 2000 / repMult);
+    : -Math.round(Math.random() * 5000 / repMult);
   const newFanBase = Math.max(0, team.fan_base + change);
 
   await prisma.team.update({

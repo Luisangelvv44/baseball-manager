@@ -20,6 +20,9 @@ const {
 } = require('../services/broadcastService');
 const { calculateSalary, generatePlayer } = require('../seeders/generators/playerGenerator');
 const { generatePlayoffBracket } = require('../services/playoffService');
+const { retireOldPlayers } = require('../services/retiredPlayer');
+const { fluctuatePlayerSkills, updatePlayersContracts } = require('../services/playerService');
+const { giveCpuTeamsRevenue } = require('../services/cpuTeamManagement');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
@@ -191,13 +194,12 @@ router.post('/advance-day', async (req, res) => {
 
     let expiredContracts = 0;
     if (finished) {
+      
       // Generate playoff bracket before resetting standings
       await generatePlayoffBracket(season.id);
+
       // Descontar un año de contrato a todos los jugadores activos
-      await prisma.player.updateMany({
-        where: { status: 'active' },
-        data: { contract_years_remaining: { decrement: 1 } },
-      });
+      await updatePlayersContracts();
 
       // Restaurar salario de mercado a contratos rookie que expiran antes de liberarlos
       const expiringRookies = await prisma.player.findMany({
@@ -230,25 +232,13 @@ router.post('/advance-day', async (req, res) => {
       });
 
       // Eliminar agentes libres con 40+ años (no pueden ser contratados)
-      await prisma.player.deleteMany({
-        where: { status: 'free_agent', age: { gte: 40 } },
-      });
+      await retireOldPlayers();
 
       // Crecimiento/declive de skills al finalizar temporada
-      const allPlayers = await prisma.player.findMany({
-        where: { status: { in: ['active', 'free_agent'] } },
-        select: { id: true, age: true, current_skill: true, growth_age: true, potential_coefficient: true },
-      });
-      for (const p of allPlayers) {
-        const delta = p.age < p.growth_age
-          ? Math.round(p.potential_coefficient * 0.5)
-          : -Math.round(p.potential_coefficient * 0.3);
-        const newSkill = Math.min(99, p.current_skill + delta);
-        await prisma.player.update({
-          where: { id: p.id },
-          data: { current_skill: newSkill },
-        });
-      }
+      await fluctuatePlayerSkills();
+
+      // Ingresos de fin de temporada para equipos CPU según su fan_base
+      await giveCpuTeamsRevenue();
 
       // Gestion de plantilla CPU: recorte + relleno con contratos rookie
       const CPU_TARGET_ROSTER = 16;
@@ -299,22 +289,6 @@ router.post('/advance-day', async (req, res) => {
               contract_years_remaining: Math.floor(Math.random() * 3) + 1,
               rookie_contract: true,
             },
-          });
-        }
-      }
-
-      // Ingresos de fin de temporada para equipos CPU según su fan_base
-      const cpuTeamsRevenue = await prisma.team.findMany({
-        where: { is_user_team: false },
-        select: { id: true, fan_base: true },
-      });
-      for (const ct of cpuTeamsRevenue) {
-        const revenuePerFan = Math.floor(Math.random() * 11) + 5; // $5–$15 entero por fan
-        const revenue = ct.fan_base * revenuePerFan;
-        if (revenue > 0) {
-          await prisma.team.update({
-            where: { id: ct.id },
-            data: { budget: { increment: revenue } },
           });
         }
       }
