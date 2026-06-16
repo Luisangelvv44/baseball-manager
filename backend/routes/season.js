@@ -19,7 +19,7 @@ const {
   OFFER_WINDOW_END_DAY,
 } = require('../services/broadcastService');
 const { calculateSalary, generatePlayer } = require('../seeders/generators/playerGenerator');
-const { generatePlayoffBracket } = require('../services/playoffService');
+const { generatePlayoffBracket, updateSeriesAfterGame, advancePlayoffRound } = require('../services/playoffService');
 const { retireOldPlayers } = require('../services/retiredPlayer');
 const { fluctuatePlayerSkills, updatePlayersContracts } = require('../services/playerService');
 const { giveCpuTeamsRevenue } = require('../services/cpuTeamManagement');
@@ -131,15 +131,162 @@ router.post('/start', async (req, res) => {
   }
 });
 
+// All end-of-season mutations — runs only after the playoff champion is crowned
+async function endOfSeasonCleanup(season) {
+  await updatePlayersContracts();
+
+  const expiringRookies = await prisma.player.findMany({
+    where: { status: 'active', rookie_contract: true, contract_years_remaining: { lte: 0 } },
+    select: { id: true, potential_coefficient: true, current_skill: true, age: true },
+  });
+  for (const p of expiringRookies) {
+    const realSalary = calculateSalary(p.potential_coefficient, p.current_skill, p.age);
+    await prisma.player.update({ where: { id: p.id }, data: { salary: realSalary, rookie_contract: false } });
+  }
+
+  const expiringPlayers = await prisma.player.findMany({
+    where: { status: 'active', contract_years_remaining: { lte: 0 } },
+    select: { id: true },
+  });
+  if (expiringPlayers.length > 0) {
+    await prisma.teamLineup.deleteMany({ where: { player_id: { in: expiringPlayers.map((p) => p.id) } } });
+  }
+  const expired = await prisma.player.updateMany({
+    where: { status: 'active', contract_years_remaining: { lte: 0 } },
+    data: { status: 'free_agent', team_id: null },
+  });
+
+  await prisma.team.updateMany({ data: { wins: 0, losses: 0, runs_scored: 0, runs_allowed: 0 } });
+  await prisma.player.updateMany({ data: { age: { increment: 1 } } });
+  await retireOldPlayers();
+  await fluctuatePlayerSkills();
+  await giveCpuTeamsRevenue();
+
+  const CPU_TARGET_ROSTER = 16;
+  const ROOKIE_SLOT_BUFFER = 50000;
+  const cpuTeamsList = await prisma.team.findMany({ where: { is_user_team: false }, select: { id: true, budget: true } });
+  for (const cpuTeam of cpuTeamsList) {
+    const cpuRoster = await prisma.player.findMany({
+      where: { team_id: cpuTeam.id, status: 'active' },
+      orderBy: { salary: 'desc' },
+      select: { id: true, salary: true },
+    });
+    let totalSalary = cpuRoster.reduce((s, p) => s + Number(p.salary), 0);
+    let rosterSize = cpuRoster.length;
+    const budget = Number(cpuTeam.budget);
+    for (const player of cpuRoster) {
+      const buffer = Math.max(0, CPU_TARGET_ROSTER - rosterSize) * ROOKIE_SLOT_BUFFER;
+      if (budget >= totalSalary + buffer) break;
+      await prisma.player.update({ where: { id: player.id }, data: { status: 'free_agent', team_id: null } });
+      totalSalary -= Number(player.salary);
+      rosterSize--;
+    }
+    const slotsToFill = Math.max(0, CPU_TARGET_ROSTER - rosterSize);
+    for (let i = 0; i < slotsToFill; i++) {
+      const rookieAge = Math.floor(Math.random() * 5) + 18;
+      const rookie = generatePlayer({ age: rookieAge });
+      const rookieSalary = Math.max(5000, Math.round(
+        calculateSalary(rookie.potential_coefficient, rookie.current_skill, rookieAge) / 10 / 100
+      ) * 100);
+      await prisma.player.create({
+        data: { ...rookie, team_id: cpuTeam.id, status: 'active', salary: rookieSalary, contract_years_remaining: Math.floor(Math.random() * 3) + 1, rookie_contract: true },
+      });
+    }
+  }
+
+  await decrementContractSeasons();
+  await cancelAllActiveAuctions(null);
+  const updatedSeason = await prisma.season.findUnique({ where: { id: season.id } });
+  await createAuctionsForFreeAgents(null, updatedSeason);
+
+  return expired.count;
+}
+
 // POST /api/season/advance-day
-// Simula automaticamente todos los partidos del dia donde NO participa el usuario,
-// y devuelve si hoy hay partido del usuario por jugar.
+// Durante temporada regular: simula partidos CPU del día actual y avanza al siguiente.
+// Durante playoffs: simula el siguiente partido de cada serie CPU activa y avanza la ronda si corresponde.
 router.post('/advance-day', async (req, res) => {
   try {
-    const season = await prisma.season.findFirst({ where: { status: 'active' } });
+    const season = await prisma.season.findFirst({ where: { status: { in: ['active', 'playoffs'] } } });
     if (!season) return res.status(400).json({ error: 'No hay temporada activa' });
     const day = season.current_day;
 
+    // ---- RAMA PLAYOFFS ----
+    if (season.status === 'playoffs') {
+      const pendingUserGame = await prisma.gameSchedule.findFirst({
+        where: { season_id: season.id, is_user_game: true, status: 'scheduled' },
+        orderBy: { id: 'asc' },
+      });
+      if (pendingUserGame) {
+        return res.json({
+          advanced: false,
+          userGameId: pendingUserGame.id,
+          message: 'Debes jugar tu partido de playoffs antes de avanzar',
+          day,
+          inPlayoffs: true,
+        });
+      }
+
+      const activeSeries = await prisma.playoffSeries.findMany({
+        where: { season_id: season.id, status: 'active' },
+        include: { games: { where: { status: 'scheduled' }, orderBy: { id: 'asc' }, take: 1 } },
+      });
+
+      let simulated = 0;
+      for (const s of activeSeries) {
+        if (s.home_team_id === USER_TEAM_ID || s.away_team_id === USER_TEAM_ID) continue;
+        const nextGameRef = s.games[0];
+        if (!nextGameRef) continue;
+        const nextGame = await prisma.gameSchedule.findUnique({ where: { id: nextGameRef.id } });
+        try {
+          const result = await playGame(nextGame, false, true);
+          await updateSeriesAfterGame(nextGame, result);
+          simulated++;
+        } catch (err) {
+          if (err.code === 'ROSTER_INCOMPLETO') {
+            await prisma.gameSchedule.update({
+              where: { id: nextGame.id },
+              data: { home_score: 9, away_score: 0, status: 'finished' },
+            });
+            await updateSeriesAfterGame(nextGame, { homeScore: 9, awayScore: 0 });
+            simulated++;
+          } else {
+            throw err;
+          }
+        }
+      }
+
+      const playoffAdvance = await advancePlayoffRound(season.id);
+      const isSeasonOver = playoffAdvance.champion === true;
+
+      let expiredContracts = 0;
+      if (isSeasonOver) {
+        expiredContracts = await endOfSeasonCleanup(season);
+      } else {
+        await prisma.season.update({ where: { id: season.id }, data: { current_day: day + 1 } });
+      }
+
+      let nextUserGameId = null;
+      if (!isSeasonOver) {
+        const nextUserGame = await prisma.gameSchedule.findFirst({
+          where: { season_id: season.id, is_user_game: true, status: 'scheduled' },
+          orderBy: { id: 'asc' },
+        });
+        nextUserGameId = nextUserGame?.id ?? null;
+      }
+
+      return res.json({
+        advanced: true,
+        simulated,
+        day: isSeasonOver ? day : day + 1,
+        seasonFinished: isSeasonOver,
+        inPlayoffs: true,
+        expiredContracts,
+        userGameId: nextUserGameId,
+      });
+    }
+
+    // ---- RAMA TEMPORADA REGULAR ----
     const games = await prisma.gameSchedule.findMany({
       where: { season_id: season.id, day_number: day },
     });
@@ -154,7 +301,6 @@ router.post('/advance-day', async (req, res) => {
       });
     }
 
-    // Simular partidos CPU vs CPU pendientes de hoy
     let simulated = 0;
     for (const g of games) {
       if (g.status !== 'scheduled') continue;
@@ -176,7 +322,6 @@ router.post('/advance-day', async (req, res) => {
     await runCpuBidding(null, season);
     const auctionsClosed = await closeExpiredAuctions(null, season);
 
-    // Finalizar negociaciones de transmisión al cruzar el día 3
     if (day === OFFER_WINDOW_END_DAY) {
       await finalizeContracts(season);
     }
@@ -192,111 +337,8 @@ router.post('/advance-day', async (req, res) => {
       },
     });
 
-    let expiredContracts = 0;
     if (finished) {
-      
-      // Generate playoff bracket before resetting standings
       await generatePlayoffBracket(season.id);
-
-      // Descontar un año de contrato a todos los jugadores activos
-      await updatePlayersContracts();
-
-      // Restaurar salario de mercado a contratos rookie que expiran antes de liberarlos
-      const expiringRookies = await prisma.player.findMany({
-        where: { status: 'active', rookie_contract: true, contract_years_remaining: { lte: 0 } },
-        select: { id: true, potential_coefficient: true, current_skill: true, age: true },
-      });
-      for (const p of expiringRookies) {
-        const realSalary = calculateSalary(p.potential_coefficient, p.current_skill, p.age);
-        await prisma.player.update({
-          where: { id: p.id },
-          data: { salary: realSalary, rookie_contract: false },
-        });
-      }
-
-      // Los contratos expirados pasan a agentes libres
-      const expired = await prisma.player.updateMany({
-        where: { status: 'active', contract_years_remaining: { lte: 0 } },
-        data: { status: 'free_agent', team_id: null },
-      });
-      expiredContracts = expired.count;
-
-      // Resetear standings de todos los equipos
-      await prisma.team.updateMany({
-        data: { wins: 0, losses: 0, runs_scored: 0, runs_allowed: 0 },
-      });
-
-      // Envejecer a todos los jugadores un año
-      await prisma.player.updateMany({
-        data: { age: { increment: 1 } },
-      });
-
-      // Eliminar agentes libres con 40+ años (no pueden ser contratados)
-      await retireOldPlayers();
-
-      // Crecimiento/declive de skills al finalizar temporada
-      await fluctuatePlayerSkills();
-
-      // Ingresos de fin de temporada para equipos CPU según su fan_base
-      await giveCpuTeamsRevenue();
-
-      // Gestion de plantilla CPU: recorte + relleno con contratos rookie
-      const CPU_TARGET_ROSTER = 16;
-      const ROOKIE_SLOT_BUFFER = 50000;
-
-      const cpuTeamsList = await prisma.team.findMany({
-        where: { is_user_team: false },
-        select: { id: true, budget: true },
-      });
-
-      for (const cpuTeam of cpuTeamsList) {
-        // Recorte: liberar jugadores (mayor salario primero) hasta cubrir nómina + margen
-        const cpuRoster = await prisma.player.findMany({
-          where: { team_id: cpuTeam.id, status: 'active' },
-          orderBy: { salary: 'desc' },
-          select: { id: true, salary: true },
-        });
-
-        let totalSalary = cpuRoster.reduce((s, p) => s + Number(p.salary), 0);
-        let rosterSize = cpuRoster.length;
-        const budget = Number(cpuTeam.budget);
-
-        for (const player of cpuRoster) {
-          const buffer = Math.max(0, CPU_TARGET_ROSTER - rosterSize) * ROOKIE_SLOT_BUFFER;
-          if (budget >= totalSalary + buffer) break;
-          await prisma.player.update({
-            where: { id: player.id },
-            data: { status: 'free_agent', team_id: null },
-          });
-          totalSalary -= Number(player.salary);
-          rosterSize--;
-        }
-
-        // Relleno rookie: generar jugadores jóvenes nuevos para cubrir huecos de roster
-        const slotsToFill = Math.max(0, CPU_TARGET_ROSTER - rosterSize);
-        for (let i = 0; i < slotsToFill; i++) {
-          const rookieAge = Math.floor(Math.random() * 5) + 18; // 18–22 años
-          const rookie = generatePlayer({ age: rookieAge });
-          const rookieSalary = Math.max(5000, Math.round(
-            calculateSalary(rookie.potential_coefficient, rookie.current_skill, rookieAge) / 10 / 100
-          ) * 100);
-          await prisma.player.create({
-            data: {
-              ...rookie,
-              team_id: cpuTeam.id,
-              status: 'active',
-              salary: rookieSalary,
-              contract_years_remaining: Math.floor(Math.random() * 3) + 1,
-              rookie_contract: true,
-            },
-          });
-        }
-      }
-
-      await decrementContractSeasons();
-      await cancelAllActiveAuctions(null);
-      const updatedSeason = await prisma.season.findUnique({ where: { id: season.id } });
-      await createAuctionsForFreeAgents(null, updatedSeason);
     }
 
     let userGameToday = null;
@@ -312,7 +354,6 @@ router.post('/advance-day', async (req, res) => {
       day: finished ? season.total_days : newDay,
       seasonFinished: false,
       playoffs: finished,
-      expiredContracts,
       auctionsClosed,
       userGameId: userGameToday ? userGameToday.id : null,
     });

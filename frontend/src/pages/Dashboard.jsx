@@ -53,17 +53,22 @@ export default function Dashboard() {
         navigate(`/game/${result.userGameId}`);
         return;
       }
+      if (result.seasonFinished) {
+        setMessage('¡La temporada ha terminado! Ya hay un campeón.');
+        navigate('/playoffs');
+        return;
+      }
       if (result.playoffs) {
         setMessage('¡La temporada regular terminó! Los playoffs han comenzado.');
         navigate('/playoffs');
         return;
-      } else if (result.userGameId) {
-        setMessage(`Dia ${result.day}. Tienes un partido hoy.`);
+      }
+      if (result.userGameId) {
+        setMessage(`Dia ${result.day}. Tienes un partido${result.inPlayoffs ? ' de playoffs' : ''} hoy.`);
         navigate(`/game/${result.userGameId}`);
         return;
-      } else {
-        setMessage(`Dia ${result.day}. Sin partido hoy. Se simularon ${result.simulated} partidos.`);
       }
+      setMessage(`Dia ${result.day}. Sin partido hoy. Se simularon ${result.simulated} partidos.`);
       await loadAll();
     } catch (err) {
       setMessage(err.message);
@@ -103,7 +108,7 @@ export default function Dashboard() {
               Iniciar Temporada
             </button>
           )}
-          {season && season.status === 'active' && (
+          {season && (season.status === 'active' || season.status === 'playoffs') && (
             <button
               onClick={handleAdvanceDay}
               disabled={loading}
