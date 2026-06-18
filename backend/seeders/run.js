@@ -1,5 +1,5 @@
 const prisma = require('../db/prisma');
-const { generateRoster, generatePlayer } = require('./generators/playerGenerator');
+const { generateRoster, generatePlayer, POSITIONS } = require('./generators/playerGenerator');
 const { generateTeamNames } = require('./generators/teamGenerator');
 const { generateStadiumSections } = require('./generators/stadiumGenerator');
 
@@ -74,9 +74,12 @@ async function seed() {
 
       // ---------- Agentes libres ----------
       console.log('Generando agentes libres...');
-      const freeAgents = Array.from({ length: 100 }, () =>
-        generatePlayer({ status: 'free_agent' })
-      );
+      const freeAgents = [];
+      for (const pos of POSITIONS) {
+        for (let i = 0; i < 10; i++) {
+          freeAgents.push(generatePlayer({ status: 'free_agent', position: pos }));
+        }
+      }
       await tx.player.createMany({ data: freeAgents });
 
       // ---------- Empresas de transmisión ----------
