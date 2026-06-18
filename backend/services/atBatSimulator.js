@@ -4,11 +4,11 @@ const BASE_PROBABILITIES = {
   SO: 0.23,   // strikeout - muy probable
   GO: 0.16,   // groundout
   FO: 0.14,   // flyout
-  '1B': 0.13, // hit sencillo
+  '1B': 0.16, // hit sencillo
   BB: 0.09,   // base por bolas
   '2B': 0.05, // doble
-  HR: 0.04,   // jonron
-  '3B': 0.01, // triple
+  HR: 0.03,   // jonron
+  '3B': 0.005, // triple
 };
 
 function simulateAtBat(batterSkill, pitcherSkill) {
