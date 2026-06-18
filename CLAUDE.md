@@ -26,6 +26,10 @@ npx prisma studio         # GUI for DB inspection
 
 No test suite is configured.
 
+## UI Verification
+
+Do not run Playwright, take screenshots, or launch browsers to verify frontend changes. The user handles all visual UI verification themselves.
+
 ## Architecture
 
 Full-stack baseball management game: Express REST API + React SPA + PostgreSQL via Prisma.
