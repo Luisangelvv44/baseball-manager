@@ -1,13 +1,104 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 
+function StatsModal({ player, stats, onClose }) {
+  const isPitcher = player.position === 'P';
+  const b = stats?.batting;
+  const p = stats?.pitching;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold">
+            {player.first_name} {player.last_name}
+            <span className="ml-2 text-sm font-normal text-gray-500">{player.position}</span>
+          </h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+
+        {isPitcher && p ? (
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Lanzamiento</p>
+            <div className="grid grid-cols-4 gap-2 text-center">
+              {[
+                ['G', p.g],
+                ['W-L', `${p.w}-${p.l}`],
+                ['IP', p.ip],
+                ['ERA', p.era ?? '—'],
+                ['SO', p.so],
+                ['BB', p.bb],
+                ['WHIP', p.whip ?? '—'],
+              ].map(([label, value]) => (
+                <div key={label} className="bg-gray-50 rounded p-2">
+                  <p className="text-xs text-gray-400">{label}</p>
+                  <p className="font-bold text-sm">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Bateo</p>
+            <div className="grid grid-cols-4 gap-2 text-center">
+              {[
+                ['G', b?.g ?? 0],
+                ['AB', b?.ab ?? 0],
+                ['H', b?.h ?? 0],
+                ['AVG', b?.avg ? `.${b.avg.slice(2)}` : '—'],
+                ['HR', b?.hr ?? 0],
+                ['RBI', b?.rbi ?? 0],
+                ['BB', b?.bb ?? 0],
+                ['SO', b?.so ?? 0],
+              ].map(([label, value]) => (
+                <div key={label} className="bg-gray-50 rounded p-2">
+                  <p className="text-xs text-gray-400">{label}</p>
+                  <p className="font-bold text-sm">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {isPitcher && b && b.ab > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Bateo</p>
+            <div className="grid grid-cols-4 gap-2 text-center">
+              {[
+                ['G', b.g],
+                ['AB', b.ab],
+                ['AVG', b.avg ? `.${b.avg.slice(2)}` : '—'],
+                ['HR', b.hr],
+              ].map(([label, value]) => (
+                <div key={label} className="bg-gray-50 rounded p-2">
+                  <p className="text-xs text-gray-400">{label}</p>
+                  <p className="font-bold text-sm">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={onClose}
+          className="w-full px-4 py-2 text-sm border rounded hover:bg-gray-50"
+        >
+          Cerrar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Roster() {
   const [team, setTeam] = useState(null);
   const [players, setPlayers] = useState([]);
+  const [statsMap, setStatsMap] = useState({});
   const [renewingPlayer, setRenewingPlayer] = useState(null);
   const [renewSalary, setRenewSalary] = useState('');
   const [renewYears, setRenewYears] = useState('');
   const [renewError, setRenewError] = useState('');
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
 
   const loadRoster = () => {
     api.getMyTeam().then((data) => {
@@ -16,11 +107,21 @@ export default function Roster() {
     });
   };
 
+  const loadStats = () => {
+    api.getTeamStats().then((data) => {
+      const map = {};
+      for (const s of data.stats) map[s.player_id] = s;
+      setStatsMap(map);
+    }).catch(() => {});
+  };
+
   useEffect(() => {
     loadRoster();
+    loadStats();
   }, []);
 
-  const openRenew = (player) => {
+  const openRenew = (e, player) => {
+    e.stopPropagation();
     setRenewingPlayer(player);
     setRenewSalary('');
     setRenewYears('');
@@ -54,6 +155,15 @@ export default function Roster() {
     }
   };
 
+  const getStatSummary = (player) => {
+    const s = statsMap[player.id];
+    if (!s) return '—';
+    if (player.position === 'P' && s.pitching) {
+      return s.pitching.era ? `${s.pitching.era} ERA` : '—';
+    }
+    return s.batting?.avg ? `.${s.batting.avg.slice(2)}` : '—';
+  };
+
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-bold">Tu Roster</h2>
@@ -80,13 +190,18 @@ export default function Roster() {
                 <th className="p-2">Edad de uso</th>
                 <th className="p-2">Salario</th>
                 <th className="p-2">Contrato (años)</th>
+                <th className="p-2">Stats</th>
                 <th className="p-2">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {players.map((p) => (
-                <tr key={p.id} className="border-t">
-                  <td className="p-2 font-medium">{p.first_name} {p.last_name}</td>
+                <tr
+                  key={p.id}
+                  className="border-t hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setSelectedPlayer(p)}
+                >
+                  <td className="p-2 font-medium text-blue-700 hover:underline">{p.first_name} {p.last_name}</td>
                   <td className="p-2">{p.position}</td>
                   <td className="p-2">{p.age}</td>
                   <td className="p-2">{p.current_skill}</td>
@@ -94,10 +209,11 @@ export default function Roster() {
                   <td className="p-2">{p.growth_age}</td>
                   <td className="p-2">${Number(p.salary).toLocaleString()}</td>
                   <td className="p-2">{p.contract_years_remaining}</td>
+                  <td className="p-2 font-mono text-xs text-gray-700">{getStatSummary(p)}</td>
                   <td className="p-2">
                     {p.contract_years_remaining <= 2 ? (
                       <button
-                        onClick={() => openRenew(p)}
+                        onClick={(e) => openRenew(e, p)}
                         className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
                       >
                         Renovar
@@ -111,6 +227,14 @@ export default function Roster() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {selectedPlayer && (
+        <StatsModal
+          player={selectedPlayer}
+          stats={statsMap[selectedPlayer.id]}
+          onClose={() => setSelectedPlayer(null)}
+        />
       )}
 
       {renewingPlayer && (

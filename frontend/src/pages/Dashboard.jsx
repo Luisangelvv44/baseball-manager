@@ -9,6 +9,7 @@ export default function Dashboard() {
   const [season, setSeason] = useState(null);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [leaders, setLeaders] = useState(null);
   const navigate = useNavigate();
 
   async function loadAll() {
@@ -23,6 +24,16 @@ export default function Dashboard() {
       setSeason(currentSeason);
     } catch (err) {
       setMessage(err.message);
+    }
+    try {
+      const { stats } = await api.getTeamStats();
+      const batters = stats.filter(s => s.position !== 'P' && s.batting.ab >= 10);
+      const pitchers = stats.filter(s => s.pitching && parseFloat(s.pitching.ip) >= 5);
+      const topBatter = batters.sort((a, b) => parseFloat(b.batting.avg) - parseFloat(a.batting.avg))[0];
+      const topPitcher = pitchers.sort((a, b) => parseFloat(a.pitching.era) - parseFloat(b.pitching.era))[0];
+      setLeaders({ topBatter, topPitcher });
+    } catch {
+      // stats opcionales, no bloquear el resto del Dashboard
     }
   }
 
@@ -174,6 +185,36 @@ export default function Dashboard() {
 
       {message && (
         <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded p-3 text-sm">{message}</div>
+      )}
+
+      {leaders && (leaders.topBatter || leaders.topPitcher) && (
+        <div className="bg-white rounded-lg shadow p-4">
+          <h3 className="font-bold text-base mb-3">Líderes de temporada</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {leaders.topBatter && (
+              <div className="bg-blue-50 rounded p-3">
+                <p className="text-xs text-blue-500 font-semibold uppercase mb-1">Mejor bateador</p>
+                <p className="font-bold text-sm">{leaders.topBatter.first_name} {leaders.topBatter.last_name}</p>
+                <p className="text-2xl font-mono font-bold text-blue-700">
+                  .{leaders.topBatter.batting.avg.slice(2)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {leaders.topBatter.batting.h} H · {leaders.topBatter.batting.hr} HR · {leaders.topBatter.batting.rbi} RBI
+                </p>
+              </div>
+            )}
+            {leaders.topPitcher && (
+              <div className="bg-green-50 rounded p-3">
+                <p className="text-xs text-green-500 font-semibold uppercase mb-1">Mejor lanzador</p>
+                <p className="font-bold text-sm">{leaders.topPitcher.first_name} {leaders.topPitcher.last_name}</p>
+                <p className="text-2xl font-mono font-bold text-green-700">{leaders.topPitcher.pitching.era} ERA</p>
+                <p className="text-xs text-gray-500">
+                  {leaders.topPitcher.pitching.w}-{leaders.topPitcher.pitching.l} · {leaders.topPitcher.pitching.ip} IP · {leaders.topPitcher.pitching.so} SO
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       <div>

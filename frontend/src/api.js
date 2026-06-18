@@ -28,6 +28,8 @@ export const api = {
     request(`/players/${id}/sign`, { method: 'POST', body: JSON.stringify({ years, salary }) }),
   renewContract: (id, salary, years) =>
     request(`/players/${id}/renew`, { method: 'POST', body: JSON.stringify({ salary, years }) }),
+  getTeamStats: () => request('/players/team-stats'),
+  getPlayerStats: (id) => request(`/players/${id}/stats`),
 
   // Estadio
   getStadium: () => request('/stadium'),
