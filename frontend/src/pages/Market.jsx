@@ -177,6 +177,16 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
   );
 }
 
+const POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
+
+const EMPTY_FILTERS = {
+  position: '',
+  minPotential: '', maxPotential: '',
+  minSkill: '', maxSkill: '',
+  minSalary: '', maxSalary: '',
+  minGrowth: '', maxGrowth: '',
+};
+
 export default function Market() {
   const { refreshTeam } = useTeam();
   const [auctions, setAuctions] = useState([]);
@@ -184,6 +194,25 @@ export default function Market() {
   const [scouted, setScouted] = useState([]);
   const [season, setSeason] = useState(null);
   const [message, setMessage] = useState('');
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+
+  function setFilter(key, value) {
+    setFilters(f => ({ ...f, [key]: value }));
+  }
+
+  const filteredAuctions = auctions.filter(a => {
+    const p = a.player;
+    if (filters.position && p.position !== filters.position) return false;
+    if (filters.minPotential !== '' && p.potential_coefficient < +filters.minPotential) return false;
+    if (filters.maxPotential !== '' && p.potential_coefficient > +filters.maxPotential) return false;
+    if (filters.minSkill !== '' && p.current_skill < +filters.minSkill) return false;
+    if (filters.maxSkill !== '' && p.current_skill > +filters.maxSkill) return false;
+    if (filters.minSalary !== '' && Number(p.salary) < +filters.minSalary) return false;
+    if (filters.maxSalary !== '' && Number(p.salary) > +filters.maxSalary) return false;
+    if (filters.minGrowth !== '' && a.growth_coefficient < +filters.minGrowth) return false;
+    if (filters.maxGrowth !== '' && a.growth_coefficient > +filters.maxGrowth) return false;
+    return true;
+  });
 
   async function load() {
     const [aucData, sc, se] = await Promise.all([
@@ -244,13 +273,89 @@ export default function Market() {
           Los equipos CPU también pujan cada día. El temporizador se reinicia 5 días tras la última puja.
           El contrato es de 1 año al precio ganador.
         </p>
+
+        {auctions.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-4 mb-4">
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-500 font-medium whitespace-nowrap">Posición</label>
+                <select
+                  value={filters.position}
+                  onChange={e => setFilter('position', e.target.value)}
+                  className="border rounded px-2 py-1 text-sm"
+                >
+                  <option value="">Todas</option>
+                  {POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
+                </select>
+              </div>
+              <button
+                onClick={() => setFilters(EMPTY_FILTERS)}
+                className="ml-auto text-xs text-gray-500 hover:text-gray-800 underline"
+              >
+                Limpiar filtros
+              </button>
+              <span className="text-xs text-gray-400">{filteredAuctions.length}/{auctions.length} subastas</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Potencial</p>
+                <div className="flex gap-1">
+                  <input type="number" min="1" max="99" placeholder="Mín" value={filters.minPotential}
+                    onChange={e => setFilter('minPotential', e.target.value)}
+                    className="border rounded px-2 py-1 text-xs w-full" />
+                  <input type="number" min="1" max="99" placeholder="Máx" value={filters.maxPotential}
+                    onChange={e => setFilter('maxPotential', e.target.value)}
+                    className="border rounded px-2 py-1 text-xs w-full" />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Destreza</p>
+                <div className="flex gap-1">
+                  <input type="number" min="1" max="99" placeholder="Mín" value={filters.minSkill}
+                    onChange={e => setFilter('minSkill', e.target.value)}
+                    className="border rounded px-2 py-1 text-xs w-full" />
+                  <input type="number" min="1" max="99" placeholder="Máx" value={filters.maxSkill}
+                    onChange={e => setFilter('maxSkill', e.target.value)}
+                    className="border rounded px-2 py-1 text-xs w-full" />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Salario</p>
+                <div className="flex gap-1">
+                  <input type="number" min="0" step="10000" placeholder="Mín" value={filters.minSalary}
+                    onChange={e => setFilter('minSalary', e.target.value)}
+                    className="border rounded px-2 py-1 text-xs w-full" />
+                  <input type="number" min="0" step="10000" placeholder="Máx" value={filters.maxSalary}
+                    onChange={e => setFilter('maxSalary', e.target.value)}
+                    className="border rounded px-2 py-1 text-xs w-full" />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Coef. Crecimiento</p>
+                <div className="flex gap-1">
+                  <input type="number" min="0" step="0.1" placeholder="Mín" value={filters.minGrowth}
+                    onChange={e => setFilter('minGrowth', e.target.value)}
+                    className="border rounded px-2 py-1 text-xs w-full" />
+                  <input type="number" min="0" step="0.1" placeholder="Máx" value={filters.maxGrowth}
+                    onChange={e => setFilter('maxGrowth', e.target.value)}
+                    className="border rounded px-2 py-1 text-xs w-full" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {auctions.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500 text-sm">
             No hay subastas activas. Inicia una temporada para abrir las subastas de agentes libres.
           </div>
+        ) : filteredAuctions.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500 text-sm">
+            Ninguna subasta coincide con los filtros aplicados.
+          </div>
         ) : (
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {auctions.map((a) => (
+            {filteredAuctions.map((a) => (
               <AuctionCard
                 key={a.id}
                 auction={a}
