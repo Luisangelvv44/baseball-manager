@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { useTeam } from '../context/TeamContext.jsx';
 
 const SPECIALTY_LABELS = {
   BATTING: { label: 'Bateo', color: 'bg-amber-100 text-amber-800', desc: '+2-3 skill/año al asignado' },
@@ -10,6 +11,7 @@ const SPECIALTY_LABELS = {
 const MAX_COACHES = 3;
 
 export default function Coaches() {
+  const { refreshTeam } = useTeam();
   const [coaches, setCoaches] = useState([]);
   const [players, setPlayers] = useState([]);
   const [team, setTeam] = useState(null);
@@ -34,7 +36,7 @@ export default function Coaches() {
       setMessage(
         `Coach contratado: ${res.coach.name} — ${SPECIALTY_LABELS[res.coach.specialty]?.label} (nivel ${res.coach.skill_level}). Honorario de contratación: $${res.hiringFee.toLocaleString()}.`
       );
-      await load();
+      await Promise.all([load(), refreshTeam()]);
     } catch (err) {
       setMessage(err.message);
     }
@@ -45,7 +47,7 @@ export default function Coaches() {
     try {
       await api.fireCoach(id);
       setMessage(`${name} ha sido despedido.`);
-      await load();
+      await Promise.all([load(), refreshTeam()]);
     } catch (err) {
       setMessage(err.message);
     }

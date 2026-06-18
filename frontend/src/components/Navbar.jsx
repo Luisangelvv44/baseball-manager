@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import api from '../api';
+import { useTeam } from '../context/TeamContext.jsx';
 
 const LINKS = [
   { to: '/', label: 'Dashboard' },
@@ -19,11 +18,7 @@ const LINKS = [
 
 export default function Navbar() {
   const location = useLocation();
-  const [myTeam, setMyTeam] = useState(null);
-
-  useEffect(() => {
-    api.getMyTeam().then((res) => setMyTeam(res.team)).catch(() => {});
-  }, []);
+  const { myTeam } = useTeam();
 
   const budget = myTeam ? `$${Number(myTeam.budget).toLocaleString()}` : '-';
   const fans = myTeam ? `${(myTeam.fan_base ?? 0).toLocaleString()} fans` : '-';

@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import Leaderboard from '../components/Leaderboard.jsx';
+import { useTeam } from '../context/TeamContext.jsx';
 
 export default function Dashboard() {
+  const { refreshTeam } = useTeam();
   const [myTeam, setMyTeam] = useState(null);
   const [teams, setTeams] = useState([]);
   const [season, setSeason] = useState(null);
@@ -47,7 +49,7 @@ export default function Dashboard() {
     try {
       await api.startSeason();
       setMessage('Temporada iniciada. ¡Mucha suerte!');
-      await loadAll();
+      await Promise.all([loadAll(), refreshTeam()]);
     } catch (err) {
       setMessage(err.message);
     } finally {
@@ -60,6 +62,7 @@ export default function Dashboard() {
     setMessage('');
     try {
       const result = await api.advanceDay();
+      refreshTeam();
       if (!result.advanced && result.userGameId) {
         navigate(`/game/${result.userGameId}`);
         return;

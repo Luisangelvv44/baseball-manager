@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import StadiumGrid from '../components/StadiumGrid.jsx';
 import SectionModal from '../components/SectionModal.jsx';
+import { useTeam } from '../context/TeamContext.jsx';
 
 // Index = current floor count; value = cost to expand to the next floor
 const FLOOR_COSTS = [null, 2_000_000, 4_000_000, 8_000_000];
 
 export default function Stadium() {
+  const { refreshTeam } = useTeam();
   const [sections, setSections] = useState([]);
   const [floors, setFloors] = useState(1);
   const [selected, setSelected] = useState(null);
@@ -38,7 +40,7 @@ export default function Stadium() {
       const res = await api.upgradeSection(id);
       setMessage(`Mejorada a nivel ${res.newLevel}. Costo: $${res.cost.toLocaleString()}.`);
       setSelected(null);
-      await load();
+      await Promise.all([load(), refreshTeam()]);
     } catch (err) {
       setMessage(err.message);
     }
@@ -49,7 +51,7 @@ export default function Stadium() {
       const res = await api.buildSection(id);
       setMessage(`Grada construida. Costo: $${res.cost.toLocaleString()}.`);
       setSelected(null);
-      await load();
+      await Promise.all([load(), refreshTeam()]);
     } catch (err) {
       setMessage(err.message);
     }
@@ -59,7 +61,7 @@ export default function Stadium() {
     try {
       const res = await api.expandStadiumFloor();
       setMessage(`Estadio expandido a planta ${res.newFloors}. Costo: $${res.cost.toLocaleString()}.`);
-      await load();
+      await Promise.all([load(), refreshTeam()]);
     } catch (err) {
       setMessage(err.message);
     }

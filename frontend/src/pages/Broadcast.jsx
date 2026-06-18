@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { useTeam } from '../context/TeamContext.jsx';
 
 const GAMES_PER_SEASON = 30;
 
@@ -8,6 +9,7 @@ function estimatedPay(fanBase, pricePerFan, seasons = 1) {
 }
 
 export default function Broadcast() {
+  const { refreshTeam } = useTeam();
   const [season, setSeason] = useState(null);
   const [myTeam, setMyTeam] = useState(null);
   const [contract, setContract] = useState(null);
@@ -50,7 +52,7 @@ export default function Broadcast() {
     try {
       await api.acceptOffer(id);
       setMessage('Oferta aceptada. Las transmisoras seleccionarán la mejor al cerrar la ventana.');
-      await load();
+      await Promise.all([load(), refreshTeam()]);
     } catch (e) {
       setError(e.message);
     }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
+import { useTeam } from '../context/TeamContext.jsx';
 
 const ROUND_LABELS = { 1: 'Cuartos de Final', 2: 'Semifinales', 3: 'Gran Final' };
 
@@ -73,6 +74,7 @@ function RoundColumn({ round, series, onPlay, disabled }) {
 }
 
 export default function Playoffs() {
+  const { refreshTeam } = useTeam();
   const [series, setSeries] = useState([]);
   const [seasonStatus, setSeasonStatus] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -104,6 +106,7 @@ export default function Playoffs() {
     setMessage('');
     try {
       const result = await api.advanceDay();
+      refreshTeam();
       if (!result.advanced && result.userGameId) {
         navigate(`/game/${result.userGameId}`);
         return;

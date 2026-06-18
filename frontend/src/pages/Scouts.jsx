@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { useTeam } from '../context/TeamContext.jsx';
 
 export default function Scouts() {
+  const { refreshTeam } = useTeam();
   const [scouts, setScouts] = useState([]);
   const [season, setSeason] = useState(null);
   const [budgets, setBudgets] = useState({});
@@ -22,7 +24,7 @@ export default function Scouts() {
     try {
       const res = await api.hireScout();
       setMessage(`Scout contratado: ${res.scout.name} (skill ${res.scout.skill_level}).`);
-      await load();
+      await Promise.all([load(), refreshTeam()]);
     } catch (err) {
       setMessage(err.message);
     }
@@ -38,7 +40,7 @@ export default function Scouts() {
     try {
       const res = await api.assignScout(id, budget);
       setMessage(`Mision asignada. Termina en el dia ${res.missionEndDay}.`);
-      await load();
+      await Promise.all([load(), refreshTeam()]);
     } catch (err) {
       setMessage(err.message);
     }

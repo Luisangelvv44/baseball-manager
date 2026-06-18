@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { useTeam } from '../context/TeamContext.jsx';
 
 function StatsModal({ player, stats, onClose }) {
   const isPitcher = player.position === 'P';
@@ -91,6 +92,7 @@ function StatsModal({ player, stats, onClose }) {
 }
 
 export default function Roster() {
+  const { refreshTeam } = useTeam();
   const [team, setTeam] = useState(null);
   const [players, setPlayers] = useState([]);
   const [statsMap, setStatsMap] = useState({});
@@ -149,7 +151,7 @@ export default function Roster() {
     try {
       await api.renewContract(renewingPlayer.id, salary, years);
       closeRenew();
-      loadRoster();
+      await Promise.all([loadRoster(), refreshTeam()]);
     } catch (err) {
       setRenewError(err.message);
     }

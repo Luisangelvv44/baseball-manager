@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
+import { TeamProvider } from './context/TeamContext.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import NewGame from './pages/NewGame.jsx';
 import Roster from './pages/Roster.jsx';
@@ -17,6 +18,7 @@ import Draft from './pages/Draft.jsx';
 
 export default function App() {
   return (
+    <TeamProvider>
     <div className="min-h-screen bg-gray-100">
       <Navbar />
       <div className="max-w-6xl mx-auto p-4">
@@ -38,5 +40,6 @@ export default function App() {
         </Routes>
       </div>
     </div>
+    </TeamProvider>
   );
 }

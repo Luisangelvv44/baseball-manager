@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { useTeam } from '../context/TeamContext.jsx';
 
 function PlayerTable({ players, onSign, rosterFull }) {
   const [years, setYears] = useState({});
@@ -177,6 +178,7 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
 }
 
 export default function Market() {
+  const { refreshTeam } = useTeam();
   const [auctions, setAuctions] = useState([]);
   const [userRosterCount, setUserRosterCount] = useState(0);
   const [scouted, setScouted] = useState([]);
@@ -204,7 +206,7 @@ export default function Market() {
     try {
       const res = await api.signPlayer(id, years);
       setMessage(`Fichado. Bono de firma: $${res.signingBonus.toLocaleString()}. Nuevo presupuesto: $${res.newBudget.toLocaleString()}`);
-      await load();
+      await Promise.all([load(), refreshTeam()]);
     } catch (err) {
       setMessage(err.message);
     }
@@ -253,7 +255,7 @@ export default function Market() {
                 key={a.id}
                 auction={a}
                 season={season}
-                onBidPlaced={load}
+                onBidPlaced={() => Promise.all([load(), refreshTeam()])}
                 rosterFull={userRosterCount >= 20}
               />
             ))}
