@@ -7,7 +7,10 @@ export default function Scouts() {
   const [scouts, setScouts] = useState([]);
   const [season, setSeason] = useState(null);
   const [budgets, setBudgets] = useState({});
+  const [positions, setPositions] = useState({});
   const [message, setMessage] = useState('');
+
+  const POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
 
   async function load() {
     const [sc, se] = await Promise.all([api.getScouts(), api.getSeason()]);
@@ -36,10 +39,12 @@ export default function Scouts() {
       setMessage('Ingresa un presupuesto valido para la mision.');
       return;
     }
+    const targetPosition = positions[id] || null;
     setMessage('');
     try {
-      const res = await api.assignScout(id, budget);
-      setMessage(`Mision asignada. Termina en el dia ${res.missionEndDay}.`);
+      const res = await api.assignScout(id, budget, targetPosition);
+      const posLabel = targetPosition ? ` buscando ${targetPosition}` : '';
+      setMessage(`Mision asignada${posLabel}. Termina en el dia ${res.missionEndDay}.`);
       await Promise.all([load(), refreshTeam()]);
     } catch (err) {
       setMessage(err.message);
@@ -77,22 +82,34 @@ export default function Scouts() {
               <p className="text-sm text-gray-600 mb-2">Nivel de scout: {s.skill_level}</p>
 
               {!s.active_mission ? (
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    placeholder="Presupuesto mision"
-                    value={budgets[s.id] || ''}
-                    onChange={(e) => setBudgets({ ...budgets, [s.id]: e.target.value })}
-                    className="border rounded px-2 py-1 flex-1"
-                  />
-                  <button onClick={() => handleAssign(s.id)} className="bg-blue-600 text-white rounded px-3 py-1 hover:bg-blue-700">
-                    Enviar
-                  </button>
+                <div className="space-y-2">
+                  <select
+                    value={positions[s.id] || ''}
+                    onChange={(e) => setPositions({ ...positions, [s.id]: e.target.value })}
+                    className="border rounded px-2 py-1 w-full"
+                  >
+                    <option value="">Cualquier posicion</option>
+                    {POSITIONS.map((pos) => (
+                      <option key={pos} value={pos}>{pos}</option>
+                    ))}
+                  </select>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      placeholder="Presupuesto mision"
+                      value={budgets[s.id] || ''}
+                      onChange={(e) => setBudgets({ ...budgets, [s.id]: e.target.value })}
+                      className="border rounded px-2 py-1 flex-1"
+                    />
+                    <button onClick={() => handleAssign(s.id)} className="bg-blue-600 text-white rounded px-3 py-1 hover:bg-blue-700">
+                      Enviar
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="text-sm">
                   <p className="mb-2">
-                    En mision (presupuesto ${Number(s.budget_assigned).toLocaleString()}). Termina el dia {s.mission_end_day}
+                    En mision{s.target_position ? ` (buscando ${s.target_position})` : ''} (presupuesto ${Number(s.budget_assigned).toLocaleString()}). Termina el dia {s.mission_end_day}
                     {season ? ` (hoy es dia ${season.current_day})` : ''}.
                   </p>
                   <button

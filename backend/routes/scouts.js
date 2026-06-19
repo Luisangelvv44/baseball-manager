@@ -3,7 +3,7 @@ const router = express.Router();
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID } = require('../config');
 const { FIRST_NAMES, LAST_NAMES } = require('../seeders/data/names');
-const { generateScoutedPlayer, randomInt, randomChoice } = require('../seeders/generators/playerGenerator');
+const { generateScoutedPlayer, randomInt, randomChoice, POSITIONS } = require('../seeders/generators/playerGenerator');
 
 const HIRE_COST = 50000;
 const MISSION_DURATION_DAYS = 5;
@@ -63,10 +63,15 @@ router.post('/', async (req, res) => {
   }
 });
 
-// POST /api/scouts/:id/assign { budget } -> envia al scout a una mision
+// POST /api/scouts/:id/assign { budget, target_position? } -> envia al scout a una mision
 router.post('/:id/assign', async (req, res) => {
   const budget = Number(req.body.budget);
   if (isNaN(budget) || budget <= 0) return res.status(400).json({ error: 'Presupuesto invalido' });
+
+  const target_position = req.body.target_position || null;
+  if (target_position && !POSITIONS.includes(target_position)) {
+    return res.status(400).json({ error: 'Posicion invalida' });
+  }
 
   try {
     const scout = await prisma.scout.findFirst({
@@ -84,7 +89,7 @@ router.post('/:id/assign', async (req, res) => {
 
     await prisma.scout.update({
       where: { id: scout.id },
-      data: { budget_assigned: budget, active_mission: true, mission_end_day: currentDay + MISSION_DURATION_DAYS },
+      data: { budget_assigned: budget, active_mission: true, mission_end_day: currentDay + MISSION_DURATION_DAYS, target_position },
     });
 
     await prisma.team.update({
@@ -136,7 +141,7 @@ router.post('/:id/collect', async (req, res) => {
 
     const prospects = [];
     for (let i = 0; i < numProspects; i++) {
-      const p = generateScoutedPlayer(scout.skill_level);
+      const p = generateScoutedPlayer(scout.skill_level, scout.target_position || null);
       const created = await prisma.player.create({
         data: {
           first_name: p.first_name,
@@ -157,7 +162,7 @@ router.post('/:id/collect', async (req, res) => {
 
     await prisma.scout.update({
       where: { id: scout.id },
-      data: { active_mission: false, budget_assigned: 0, mission_end_day: null },
+      data: { active_mission: false, budget_assigned: 0, mission_end_day: null, target_position: null },
     });
 
     res.json({ success: true, prospects });

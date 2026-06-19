@@ -55,8 +55,8 @@ export const api = {
   // Scouts
   getScouts: () => request('/scouts'),
   hireScout: () => request('/scouts', { method: 'POST' }),
-  assignScout: (id, budget) =>
-    request(`/scouts/${id}/assign`, { method: 'POST', body: JSON.stringify({ budget }) }),
+  assignScout: (id, budget, targetPosition = null) =>
+    request(`/scouts/${id}/assign`, { method: 'POST', body: JSON.stringify({ budget, ...(targetPosition ? { target_position: targetPosition } : {}) }) }),
   collectScout: (id) => request(`/scouts/${id}/collect`, { method: 'POST' }),
 
   // Lineup

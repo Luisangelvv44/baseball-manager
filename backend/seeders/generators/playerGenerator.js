@@ -82,7 +82,7 @@ function generateRoster(teamId, size = 16) {
 }
 
 // Jugadores que un scout encuentra: alto potencial, baja destreza actual (jovenes sin pulir)
-function generateScoutedPlayer(scoutSkillLevel) {
+function generateScoutedPlayer(scoutSkillLevel, targetPosition = null) {
   // entre mas alto el skill del scout, mejores prospectos encuentra (en promedio)
   const floor = 40 + Math.floor(scoutSkillLevel / 4); // 40-65
   const potential = randomInt(floor, Math.min(99, floor + 35));
@@ -101,6 +101,7 @@ function generateScoutedPlayer(scoutSkillLevel) {
     contract_years_remaining: randomInt(1, 3),
     rookie_contract: true,
     status: 'scouted',
+    ...(targetPosition ? { position: targetPosition } : {}),
   });
 }
 
