@@ -138,6 +138,31 @@ router.post('/start', async (req, res) => {
 
 // All end-of-season mutations — runs only after the playoff champion is crowned
 async function endOfSeasonCleanup(season) {
+  // Save season record before standings are reset
+  const allTeams = await prisma.team.findMany({
+    select: { id: true, name: true, wins: true, losses: true, division: { select: { name: true } } },
+    orderBy: [{ wins: 'desc' }, { losses: 'asc' }],
+  });
+  const finalSeries = await prisma.playoffSeries.findFirst({
+    where: { season_id: season.id, winner_id: { not: null } },
+    orderBy: { round: 'desc' },
+    include: { winner: { select: { name: true } } },
+  });
+  await prisma.seasonRecord.create({
+    data: {
+      season_id: season.id,
+      year: season.year,
+      champion_name: finalSeries?.winner?.name ?? null,
+      standings: allTeams.map((t) => ({
+        team_id: t.id,
+        name: t.name,
+        division: t.division?.name ?? null,
+        wins: t.wins,
+        losses: t.losses,
+      })),
+    },
+  });
+
   await updatePlayersContracts();
 
   const expiringRookies = await prisma.player.findMany({

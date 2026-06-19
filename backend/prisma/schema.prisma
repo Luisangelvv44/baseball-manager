@@ -88,6 +88,19 @@ model Season {
   broadcast_contracts BroadcastContract[]
   playoff_series      PlayoffSeries[]
   draft               Draft?
+  season_record       SeasonRecord?
+}
+
+model SeasonRecord {
+  id            Int     @id @default(autoincrement())
+  season_id     Int     @unique
+  year          Int
+  champion_name String? @db.VarChar(100)
+  standings     Json
+
+  season Season @relation(fields: [season_id], references: [id])
+
+  @@map("season_records")
 }
 
 
@@ -176,6 +189,7 @@ model Scout {
   budget_assigned Decimal @default(0) @db.Decimal(10, 2)
   active_mission  Boolean @default(false)
   mission_end_day Int?
+  target_position String? @db.VarChar(10)
 
   team Team? @relation(fields: [team_id], references: [id])
 
