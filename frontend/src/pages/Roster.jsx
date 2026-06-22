@@ -166,6 +166,63 @@ export default function Roster() {
     return s.batting?.avg ? `.${s.batting.avg.slice(2)}` : '—';
   };
 
+  const activePlayers = players.filter((p) => p.injury_days_remaining === 0);
+  const injuredPlayers = players.filter((p) => p.injury_days_remaining > 0);
+
+  const rosterTable = (list) => (
+    <table className="w-full text-sm">
+      <thead className="bg-gray-50 text-gray-500 text-left">
+        <tr>
+          <th className="p-2">Nombre</th>
+          <th className="p-2">Pos</th>
+          <th className="p-2">Edad</th>
+          <th className="p-2">Destreza</th>
+          <th className="p-2">Potencial</th>
+          <th className="p-2">Edad de uso</th>
+          <th className="p-2">Salario</th>
+          <th className="p-2">Contrato (años)</th>
+          <th className="p-2">Stats</th>
+          <th className="p-2">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {list.map((p) => (
+          <tr
+            key={p.id}
+            className="border-t hover:bg-gray-50 cursor-pointer"
+            onClick={() => setSelectedPlayer(p)}
+          >
+            <td className="p-2 font-medium text-blue-700 hover:underline">{p.first_name} {p.last_name}</td>
+            <td className="p-2">{p.position}</td>
+            <td className="p-2">{p.age}</td>
+            <td className="p-2">{p.current_skill}</td>
+            <td className="p-2">{p.potential_coefficient}</td>
+            <td className="p-2">{p.growth_age}</td>
+            <td className="p-2">${Number(p.salary).toLocaleString()}</td>
+            <td className="p-2">{p.contract_years_remaining}</td>
+            <td className="p-2 font-mono text-xs text-gray-700">{getStatSummary(p)}</td>
+            <td className="p-2">
+              {p.injury_days_remaining > 0 ? (
+                <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded font-medium">
+                  Lesionado ({p.injury_days_remaining}d)
+                </span>
+              ) : p.contract_years_remaining <= 2 ? (
+                <button
+                  onClick={(e) => openRenew(e, p)}
+                  className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                >
+                  Renovar
+                </button>
+              ) : (
+                <span className="text-gray-300">—</span>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-bold">Tu Roster</h2>
@@ -180,55 +237,22 @@ export default function Roster() {
           No tienes jugadores todavia. Ve al <b>Mercado</b> para fichar agentes libres o prospectos de tus scouts.
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-left">
-              <tr>
-                <th className="p-2">Nombre</th>
-                <th className="p-2">Pos</th>
-                <th className="p-2">Edad</th>
-                <th className="p-2">Destreza</th>
-                <th className="p-2">Potencial</th>
-                <th className="p-2">Edad de uso</th>
-                <th className="p-2">Salario</th>
-                <th className="p-2">Contrato (años)</th>
-                <th className="p-2">Stats</th>
-                <th className="p-2">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {players.map((p) => (
-                <tr
-                  key={p.id}
-                  className="border-t hover:bg-gray-50 cursor-pointer"
-                  onClick={() => setSelectedPlayer(p)}
-                >
-                  <td className="p-2 font-medium text-blue-700 hover:underline">{p.first_name} {p.last_name}</td>
-                  <td className="p-2">{p.position}</td>
-                  <td className="p-2">{p.age}</td>
-                  <td className="p-2">{p.current_skill}</td>
-                  <td className="p-2">{p.potential_coefficient}</td>
-                  <td className="p-2">{p.growth_age}</td>
-                  <td className="p-2">${Number(p.salary).toLocaleString()}</td>
-                  <td className="p-2">{p.contract_years_remaining}</td>
-                  <td className="p-2 font-mono text-xs text-gray-700">{getStatSummary(p)}</td>
-                  <td className="p-2">
-                    {p.contract_years_remaining <= 2 ? (
-                      <button
-                        onClick={(e) => openRenew(e, p)}
-                        className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-                      >
-                        Renovar
-                      </button>
-                    ) : (
-                      <span className="text-gray-300">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="bg-white rounded-lg shadow overflow-x-auto">
+            {rosterTable(activePlayers)}
+          </div>
+
+          {injuredPlayers.length > 0 && (
+            <div>
+              <h3 className="text-base font-semibold text-red-700 mb-1">
+                Lista de Lesionados ({injuredPlayers.length})
+              </h3>
+              <div className="bg-red-50 border border-red-200 rounded-lg overflow-x-auto">
+                {rosterTable(injuredPlayers)}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {selectedPlayer && (

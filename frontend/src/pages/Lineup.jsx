@@ -42,8 +42,13 @@ export default function Lineup() {
   ]);
 
   const activePitcherCount = pitchers.filter(Boolean).length;
-  const availablePitchers = roster.filter((p) => p.position === 'P' && !assignedIds.has(p.id));
-  const availableBatters = roster.filter((p) => p.position !== 'P' && !assignedIds.has(p.id));
+  const availablePitchers = roster.filter(
+    (p) => p.position === 'P' && !assignedIds.has(p.id) && p.injury_days_remaining === 0
+  );
+  const availableBatters = roster.filter(
+    (p) => p.position !== 'P' && !assignedIds.has(p.id) && p.injury_days_remaining === 0
+  );
+  const inactivePlayers = roster.filter((p) => p.injury_days_remaining > 0);
 
   function addPitcher(player) {
     const firstEmpty = pitchers.findIndex((s) => s === null);
@@ -171,6 +176,25 @@ export default function Lineup() {
               </ul>
             )}
           </div>
+
+          {inactivePlayers.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded shadow p-3">
+              <h2 className="font-semibold text-sm text-red-700 mb-2">Lesionados (inactivos)</h2>
+              <ul className="space-y-1">
+                {inactivePlayers.map((p) => (
+                  <li key={p.id} className="flex justify-between items-center px-2 py-1 text-sm text-gray-400">
+                    <span>
+                      <span className="text-xs font-mono mr-1">{p.position}</span>
+                      {p.first_name} {p.last_name}
+                    </span>
+                    <span className="text-xs text-red-500 font-medium">
+                      {p.injury_days_remaining}d
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* Right: lineup config */}

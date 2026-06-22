@@ -1,6 +1,7 @@
 const prisma = require('../db/prisma');
 const { getLineup } = require('./lineup');
 const { simulateGame } = require('./gameSimulator');
+const { checkAndApplyGameInjuries } = require('./injuryService');
 
 // Simula un partido (schedule row), actualiza marcador/standings,
 // y opcionalmente guarda el play-by-play en game_events.
@@ -16,6 +17,8 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
   }
 
   const result = simulateGame(homeLineup, awayLineup, homeLineup.pitcher, awayLineup.pitcher);
+
+  await checkAndApplyGameInjuries(homeLineup, awayLineup);
 
   await prisma.gameSchedule.update({
     where: { id: gameRow.id },

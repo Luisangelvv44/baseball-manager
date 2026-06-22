@@ -4,7 +4,7 @@ const { FIELD_POSITIONS } = require('../seeders/generators/playerGenerator');
 async function getSavedLineup(teamId, gameRow) {
   const rows = await prisma.teamLineup.findMany({
     where: { team_id: teamId },
-    include: { player: { select: { id: true, current_skill: true, position: true, team_id: true } } },
+    include: { player: { select: { id: true, current_skill: true, position: true, team_id: true, injury_days_remaining: true } } },
   });
 
   if (rows.length === 0) return null;
@@ -20,6 +20,9 @@ async function getSavedLineup(teamId, gameRow) {
 
   const allValid = [...pitcherRows, ...batterRows].every((r) => r.player.team_id === teamId);
   if (!allValid) return null;
+
+  const anyInjured = [...pitcherRows, ...batterRows].some((r) => r.player.injury_days_remaining > 0);
+  if (anyInjured) return null;
 
   let selectedPitcher;
   if (pitcherRows.length > 1 && gameRow) {
@@ -44,7 +47,7 @@ async function getSavedLineup(teamId, gameRow) {
 
 async function autoGenerateLineup(teamId) {
   const players = await prisma.player.findMany({
-    where: { team_id: teamId },
+    where: { team_id: teamId, injury_days_remaining: 0 },
     select: { id: true, first_name: true, last_name: true, position: true, current_skill: true },
   });
 

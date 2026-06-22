@@ -25,6 +25,7 @@ const { fluctuatePlayerSkills, updatePlayersContracts } = require('../services/p
 const { giveCpuTeamsRevenue } = require('../services/cpuTeamManagement');
 const { applyCoachBonuses, deductCoachSalaries } = require('../services/coachService');
 const { createDraft } = require('../services/draftService');
+const { processInjuryRecovery, clearAllInjuries } = require('../services/injuryService');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
@@ -230,6 +231,8 @@ async function endOfSeasonCleanup(season) {
   const updatedSeason = await prisma.season.findUnique({ where: { id: season.id } });
   await createAuctionsForFreeAgents(null, updatedSeason);
 
+  await clearAllInjuries();
+
   // Create annual draft and switch season to 'draft' phase
   await createDraft(season.id);
   await prisma.season.update({ where: { id: season.id }, data: { status: 'draft' } });
@@ -245,6 +248,8 @@ router.post('/advance-day', async (req, res) => {
     const season = await prisma.season.findFirst({ where: { status: { in: ['active', 'playoffs'] } }, orderBy: { id: 'desc' } });
     if (!season) return res.status(400).json({ error: 'No hay temporada activa' });
     const day = season.current_day;
+
+    await processInjuryRecovery();
 
     // ---- RAMA PLAYOFFS ----
     if (season.status === 'playoffs') {
