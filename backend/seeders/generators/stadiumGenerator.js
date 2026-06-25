@@ -14,7 +14,7 @@ const GRID_SIZE = 4;
 const BASE_PRICE = 15.0;
 const BASE_CAPACITY = 100;        // nivel 1 = 100; fórmula: 100 * 2^(level-1)
 const BUILD_COST = 500000;        // costo de construir una nueva sección en celda vacía
-const UPGRADE_BASE_COST = 20000;  // nivel 1→2 = $20,000; fórmula: 20000 * 2^(currentLevel-1)
+const UPGRADE_BASE_COST = 100000; // nivel 1→2 = $100,000; fórmula: 100000 * 2^(currentLevel-1)
 const FLOOR_EXPAND_BASE_COST = 2_000_000; // planta 2 = $2M, planta 3 = $4M, planta 4 = $8M
 
 const INITIAL_LAYOUT = [
