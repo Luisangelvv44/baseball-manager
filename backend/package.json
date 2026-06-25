@@ -8,7 +8,12 @@
     "dev": "node index.js",
     "seed": "node seeders/run.js",
     "seed:broadcast": "node seeders/seedBroadcast.js",
-    "postinstall": "prisma generate --schema=prisma/schema.prisma"
+    "postinstall": "prisma generate --schema=prisma/schema.prisma",
+    "test": "jest"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/__tests__/**/*.test.js"]
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -17,6 +22,8 @@
     "express": "^4.19.2"
   },
   "devDependencies": {
-    "prisma": "^5.22.0"
+    "jest": "^30.4.2",
+    "prisma": "^5.22.0",
+    "supertest": "^7.2.2"
   }
 }
