@@ -38,6 +38,7 @@ function simulateGame(homeLineup, awayLineup, homePitcher, awayPitcher) {
       result,
       outs_after: state.outs,
       runs_scored: runsScored,
+      bases_after: [...state.bases],
       event_order: state.eventOrder++,
     });
 
