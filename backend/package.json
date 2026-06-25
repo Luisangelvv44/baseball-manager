@@ -8,6 +8,7 @@
     "dev": "node index.js",
     "seed": "node seeders/run.js",
     "seed:broadcast": "node seeders/seedBroadcast.js",
+    "seed:stars": "node seeders/seedStarPlayers.js",
     "postinstall": "prisma generate --schema=prisma/schema.prisma",
     "test": "jest"
   },

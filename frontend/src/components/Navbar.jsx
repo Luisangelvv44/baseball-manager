@@ -7,6 +7,7 @@ const LINKS = [
   { to: '/roster', label: 'Roster' },
   { to: '/lineup', label: 'Lineup' },
   { to: '/market', label: 'Mercado' },
+  { to: '/stars', label: 'Estrellas' },
   { to: '/stadium', label: 'Estadio' },
   { to: '/scouts', label: 'Scouts' },
   { to: '/coaches', label: 'Coaches' },
