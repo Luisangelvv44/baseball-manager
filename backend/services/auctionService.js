@@ -184,7 +184,7 @@ async function closeExpiredAuctions(tx, season) {
 }
 
 async function _signPlayerToTeam(client, auction, teamId, amount, season) {
-  const signingBonus = Math.round(amount * 0.1);
+  const signingBonus = Math.round(amount * 0.2);
 
   await client.player.update({
     where: { id: auction.player_id },

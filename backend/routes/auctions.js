@@ -117,7 +117,7 @@ router.post('/:id/bid', async (req, res) => {
     }
 
     const userTeam = await prisma.team.findUnique({ where: { id: USER_TEAM_ID } });
-    const requiredNow = Math.round(amount * 0.1);
+    const requiredNow = Math.round(amount * 0.2);
     if (Number(userTeam.budget) < requiredNow) {
       return res.status(400).json({
         error: `Presupuesto insuficiente. Necesitas al menos $${requiredNow.toLocaleString()} disponibles (bono de firma).`,

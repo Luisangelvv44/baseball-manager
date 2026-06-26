@@ -7,7 +7,7 @@ async function giveCpuTeamsRevenue() {
     });
 
     for (const ct of cpuTeamsRevenue) {
-        const revenuePerFan = Math.floor(Math.random() * 51) + 25; // $50–$75 entero por fan
+        const revenuePerFan = Math.floor(Math.random() * 101) + 50; // $50–$150 entero por fan
         const revenue = ct.fan_base * revenuePerFan;
         if (revenue > 0) {
             await prisma.team.update({

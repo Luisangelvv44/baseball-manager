@@ -34,9 +34,23 @@ function generateInitialSkill(potential, age, growthAge) {
 }
 
 function calculateSalary(potential, currentSkill, age) {
-  const base = (currentSkill * 8000) + (potential * 2000);
+  let base;
+  if (currentSkill >= 90) {
+    base = 5_000_000 + (currentSkill - 90) * 300_000;
+  } else if (currentSkill >= 80) {
+    base = 2_000_000 + (currentSkill - 80) * 300_000;
+  } else if (currentSkill >= 70) {
+    base = 750_000 + (currentSkill - 70) * 125_000;
+  } else if (currentSkill >= 60) {
+    base = 300_000 + (currentSkill - 60) * 45_000;
+  } else {
+    base = 50_000 + currentSkill * 4_200;
+  }
+  const potentialBonus = potential * 2_000;
   const ageFactor = age > 32 ? 0.85 : 1;
-  return Math.round((base * ageFactor) / 100) * 100;
+  // ±20% variance so two players with the same stats have different market values
+  const variance = 0.80 + Math.random() * 0.40;
+  return Math.round((base + potentialBonus) * ageFactor * variance / 50_000) * 50_000;
 }
 
 function generatePlayer(overrides = {}) {

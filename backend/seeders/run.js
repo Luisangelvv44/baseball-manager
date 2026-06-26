@@ -42,7 +42,7 @@ async function seed() {
         const isUser = i === 0;
         const divisionId = i < TEAMS_PER_DIVISION ? divNorth.id : divSouth.id;
         const name = isUser ? USER_TEAM_NAME : cpuTeamNames[cpuIndex++];
-        const budget = isUser ? USER_STARTING_BUDGET : randomInt(2000000, 8000000);
+        const budget = isUser ? USER_STARTING_BUDGET : randomInt(8000000, 20000000);
         const reputation = isUser ? 50 : randomInt(40, 60);
 
         const bid_aggressiveness   = isUser ? 0.12 : randomFloat(0.05, 0.25);
