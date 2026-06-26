@@ -20,6 +20,7 @@ app.use('/api/broadcast', require('./routes/broadcast'));
 app.use('/api/playoffs', require('./routes/playoffs'));
 app.use('/api/coaches', require('./routes/coaches'));
 app.use('/api/draft', require('./routes/draft'));
+app.use('/api/news', require('./routes/news'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

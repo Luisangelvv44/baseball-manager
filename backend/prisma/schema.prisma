@@ -379,3 +379,14 @@ model DraftProspect {
   @@map("draft_prospects")
   @@index([draft_id])
 }
+
+model NewsItem {
+  id         Int      @id @default(autoincrement())
+  type       String   @db.VarChar(20)
+  headline   String   @db.VarChar(500)
+  season_day Int      @default(0)
+  created_at DateTime @default(now())
+
+  @@map("news_items")
+  @@index([season_day])
+}

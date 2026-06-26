@@ -2,6 +2,7 @@ const prisma = require('../db/prisma');
 const { getLineup } = require('./lineup');
 const { simulateGame } = require('./gameSimulator');
 const { checkAndApplyGameInjuries } = require('./injuryService');
+const { createNews } = require('./newsService');
 
 // Simula un partido (schedule row), actualiza marcador/standings,
 // y opcionalmente guarda el play-by-play en game_events.
@@ -18,7 +19,7 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
 
   const result = simulateGame(homeLineup, awayLineup, homeLineup.pitcher, awayLineup.pitcher);
 
-  await checkAndApplyGameInjuries(homeLineup, awayLineup);
+  const injuredIds = await checkAndApplyGameInjuries(homeLineup, awayLineup);
 
   await prisma.gameSchedule.update({
     where: { id: gameRow.id },
@@ -49,6 +50,27 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
 
   const homeTeam = await prisma.team.findUnique({ where: { id: gameRow.home_team_id } });
   const awayTeam = await prisma.team.findUnique({ where: { id: gameRow.away_team_id } });
+
+  const winner = result.homeScore > result.awayScore ? homeTeam.name : awayTeam.name;
+  const loser  = result.homeScore > result.awayScore ? awayTeam.name : homeTeam.name;
+  const hi = Math.max(result.homeScore, result.awayScore);
+  const lo = Math.min(result.homeScore, result.awayScore);
+  await createNews('game', `${winner} derrotó a ${loser} ${hi}-${lo}`, gameRow.day_number);
+
+  if (injuredIds.length > 0) {
+    const injuredPlayers = await prisma.player.findMany({
+      where: { id: { in: injuredIds.map((i) => i.id) } },
+      select: { id: true, first_name: true, last_name: true, position: true },
+    });
+    const nameMap = Object.fromEntries(injuredPlayers.map((p) => [p.id, p]));
+    for (const { id, days } of injuredIds) {
+      const p = nameMap[id];
+      if (p) await createNews('injury',
+        `${p.first_name} ${p.last_name} (${p.position}) se lesionó por ${days} días`,
+        gameRow.day_number
+      );
+    }
+  }
 
   return {
     homeScore: result.homeScore,

@@ -3,6 +3,7 @@ const router = express.Router();
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID } = require('../config');
 const { calculateSalary } = require('../seeders/generators/playerGenerator');
+const { createNews } = require('../services/newsService');
 
 // GET /api/players/team-stats -> estadísticas de la temporada actual para todos los jugadores del usuario
 router.get('/team-stats', async (req, res) => {
@@ -231,6 +232,14 @@ router.post('/:id/sign', async (req, res) => {
         description: `Bono de firma: ${player.first_name} ${player.last_name}`,
       },
     });
+
+    const totalValue = salary * years;
+    const totalM = (totalValue / 1_000_000).toFixed(1);
+    const salaryM = (salary / 1_000_000).toFixed(2);
+    await createNews('signing',
+      `${team.name} firmó a ${player.first_name} ${player.last_name}: ${years} año(s), $${salaryM}M/año ($${totalM}M total)`,
+      day
+    );
 
     res.json({ success: true, signingBonus, newBudget });
   } catch (err) {

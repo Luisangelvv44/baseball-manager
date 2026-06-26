@@ -3,6 +3,7 @@ import { useTeam } from '../context/TeamContext.jsx';
 
 const LINKS = [
   { to: '/', label: 'Dashboard' },
+  { to: '/news', label: 'Noticias' },
   { to: '/schedule', label: 'Calendario' },
   { to: '/roster', label: 'Roster' },
   { to: '/lineup', label: 'Lineup' },

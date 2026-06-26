@@ -1,5 +1,6 @@
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID } = require('../config');
+const { createNews } = require('./newsService');
 
 function calculateGrowthCoefficient(player) {
   const yearsLeft = Math.max(0, player.growth_age - player.age);
@@ -217,6 +218,13 @@ async function _signPlayerToTeam(client, auction, teamId, amount, season) {
       },
     });
   }
+
+  const signingTeam = await client.team.findUnique({ where: { id: teamId }, select: { name: true } });
+  const amtM = (amount / 1_000_000).toFixed(2);
+  await createNews('auction',
+    `${signingTeam.name} ganó la subasta de ${auction.player.first_name} ${auction.player.last_name}: $${amtM}M/año`,
+    season.current_day
+  );
 }
 
 async function cancelAllActiveAuctions(tx) {

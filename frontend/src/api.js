@@ -88,6 +88,9 @@ export const api = {
   advanceDraftPick: () => request('/draft/advance', { method: 'POST' }),
   draftPick: (prospectId) => request('/draft/pick', { method: 'POST', body: JSON.stringify({ prospectId }) }),
 
+  // Noticias
+  getNews: () => request('/news'),
+
   // Transmisión
   getBroadcastOffers: () => request('/broadcast/offers'),
   acceptOffer: (id) => request(`/broadcast/offers/${id}/accept`, { method: 'POST' }),
