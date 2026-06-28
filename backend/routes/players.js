@@ -12,7 +12,7 @@ router.get('/team-stats', async (req, res) => {
     if (!season) return res.json({ stats: [], seasonYear: null });
 
     const games = await prisma.gameSchedule.findMany({
-      where: { season_id: season.id, status: 'completed' },
+      where: { season_id: season.id, status: 'finished' },
       select: { id: true, home_team_id: true, away_team_id: true, home_score: true, away_score: true },
     });
     const gameIds = games.map(g => g.id);
@@ -317,7 +317,7 @@ router.get('/:id/stats', async (req, res) => {
     if (!player) return res.status(404).json({ error: 'Jugador no encontrado' });
 
     const games = await prisma.gameSchedule.findMany({
-      where: { season_id: season.id, status: 'completed' },
+      where: { season_id: season.id, status: 'finished' },
       select: { id: true, home_team_id: true, away_team_id: true, home_score: true, away_score: true },
     });
     const gameIds = games.map(g => g.id);

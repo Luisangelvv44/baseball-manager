@@ -18,18 +18,18 @@ function StatsModal({ player, stats, onClose }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
 
-        {isPitcher && p ? (
+        {isPitcher ? (
           <div>
             <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Lanzamiento</p>
             <div className="grid grid-cols-4 gap-2 text-center">
               {[
-                ['G', p.g],
-                ['W-L', `${p.w}-${p.l}`],
-                ['IP', p.ip],
-                ['ERA', p.era ?? '—'],
-                ['SO', p.so],
-                ['BB', p.bb],
-                ['WHIP', p.whip ?? '—'],
+                ['G', p?.g ?? 0],
+                ['W-L', p ? `${p.w}-${p.l}` : '0-0'],
+                ['IP', p?.ip ?? '0.0'],
+                ['ERA', p?.era ?? '—'],
+                ['SO', p?.so ?? 0],
+                ['BB', p?.bb ?? 0],
+                ['WHIP', p?.whip ?? '—'],
               ].map(([label, value]) => (
                 <div key={label} className="bg-gray-50 rounded p-2">
                   <p className="text-xs text-gray-400">{label}</p>

@@ -46,6 +46,12 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
         event_order: ev.event_order,
       })),
     });
+    await prisma.gameLineup.createMany({
+      data: [
+        { game_id: gameRow.id, player_id: homeLineup.pitcher.id, team_id: homeLineup.teamId, position: 'P' },
+        { game_id: gameRow.id, player_id: awayLineup.pitcher.id, team_id: awayLineup.teamId, position: 'P' },
+      ],
+    });
   }
 
   const homeTeam = await prisma.team.findUnique({ where: { id: gameRow.home_team_id } });
