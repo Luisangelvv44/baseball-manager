@@ -25,7 +25,7 @@ async function applyCoachBonuses() {
         const reducedDecline = Math.round(player.potential_coefficient * 0.3 * 0.6);
         const recovery = normalDecline - reducedDecline;
         if (recovery > 0) {
-          const newSkill = Math.min(99, player.current_skill + recovery);
+          const newSkill = Math.min(100, Math.round(player.current_skill + recovery));
           await prisma.player.update({ where: { id: player.id }, data: { current_skill: newSkill } });
         }
       }
