@@ -2,8 +2,8 @@ const prisma = require('../db/prisma');
 
 function getInjuryProbability(age) {
   if (age <= 22) return 0;
-  if (age >= 40) return 0.05;
-  return ((age - 22) / (40 - 22)) * 0.05;
+  if (age >= 40) return 0.005;
+  return ((age - 22) / (40 - 22)) * 0.005;
 }
 
 function randomDays() {
