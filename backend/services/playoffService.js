@@ -227,9 +227,11 @@ async function advancePlayoffRound(seasonId) {
 }
 
 async function handleChampion(winnerId, seasonId) {
+  const fandomBoost = Math.floor(Math.random() * 100_001) + 50_000;
+
   await prisma.team.update({
     where: { id: winnerId },
-    data: { reputation: { increment: 20 }, budget: { increment: 3_000_000 } },
+    data: { reputation: { increment: 20 }, budget: { increment: 3_000_000 }, fan_base: { increment: fandomBoost } },
   });
 
   if (winnerId === USER_TEAM_ID) {
