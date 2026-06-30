@@ -89,6 +89,29 @@ async function runCpuBidding(tx, season) {
     salaryTotals.map((r) => [r.team_id, Number(r._sum.salary ?? 0)])
   );
 
+  // Build pending commitment maps: auctions where a CPU team is currently the highest bidder
+  const activeAuctionsSnapshot = await client.freeAgentAuction.findMany({
+    where: {
+      status: 'active',
+      season_id: season.id,
+      OR: [{ closes_on_day: null }, { closes_on_day: { gt: currentDay } }],
+    },
+    include: {
+      bids: { orderBy: { amount: 'desc' }, take: 1 },
+    },
+  });
+
+  const pendingSalaryMap = {};
+  const pendingCountMap = {};
+
+  for (const auc of activeAuctionsSnapshot) {
+    if (auc.bids.length === 0) continue;
+    const topBid = auc.bids[0];
+    const tid = topBid.team_id;
+    pendingSalaryMap[tid] = (pendingSalaryMap[tid] ?? 0) + Number(topBid.amount);
+    pendingCountMap[tid] = (pendingCountMap[tid] ?? 0) + 1;
+  }
+
   for (const auction of activeAuctions) {
     const player = auction.player;
     const growthCoeff = calculateGrowthCoefficient(player);
@@ -100,10 +123,12 @@ async function runCpuBidding(tx, season) {
     for (const team of cpuTeams) {
       if (team.id === currentLeaderId) continue;
       if (growthCoeff < team.min_growth_threshold) continue;
-      if ((countMap[team.id] ?? 0) >= 20) continue;
+      const pendingCount = pendingCountMap[team.id] ?? 0;
+      if ((countMap[team.id] ?? 0) + pendingCount >= 20) continue;
 
       const existingSalary = salaryMap[team.id] ?? 0;
-      if (existingSalary + Number(player.salary) > Number(team.budget)) continue;
+      const pendingSalary = pendingSalaryMap[team.id] ?? 0;
+      if (existingSalary + pendingSalary + Number(player.salary) > Number(team.budget)) continue;
 
       const maxWilling = Number(team.budget) * team.bid_aggressiveness;
       if (maxWilling < Number(player.salary)) continue;
@@ -130,6 +155,8 @@ async function runCpuBidding(tx, season) {
         },
       });
 
+      pendingSalaryMap[team.id] = (pendingSalaryMap[team.id] ?? 0) + proposed;
+      pendingCountMap[team.id] = (pendingCountMap[team.id] ?? 0) + 1;
       break; // one CPU bid per auction per day
     }
   }
