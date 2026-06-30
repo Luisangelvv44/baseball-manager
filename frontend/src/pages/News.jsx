@@ -14,16 +14,31 @@ export default function News() {
   const [news, setNews] = useState([]);
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchDay, setFetchDay] = useState(null);
+  const [inputDay, setInputDay] = useState('');
 
   useEffect(() => {
-    Promise.all([api.getNews(), api.getTeams()])
+    setLoading(true);
+    Promise.all([api.getNews(fetchDay), api.getTeams()])
       .then(([newsData, teamsData]) => {
         setNews(newsData);
         setTeams(teamsData);
+        if (fetchDay === null && newsData.length > 0) {
+          setInputDay(String(newsData[0].season_day));
+        }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [fetchDay]);
+
+  const applyFilter = () => {
+    const d = parseInt(inputDay, 10);
+    if (!isNaN(d)) setFetchDay(d);
+  };
+
+  const goToLatest = () => {
+    setFetchDay(null);
+  };
 
   const sorted = [...teams].sort((a, b) => {
     if (b.wins !== a.wins) return b.wins - a.wins;
@@ -32,14 +47,39 @@ export default function News() {
     return rdB - rdA;
   });
 
-  if (loading) return <div className="text-center py-10 text-gray-400">Cargando noticias...</div>;
-
   return (
     <div className="flex gap-6 items-start">
       {/* News feed */}
       <div className="flex-1 min-w-0">
-        <h2 className="text-xl font-bold mb-4 text-gray-800">Últimas Noticias</h2>
-        {news.length === 0 ? (
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-gray-800">Noticias</h2>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600">Día:</label>
+            <input
+              type="number"
+              min="1"
+              value={inputDay}
+              onChange={(e) => setInputDay(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && applyFilter()}
+              className="w-20 border border-gray-300 rounded px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <button
+              onClick={applyFilter}
+              className="bg-blue-600 text-white text-sm px-3 py-1 rounded hover:bg-blue-700"
+            >
+              Filtrar
+            </button>
+            <button
+              onClick={goToLatest}
+              className="bg-gray-200 text-gray-700 text-sm px-3 py-1 rounded hover:bg-gray-300"
+            >
+              Último día
+            </button>
+          </div>
+        </div>
+        {loading ? (
+          <div className="text-center py-10 text-gray-400">Cargando noticias...</div>
+        ) : news.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
             No hay noticias aún. Avanza días de temporada para que aparezcan resultados, lesiones y fichajes.
           </div>

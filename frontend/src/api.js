@@ -89,7 +89,7 @@ export const api = {
   draftPick: (prospectId) => request('/draft/pick', { method: 'POST', body: JSON.stringify({ prospectId }) }),
 
   // Noticias
-  getNews: () => request('/news'),
+  getNews: (day) => request(day != null ? `/news?day=${day}` : '/news'),
 
   // Transmisión
   getBroadcastOffers: () => request('/broadcast/offers'),
