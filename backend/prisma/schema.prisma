@@ -385,8 +385,10 @@ model NewsItem {
   type       String   @db.VarChar(20)
   headline   String   @db.VarChar(500)
   season_day Int      @default(0)
+  season_id  Int?
   created_at DateTime @default(now())
 
   @@map("news_items")
   @@index([season_day])
+  @@index([season_id])
 }

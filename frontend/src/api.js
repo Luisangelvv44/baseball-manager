@@ -89,7 +89,13 @@ export const api = {
   draftPick: (prospectId) => request('/draft/pick', { method: 'POST', body: JSON.stringify({ prospectId }) }),
 
   // Noticias
-  getNews: (day) => request(day != null ? `/news?day=${day}` : '/news'),
+  getNews: (day, seasonId) => {
+    const params = new URLSearchParams();
+    if (day != null) params.set('day', day);
+    if (seasonId != null) params.set('seasonId', seasonId);
+    const qs = params.toString();
+    return request(qs ? `/news?${qs}` : '/news');
+  },
 
   // Transmisión
   getBroadcastOffers: () => request('/broadcast/offers'),

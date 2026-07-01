@@ -16,20 +16,22 @@ export default function News() {
   const [loading, setLoading] = useState(true);
   const [fetchDay, setFetchDay] = useState(null);
   const [inputDay, setInputDay] = useState('');
+  const [seasonId, setSeasonId] = useState(null);
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([api.getNews(fetchDay), api.getTeams()])
+    Promise.all([api.getNews(fetchDay, seasonId), api.getTeams()])
       .then(([newsData, teamsData]) => {
-        setNews(newsData);
+        setNews(newsData.items);
         setTeams(teamsData);
-        if (fetchDay === null && newsData.length > 0) {
-          setInputDay(String(newsData[0].season_day));
+        if (seasonId === null && newsData.seasonId) setSeasonId(newsData.seasonId);
+        if (fetchDay === null && newsData.items.length > 0) {
+          setInputDay(String(newsData.items[0].season_day));
         }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [fetchDay]);
+  }, [fetchDay, seasonId]);
 
   const applyFilter = () => {
     const d = parseInt(inputDay, 10);

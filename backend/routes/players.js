@@ -238,7 +238,8 @@ router.post('/:id/sign', async (req, res) => {
     const salaryM = (salary / 1_000_000).toFixed(2);
     await createNews('signing',
       `${team.name} firmó a ${player.first_name} ${player.last_name}: ${years} año(s), $${salaryM}M/año ($${totalM}M total)`,
-      day
+      day,
+      season?.id
     );
 
     res.json({ success: true, signingBonus, newBudget });

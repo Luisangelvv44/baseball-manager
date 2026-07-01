@@ -250,7 +250,8 @@ async function _signPlayerToTeam(client, auction, teamId, amount, season) {
   const amtM = (amount / 1_000_000).toFixed(2);
   await createNews('auction',
     `${signingTeam.name} ganó la subasta de ${auction.player.first_name} ${auction.player.last_name}: $${amtM}M/año`,
-    season.current_day
+    season.current_day,
+    season.id
   );
 }
 

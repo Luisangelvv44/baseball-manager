@@ -61,7 +61,7 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
   const loser  = result.homeScore > result.awayScore ? awayTeam.name : homeTeam.name;
   const hi = Math.max(result.homeScore, result.awayScore);
   const lo = Math.min(result.homeScore, result.awayScore);
-  await createNews('game', `${winner} derrotó a ${loser} ${hi}-${lo}`, gameRow.day_number);
+  await createNews('game', `${winner} derrotó a ${loser} ${hi}-${lo}`, gameRow.day_number, gameRow.season_id);
 
   if (injuredIds.length > 0) {
     const injuredPlayers = await prisma.player.findMany({
@@ -73,7 +73,8 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
       const p = nameMap[id];
       if (p) await createNews('injury',
         `${p.first_name} ${p.last_name} (${p.position}) se lesionó por ${days} días`,
-        gameRow.day_number
+        gameRow.day_number,
+        gameRow.season_id
       );
     }
   }
