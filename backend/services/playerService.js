@@ -7,7 +7,8 @@ async function fluctuatePlayerSkills() {
     });
 
     for (const p of allPlayers) {
-        const delta = p.age < p.growth_age ? Math.round(p.potential_coefficient * 0.5) : -Math.round(p.potential_coefficient * 0.3);
+        const multiplier = Math.random() * 0.05 + 0.05;
+        const delta = p.age < p.growth_age ? Math.round(p.potential_coefficient * multiplier) : -Math.round(p.potential_coefficient * multiplier);
         const newSkill = Math.min(100, p.current_skill + delta);
         await prisma.player.update({
             where: { id: p.id },
