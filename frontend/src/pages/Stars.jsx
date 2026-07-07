@@ -123,7 +123,7 @@ function StarAuctionCard({ auction, season, onBidPlaced, rosterFull }) {
       </div>
 
       {rosterFull ? (
-        <p className="text-center text-sm text-red-600 font-medium py-1">Roster lleno (máx. 20)</p>
+        <p className="text-center text-sm text-red-600 font-medium py-1">Roster lleno (máx. 25)</p>
       ) : (
         <div className="flex gap-2">
           <input
@@ -185,7 +185,7 @@ export default function Stars() {
 
   useEffect(() => { load(); }, []);
 
-  const rosterFull = userRosterCount >= 20;
+  const rosterFull = userRosterCount >= 25;
 
   return (
     <div className="space-y-6">
@@ -198,7 +198,7 @@ export default function Stars() {
 
       {rosterFull && (
         <div className="bg-red-50 border border-red-200 text-red-800 rounded p-3 text-sm font-medium">
-          Roster lleno ({userRosterCount}/20). Libera jugadores para poder pujar.
+          Roster lleno ({userRosterCount}/25). Libera jugadores para poder pujar.
         </div>
       )}
 

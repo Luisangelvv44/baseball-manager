@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID } = require('../config');
+const { USER_TEAM_ID, MAX_ROSTER_SIZE } = require('../config');
 const { calculateGrowthCoefficient } = require('../services/auctionService');
 
 function auctionInclude() {
@@ -112,8 +112,8 @@ router.post('/:id/bid', async (req, res) => {
     const userRosterCount = await prisma.player.count({
       where: { team_id: USER_TEAM_ID, status: 'active' },
     });
-    if (userRosterCount >= 20) {
-      return res.status(400).json({ error: 'Tu roster está lleno (máximo 20 jugadores)' });
+    if (userRosterCount >= MAX_ROSTER_SIZE) {
+      return res.status(400).json({ error: `Tu roster está lleno (máximo ${MAX_ROSTER_SIZE} jugadores)` });
     }
 
     const userTeam = await prisma.team.findUnique({ where: { id: USER_TEAM_ID } });

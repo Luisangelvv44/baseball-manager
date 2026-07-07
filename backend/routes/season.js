@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID, PRE_SEASON_DAYS } = require('../config');
+const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE } = require('../config');
 const { generateSchedule } = require('../services/scheduleGenerator');
 const { playGame } = require('../services/gamePlay');
 const {
@@ -194,7 +194,7 @@ async function endOfSeasonCleanup(season) {
   await applyCoachBonuses();
   await giveCpuTeamsRevenue();
 
-  const CPU_TARGET_ROSTER = 16;
+  const CPU_TARGET_ROSTER = MAX_ROSTER_SIZE;
   const ROOKIE_SLOT_BUFFER = 50000;
   const cpuTeamsList = await prisma.team.findMany({ where: { is_user_team: false }, select: { id: true, budget: true } });
   for (const cpuTeam of cpuTeamsList) {

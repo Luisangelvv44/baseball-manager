@@ -64,7 +64,7 @@ describe('POST /api/players/:id/sign', () => {
 
   it('returns 400 when roster is full', async () => {
     prisma.player.findUnique.mockResolvedValue(mockFreeAgent);
-    prisma.player.count.mockResolvedValue(20);
+    prisma.player.count.mockResolvedValue(25);
     const res = await request(app).post('/api/players/20/sign').send({ years: 1, salary: 80000 });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/roster está lleno/);

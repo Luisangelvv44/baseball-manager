@@ -151,7 +151,7 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
       </div>
 
       {rosterFull ? (
-        <p className="text-center text-sm text-red-600 font-medium py-1">Roster lleno (máx. 20)</p>
+        <p className="text-center text-sm text-red-600 font-medium py-1">Roster lleno (máx. 25)</p>
       ) : (
         <div className="flex gap-2">
           <input
@@ -250,21 +250,21 @@ export default function Market() {
         </div>
       )}
 
-      {userRosterCount >= 20 && (
+      {userRosterCount >= 25 && (
         <div className="bg-red-50 border border-red-200 text-red-800 rounded p-3 text-sm font-medium">
-          Roster lleno ({userRosterCount}/20). Libera o pierde jugadores para poder fichar o pujar.
+          Roster lleno ({userRosterCount}/25). Libera o pierde jugadores para poder fichar o pujar.
         </div>
       )}
 
       <div className="bg-white rounded-lg shadow p-4">
         <h3 className="font-bold mb-1">
           Prospectos de Scouts
-          <span className="ml-2 text-xs font-normal text-gray-500">{userRosterCount}/20 jugadores</span>
+          <span className="ml-2 text-xs font-normal text-gray-500">{userRosterCount}/25 jugadores</span>
         </h3>
         <p className="text-xs text-gray-500 mb-3">
           Fichaje directo — exclusivos de tu red de scouts. Alto potencial, destreza baja: riesgo/recompensa.
         </p>
-        <PlayerTable players={scouted} onSign={handleSign} rosterFull={userRosterCount >= 20} />
+        <PlayerTable players={scouted} onSign={handleSign} rosterFull={userRosterCount >= 25} />
       </div>
 
       <div>
@@ -361,7 +361,7 @@ export default function Market() {
                 auction={a}
                 season={season}
                 onBidPlaced={() => Promise.all([load(), refreshTeam()])}
-                rosterFull={userRosterCount >= 20}
+                rosterFull={userRosterCount >= 25}
               />
             ))}
           </div>

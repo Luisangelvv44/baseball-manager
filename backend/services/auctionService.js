@@ -1,5 +1,5 @@
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID } = require('../config');
+const { USER_TEAM_ID, MAX_ROSTER_SIZE } = require('../config');
 const { createNews } = require('./newsService');
 
 function calculateGrowthCoefficient(player) {
@@ -71,7 +71,7 @@ async function runCpuBidding(tx, season) {
   // Shuffle CPU teams so bidding order varies each day
   cpuTeams.sort(() => Math.random() - 0.5);
 
-  // Pre-fetch roster counts so we can skip full teams (max 20 players)
+  // Pre-fetch roster counts so we can skip full teams (max MAX_ROSTER_SIZE players)
   const rosterCounts = await client.player.groupBy({
     by: ['team_id'],
     where: { team_id: { in: cpuTeams.map((t) => t.id) }, status: 'active' },
@@ -124,7 +124,7 @@ async function runCpuBidding(tx, season) {
       if (team.id === currentLeaderId) continue;
       if (growthCoeff < team.min_growth_threshold) continue;
       const pendingCount = pendingCountMap[team.id] ?? 0;
-      if ((countMap[team.id] ?? 0) + pendingCount >= 20) continue;
+      if ((countMap[team.id] ?? 0) + pendingCount >= MAX_ROSTER_SIZE) continue;
 
       const existingSalary = salaryMap[team.id] ?? 0;
       const pendingSalary = pendingSalaryMap[team.id] ?? 0;

@@ -5,4 +5,5 @@ module.exports = {
   PRE_SEASON_DAYS: 15,
   OFFER_WINDOW_END_DAY: 3,
   GAMES_PER_SEASON: 30,
+  MAX_ROSTER_SIZE: 25,
 };

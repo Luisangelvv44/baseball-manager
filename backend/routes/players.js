@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID } = require('../config');
+const { USER_TEAM_ID, MAX_ROSTER_SIZE } = require('../config');
 const { calculateSalary } = require('../seeders/generators/playerGenerator');
 const { createNews } = require('../services/newsService');
 
@@ -194,8 +194,8 @@ router.post('/:id/sign', async (req, res) => {
     const rosterCount = await prisma.player.count({
       where: { team_id: USER_TEAM_ID, status: 'active' },
     });
-    if (rosterCount >= 20) {
-      return res.status(400).json({ error: 'Tu roster está lleno (máximo 20 jugadores)' });
+    if (rosterCount >= MAX_ROSTER_SIZE) {
+      return res.status(400).json({ error: `Tu roster está lleno (máximo ${MAX_ROSTER_SIZE} jugadores)` });
     }
 
     if (!salary) salary = player.salary;
