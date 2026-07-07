@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { useTeam } from '../context/TeamContext.jsx';
+import Pagination from '../components/Pagination.jsx';
 
 function PlayerTable({ players, onSign, rosterFull }) {
   const [years, setYears] = useState({});
@@ -190,6 +191,7 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
 }
 
 const POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
+const PAGE_SIZE = 20;
 
 const EMPTY_FILTERS = {
   position: '',
@@ -207,40 +209,53 @@ export default function Market() {
   const [season, setSeason] = useState(null);
   const [message, setMessage] = useState('');
   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalActive, setTotalActive] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   function setFilter(key, value) {
     setFilters(f => ({ ...f, [key]: value }));
   }
 
-  const filteredAuctions = auctions.filter(a => {
-    const p = a.player;
-    if (filters.position && p.position !== filters.position) return false;
-    if (filters.minPotential !== '' && p.potential_coefficient < +filters.minPotential) return false;
-    if (filters.maxPotential !== '' && p.potential_coefficient > +filters.maxPotential) return false;
-    if (filters.minSkill !== '' && p.current_skill < +filters.minSkill) return false;
-    if (filters.maxSkill !== '' && p.current_skill > +filters.maxSkill) return false;
-    if (filters.minSalary !== '' && Number(p.salary) < +filters.minSalary) return false;
-    if (filters.maxSalary !== '' && Number(p.salary) > +filters.maxSalary) return false;
-    if (filters.minGrowth !== '' && a.growth_coefficient < +filters.minGrowth) return false;
-    if (filters.maxGrowth !== '' && a.growth_coefficient > +filters.maxGrowth) return false;
-    return true;
-  });
+  async function loadAuctions() {
+    const aucData = await api.getAuctions({ ...filters, page, pageSize: PAGE_SIZE });
+    setAuctions(aucData.auctions);
+    setUserRosterCount(aucData.userRosterCount);
+    setTotal(aucData.total);
+    setTotalActive(aucData.totalActive);
+    setTotalPages(aucData.totalPages);
+  }
 
   async function load() {
-    const [aucData, sc, se] = await Promise.all([
-      api.getAuctions(),
+    const [sc, se] = await Promise.all([
       api.getScoutedPlayers(),
       api.getSeason(),
     ]);
-    setAuctions(aucData.auctions);
-    setUserRosterCount(aucData.userRosterCount);
     setScouted(sc);
     setSeason(se);
+    await loadAuctions();
   }
 
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters]);
+
+  const isFirstRun = useRef(true);
+  useEffect(() => {
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      loadAuctions();
+    }, 350);
+    return () => clearTimeout(t);
+  }, [filters, page]);
 
   async function handleSign(id, years) {
     setMessage('');
@@ -287,7 +302,7 @@ export default function Market() {
           5 días tras la última puja.
         </p>
 
-        {auctions.length > 0 && (
+        {totalActive > 0 && (
           <div className="bg-white rounded-lg shadow p-4 mb-4">
             <div className="flex flex-wrap items-center gap-3 mb-3">
               <div className="flex items-center gap-2">
@@ -307,7 +322,7 @@ export default function Market() {
               >
                 Limpiar filtros
               </button>
-              <span className="text-xs text-gray-400">{filteredAuctions.length}/{auctions.length} subastas</span>
+              <span className="text-xs text-gray-400">{total} de {totalActive} subastas</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div>
@@ -358,26 +373,29 @@ export default function Market() {
           </div>
         )}
 
-        {auctions.length === 0 ? (
+        {totalActive === 0 ? (
           <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500 text-sm">
             No hay subastas activas. Inicia una temporada para abrir las subastas de agentes libres.
           </div>
-        ) : filteredAuctions.length === 0 ? (
+        ) : total === 0 ? (
           <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500 text-sm">
             Ninguna subasta coincide con los filtros aplicados.
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredAuctions.map((a) => (
-              <AuctionCard
-                key={a.id}
-                auction={a}
-                season={season}
-                onBidPlaced={() => Promise.all([load(), refreshTeam()])}
-                rosterFull={userRosterCount >= 25}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {auctions.map((a) => (
+                <AuctionCard
+                  key={a.id}
+                  auction={a}
+                  season={season}
+                  onBidPlaced={() => Promise.all([load(), refreshTeam()])}
+                  rosterFull={userRosterCount >= 25}
+                />
+              ))}
+            </div>
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          </>
         )}
       </div>
     </div>

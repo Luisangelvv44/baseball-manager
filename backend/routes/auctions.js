@@ -16,29 +16,110 @@ function auctionInclude() {
   };
 }
 
+function toNumber(v) {
+  return v !== undefined && v !== '' ? Number(v) : undefined;
+}
+
 // GET /api/auctions
 router.get('/', async (req, res) => {
   try {
     const season = await prisma.season.findFirst({ where: { status: 'active' } });
 
-    const auctions = await prisma.freeAgentAuction.findMany({
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
+
+    const minSkill = toNumber(req.query.minSkill);
+    const maxSkill = toNumber(req.query.maxSkill);
+    const minPotential = toNumber(req.query.minPotential);
+    const maxPotential = toNumber(req.query.maxPotential);
+    const minSalary = toNumber(req.query.minSalary);
+    const maxSalary = toNumber(req.query.maxSalary);
+    const minGrowth = toNumber(req.query.minGrowth);
+    const maxGrowth = toNumber(req.query.maxGrowth);
+
+    const playerWhere = {};
+    if (req.query.position) playerWhere.position = req.query.position;
+    if (minSkill !== undefined || maxSkill !== undefined) {
+      playerWhere.current_skill = {};
+      if (minSkill !== undefined) playerWhere.current_skill.gte = minSkill;
+      if (maxSkill !== undefined) playerWhere.current_skill.lte = maxSkill;
+    }
+    if (minPotential !== undefined || maxPotential !== undefined) {
+      playerWhere.potential_coefficient = {};
+      if (minPotential !== undefined) playerWhere.potential_coefficient.gte = minPotential;
+      if (maxPotential !== undefined) playerWhere.potential_coefficient.lte = maxPotential;
+    }
+    if (minSalary !== undefined || maxSalary !== undefined) {
+      playerWhere.salary = {};
+      if (minSalary !== undefined) playerWhere.salary.gte = minSalary;
+      if (maxSalary !== undefined) playerWhere.salary.lte = maxSalary;
+    }
+
+    const where = { status: 'active', season_id: season?.id };
+    if (Object.keys(playerWhere).length) where.player = playerWhere;
+
+    const totalActive = await prisma.freeAgentAuction.count({
       where: { status: 'active', season_id: season?.id },
-      include: auctionInclude(),
-      orderBy: { id: 'asc' },
     });
 
-    const result = auctions.map((a) => ({
-      ...a,
-      growth_coefficient: calculateGrowthCoefficient(a.player),
-      top_bid: a.bids[0] ?? null,
-      bids: undefined,
-    }));
+    const hasGrowthFilter = minGrowth !== undefined || maxGrowth !== undefined;
+
+    let result, total;
+
+    if (hasGrowthFilter) {
+      const all = await prisma.freeAgentAuction.findMany({
+        where,
+        include: auctionInclude(),
+        orderBy: { id: 'asc' },
+      });
+
+      const mapped = all.map((a) => ({
+        ...a,
+        growth_coefficient: calculateGrowthCoefficient(a.player),
+        top_bid: a.bids[0] ?? null,
+        bids: undefined,
+      }));
+
+      const filtered = mapped.filter((a) => {
+        if (minGrowth !== undefined && a.growth_coefficient < minGrowth) return false;
+        if (maxGrowth !== undefined && a.growth_coefficient > maxGrowth) return false;
+        return true;
+      });
+
+      total = filtered.length;
+      result = filtered.slice((page - 1) * pageSize, page * pageSize);
+    } else {
+      total = await prisma.freeAgentAuction.count({ where });
+
+      const rows = await prisma.freeAgentAuction.findMany({
+        where,
+        include: auctionInclude(),
+        orderBy: { id: 'asc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      });
+
+      result = rows.map((a) => ({
+        ...a,
+        growth_coefficient: calculateGrowthCoefficient(a.player),
+        top_bid: a.bids[0] ?? null,
+        bids: undefined,
+      }));
+    }
 
     const userRosterCount = await prisma.player.count({
       where: { team_id: USER_TEAM_ID, status: 'active' },
     });
 
-    res.json({ auctions: result, userRosterCount });
+    res.json({
+      auctions: result,
+      userRosterCount,
+      total,
+      totalActive,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener subastas' });

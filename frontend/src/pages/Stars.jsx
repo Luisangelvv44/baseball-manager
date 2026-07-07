@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { useTeam } from '../context/TeamContext.jsx';
+import Pagination from '../components/Pagination.jsx';
 
 function getTier(skill) {
   if (skill >= 100) return { label: 'Leyenda', bg: 'bg-yellow-400 text-yellow-900' };
@@ -19,6 +20,7 @@ const TIER_CHIPS = [
 ];
 
 const POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
+const PAGE_SIZE = 20;
 
 const DEFAULT_FILTERS = { position: '', minSkill: '70', maxSkill: '' };
 
@@ -156,6 +158,10 @@ export default function Stars() {
   const [season, setSeason] = useState(null);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [activeChip, setActiveChip] = useState(0);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalActive, setTotalActive] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   function applyChip(idx) {
     const chip = TIER_CHIPS[idx];
@@ -168,22 +174,36 @@ export default function Stars() {
     setActiveChip(-1);
   }
 
-  const filtered = auctions.filter(a => {
-    const p = a.player;
-    if (filters.position && p.position !== filters.position) return false;
-    if (filters.minSkill !== '' && p.current_skill < +filters.minSkill) return false;
-    if (filters.maxSkill !== '' && p.current_skill > +filters.maxSkill) return false;
-    return true;
-  });
-
   async function load() {
-    const [aucData, se] = await Promise.all([api.getAuctions(), api.getSeason()]);
+    const [aucData, se] = await Promise.all([
+      api.getAuctions({ ...filters, page, pageSize: PAGE_SIZE }),
+      api.getSeason(),
+    ]);
     setAuctions(aucData.auctions);
     setUserRosterCount(aucData.userRosterCount);
+    setTotal(aucData.total);
+    setTotalActive(aucData.totalActive);
+    setTotalPages(aucData.totalPages);
     setSeason(se);
   }
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters]);
+
+  const isFirstRun = useRef(true);
+  useEffect(() => {
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      load();
+    }, 350);
+    return () => clearTimeout(t);
+  }, [filters, page]);
 
   const rosterFull = userRosterCount >= 25;
 
@@ -238,29 +258,32 @@ export default function Stars() {
             </select>
           </div>
         </div>
-        <div className="text-xs text-gray-400">{filtered.length} jugadores encontrados</div>
+        <div className="text-xs text-gray-400">{total} jugadores encontrados</div>
       </div>
 
-      {auctions.length === 0 ? (
+      {totalActive === 0 ? (
         <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500 text-sm">
           No hay subastas activas. Ejecuta <code className="bg-gray-100 px-1 rounded">npm run seed:stars</code> desde el backend para agregar jugadores sobresalientes.
         </div>
-      ) : filtered.length === 0 ? (
+      ) : total === 0 ? (
         <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500 text-sm">
           Ningún jugador sobresaliente disponible con estos filtros.
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map(a => (
-            <StarAuctionCard
-              key={a.id}
-              auction={a}
-              season={season}
-              onBidPlaced={() => Promise.all([load(), refreshTeam()])}
-              rosterFull={rosterFull}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {auctions.map(a => (
+              <StarAuctionCard
+                key={a.id}
+                auction={a}
+                season={season}
+                onBidPlaced={() => Promise.all([load(), refreshTeam()])}
+                rosterFull={rosterFull}
+              />
+            ))}
+          </div>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+        </>
       )}
     </div>
   );

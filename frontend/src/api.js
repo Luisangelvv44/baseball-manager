@@ -65,7 +65,14 @@ export const api = {
     request('/lineup', { method: 'PUT', body: JSON.stringify({ pitcherIds, batterIds }) }),
 
   // Subastas
-  getAuctions: () => request('/auctions'),
+  getAuctions: (params = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, v);
+    });
+    const s = qs.toString();
+    return request(s ? `/auctions?${s}` : '/auctions');
+  },
   getAuction: (id) => request(`/auctions/${id}`),
   placeBid: (id, amount, years) =>
     request(`/auctions/${id}/bid`, { method: 'POST', body: JSON.stringify({ amount, years }) }),
