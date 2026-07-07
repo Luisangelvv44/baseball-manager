@@ -72,9 +72,13 @@ router.get('/:id', async (req, res) => {
 // POST /api/auctions/:id/bid  { amount }
 router.post('/:id/bid', async (req, res) => {
   const amount = Math.round(Number(req.body.amount));
+  const years = parseInt(req.body.years, 10);
 
   if (isNaN(amount) || amount <= 0) {
     return res.status(400).json({ error: 'Monto de puja inválido' });
+  }
+  if (!Number.isInteger(years) || years < 1) {
+    return res.status(400).json({ error: 'Años de contrato inválidos' });
   }
 
   try {
@@ -89,6 +93,11 @@ router.post('/:id/bid', async (req, res) => {
     if (!auction) return res.status(404).json({ error: 'Subasta no encontrada' });
     if (auction.status !== 'active') {
       return res.status(400).json({ error: 'Esta subasta ya no está activa' });
+    }
+
+    const maxYears = Math.min(9, 40 - auction.player.age);
+    if (years > maxYears) {
+      return res.status(400).json({ error: `Máximo ${maxYears} año(s) de contrato para este jugador` });
     }
 
     const topBid = auction.bids[0] ?? null;
@@ -132,6 +141,7 @@ router.post('/:id/bid', async (req, res) => {
         auction_id: auction.id,
         team_id: USER_TEAM_ID,
         amount,
+        years,
         season_day: currentDay,
       },
     });
@@ -147,6 +157,7 @@ router.post('/:id/bid', async (req, res) => {
     res.json({
       success: true,
       newHighBid: amount,
+      years,
       closesOnDay: currentDay + 5,
       currentDay,
     });

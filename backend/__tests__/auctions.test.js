@@ -39,10 +39,27 @@ describe('POST /api/auctions/:id/bid', () => {
     expect(res.body.error).toMatch(/inválido/);
   });
 
+  it('returns 400 when years is missing or invalid', async () => {
+    const res = await request(app).post('/api/auctions/1/bid').send({ amount: 90000 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/[Aa]ños/);
+  });
+
   it('returns 404 when auction not found', async () => {
     prisma.freeAgentAuction.findUnique.mockResolvedValue(null);
-    const res = await request(app).post('/api/auctions/999/bid').send({ amount: 90000 });
+    const res = await request(app).post('/api/auctions/999/bid').send({ amount: 90000, years: 1 });
     expect(res.status).toBe(404);
+  });
+
+  it('returns 400 when offered years exceed the player-age cap', async () => {
+    prisma.freeAgentAuction.findUnique.mockResolvedValue({
+      ...mockAuction,
+      player: mockFreeAgent,
+      bids: [],
+    });
+    const res = await request(app).post('/api/auctions/1/bid').send({ amount: 90000, years: 20 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/año\(s\) de contrato/);
   });
 
   it('returns 400 when user is already the top bidder', async () => {
@@ -50,7 +67,7 @@ describe('POST /api/auctions/:id/bid', () => {
       ...mockAuction,
       bids: [{ id: 1, auction_id: 1, team_id: 1, amount: 85000 }],
     });
-    const res = await request(app).post('/api/auctions/1/bid').send({ amount: 90000 });
+    const res = await request(app).post('/api/auctions/1/bid').send({ amount: 90000, years: 1 });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/mejor postor/);
   });
@@ -60,7 +77,7 @@ describe('POST /api/auctions/:id/bid', () => {
       ...mockAuction,
       bids: [{ id: 1, auction_id: 1, team_id: 2, amount: 100000 }],
     });
-    const res = await request(app).post('/api/auctions/1/bid').send({ amount: 100000 });
+    const res = await request(app).post('/api/auctions/1/bid').send({ amount: 100000, years: 1 });
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('minimumBid');
   });
@@ -77,10 +94,11 @@ describe('POST /api/auctions/:id/bid', () => {
     prisma.auctionBid.create.mockResolvedValue({});
     prisma.freeAgentAuction.update.mockResolvedValue({});
 
-    const res = await request(app).post('/api/auctions/1/bid').send({ amount: 90000 });
+    const res = await request(app).post('/api/auctions/1/bid').send({ amount: 90000, years: 3 });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.newHighBid).toBe(90000);
+    expect(res.body.years).toBe(3);
     expect(res.body.closesOnDay).toBe(mockSeason.current_day + 5);
   });
 });

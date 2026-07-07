@@ -138,11 +138,15 @@ async function runCpuBidding(tx, season) {
 
       if (proposed > maxWilling) continue;
 
+      const yearsCap = Math.min(5, 40 - player.age);
+      const years = 1 + Math.floor(Math.random() * yearsCap);
+
       await client.auctionBid.create({
         data: {
           auction_id: auction.id,
           team_id: team.id,
           amount: proposed,
+          years,
           season_day: currentDay,
         },
       });
@@ -193,7 +197,7 @@ async function closeExpiredAuctions(tx, season) {
       const winnerTeam = await client.team.findUnique({ where: { id: bid.team_id } });
       const signingBonus = Math.round(Number(bid.amount) * 0.1);
       if (Number(winnerTeam.budget) >= signingBonus) {
-        await _signPlayerToTeam(client, auction, bid.team_id, Number(bid.amount), season);
+        await _signPlayerToTeam(client, auction, bid.team_id, Number(bid.amount), bid.years, season);
         resolved = true;
         closed++;
         break;
@@ -211,7 +215,7 @@ async function closeExpiredAuctions(tx, season) {
   return closed;
 }
 
-async function _signPlayerToTeam(client, auction, teamId, amount, season) {
+async function _signPlayerToTeam(client, auction, teamId, amount, years, season) {
   const signingBonus = Math.round(amount * 0.2);
 
   await client.player.update({
@@ -220,7 +224,7 @@ async function _signPlayerToTeam(client, auction, teamId, amount, season) {
       team_id: teamId,
       status: 'active',
       salary: amount,
-      contract_years_remaining: 1,
+      contract_years_remaining: years,
     },
   });
 
@@ -249,7 +253,7 @@ async function _signPlayerToTeam(client, auction, teamId, amount, season) {
   const signingTeam = await client.team.findUnique({ where: { id: teamId }, select: { name: true } });
   const amtM = (amount / 1_000_000).toFixed(2);
   await createNews('auction',
-    `${signingTeam.name} ganó la subasta de ${auction.player.first_name} ${auction.player.last_name}: $${amtM}M/año`,
+    `${signingTeam.name} ganó la subasta de ${auction.player.first_name} ${auction.player.last_name}: ${years} año(s), $${amtM}M/año`,
     season.current_day,
     season.id
   );

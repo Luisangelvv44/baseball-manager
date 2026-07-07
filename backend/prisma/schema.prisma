@@ -273,6 +273,7 @@ model AuctionBid {
   auction_id Int
   team_id    Int
   amount     Decimal  @db.Decimal(14, 2)
+  years      Int      @default(1)
   season_day Int
   created_at DateTime @default(now())
 

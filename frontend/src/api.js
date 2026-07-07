@@ -67,8 +67,8 @@ export const api = {
   // Subastas
   getAuctions: () => request('/auctions'),
   getAuction: (id) => request(`/auctions/${id}`),
-  placeBid: (id, amount) =>
-    request(`/auctions/${id}/bid`, { method: 'POST', body: JSON.stringify({ amount }) }),
+  placeBid: (id, amount, years) =>
+    request(`/auctions/${id}/bid`, { method: 'POST', body: JSON.stringify({ amount, years }) }),
 
   // Playoffs
   getPlayoffs: () => request('/playoffs'),

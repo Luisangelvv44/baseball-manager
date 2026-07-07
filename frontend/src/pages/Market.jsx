@@ -65,6 +65,7 @@ function PlayerTable({ players, onSign, rosterFull }) {
 
 function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
   const [bidAmount, setBidAmount] = useState('');
+  const [years, setYears] = useState(1);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -79,6 +80,8 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
     ? Math.ceil(Number(topBid.amount) * 1.01)
     : Number(p.salary);
 
+  const maxYears = Math.max(1, Math.min(9, 40 - p.age));
+
   async function handleBid() {
     const amount = Math.round(Number(bidAmount));
     if (!amount || amount < minBid) {
@@ -88,7 +91,7 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
     setLoading(true);
     setError('');
     try {
-      await api.placeBid(auction.id, amount);
+      await api.placeBid(auction.id, amount, Math.min(years, maxYears));
       setBidAmount('');
       onBidPlaced();
     } catch (err) {
@@ -130,7 +133,7 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
           <div className="truncate">
             <span className="text-gray-500">Mejor puja: </span>
             <span className="font-bold text-green-700">${Number(topBid.amount).toLocaleString()}</span>
-            <span className="text-gray-400 text-xs"> — {topBid.team?.name}</span>
+            <span className="text-gray-400 text-xs"> — {topBid.years} año(s) — {topBid.team?.name}</span>
           </div>
         ) : (
           <span className="text-gray-400 italic text-xs">Sin pujas aún</span>
@@ -162,6 +165,15 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
             onChange={(e) => setBidAmount(e.target.value)}
             placeholder={`Mín $${minBid.toLocaleString()}`}
             className="border rounded px-2 py-1 flex-1 text-sm"
+          />
+          <input
+            type="number"
+            min={1}
+            max={maxYears}
+            value={years}
+            onChange={(e) => setYears(Math.min(Math.max(1, Number(e.target.value)), maxYears))}
+            title={`Años de contrato (máx. ${maxYears})`}
+            className="border rounded w-16 px-1 py-1 text-sm"
           />
           <button
             onClick={handleBid}
@@ -270,8 +282,9 @@ export default function Market() {
       <div>
         <h3 className="font-bold text-lg mb-1">Subastas de Agentes Libres</h3>
         <p className="text-xs text-gray-500 mb-3">
-          Los equipos CPU también pujan cada día. El temporizador se reinicia 5 días tras la última puja.
-          El contrato es de 1 año al precio ganador.
+          Los equipos CPU también pujan cada día, ofreciendo entre 1 y 5 años de contrato. Tú puedes ofrecer
+          hasta 9 años (menos si el jugador está cerca de retirarse a los 40). El temporizador se reinicia
+          5 días tras la última puja.
         </p>
 
         {auctions.length > 0 && (
