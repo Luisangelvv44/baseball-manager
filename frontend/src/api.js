@@ -104,6 +104,10 @@ export const api = {
     return request(qs ? `/news?${qs}` : '/news');
   },
 
+  // Históricos
+  getChampionsHistory: () => request('/history/champions'),
+  getSeasonHistory: () => request('/history/seasons'),
+
   // Transmisión
   getBroadcastOffers: () => request('/broadcast/offers'),
   acceptOffer: (id) => request(`/broadcast/offers/${id}/accept`, { method: 'POST' }),

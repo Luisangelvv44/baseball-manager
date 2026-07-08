@@ -16,6 +16,7 @@ const LINKS = [
   { to: '/broadcast', label: 'Transmisión' },
   { to: '/playoffs', label: 'Playoffs' },
   { to: '/draft', label: 'Draft' },
+  { to: '/history', label: 'Históricos' },
 ];
 
 export default function Navbar() {

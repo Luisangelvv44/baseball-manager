@@ -17,6 +17,7 @@ import Coaches from './pages/Coaches.jsx';
 import Draft from './pages/Draft.jsx';
 import Stars from './pages/Stars.jsx';
 import News from './pages/News.jsx';
+import History from './pages/History.jsx';
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/draft" element={<Draft />} />
           <Route path="/stars" element={<Stars />} />
           <Route path="/news" element={<News />} />
+          <Route path="/history" element={<History />} />
           <Route path="/game/:id" element={<GameView />} />
         </Routes>
       </div>
