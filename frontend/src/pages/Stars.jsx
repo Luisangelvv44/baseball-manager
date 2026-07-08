@@ -26,6 +26,7 @@ const DEFAULT_FILTERS = { position: '', minSkill: '70', maxSkill: '' };
 
 function StarAuctionCard({ auction, season, onBidPlaced, rosterFull }) {
   const [bidAmount, setBidAmount] = useState('');
+  const [years, setYears] = useState(1);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -40,6 +41,8 @@ function StarAuctionCard({ auction, season, onBidPlaced, rosterFull }) {
     ? Math.ceil(Number(topBid.amount) * 1.01)
     : Number(p.salary);
 
+  const maxYears = Math.max(1, Math.min(9, 40 - p.age));
+
   const tier = getTier(p.current_skill);
 
   async function handleBid() {
@@ -51,7 +54,7 @@ function StarAuctionCard({ auction, season, onBidPlaced, rosterFull }) {
     setLoading(true);
     setError('');
     try {
-      await api.placeBid(auction.id, amount);
+      await api.placeBid(auction.id, amount, Math.min(years, maxYears));
       setBidAmount('');
       onBidPlaced();
     } catch (err) {
@@ -104,7 +107,7 @@ function StarAuctionCard({ auction, season, onBidPlaced, rosterFull }) {
           <div className="truncate">
             <span className="text-gray-500">Mejor puja: </span>
             <span className="font-bold text-green-700">${Number(topBid.amount).toLocaleString()}</span>
-            <span className="text-gray-400 text-xs"> — {topBid.team?.name}</span>
+            <span className="text-gray-400 text-xs"> — {topBid.years} año(s) — {topBid.team?.name}</span>
           </div>
         ) : (
           <span className="text-gray-400 italic text-xs">Sin pujas aún</span>
@@ -127,16 +130,31 @@ function StarAuctionCard({ auction, season, onBidPlaced, rosterFull }) {
       {rosterFull ? (
         <p className="text-center text-sm text-red-600 font-medium py-1">Roster lleno (máx. 25)</p>
       ) : (
-        <div className="flex gap-2">
-          <input
-            type="number"
-            min={minBid}
-            step={10000}
-            value={bidAmount}
-            onChange={(e) => setBidAmount(e.target.value)}
-            placeholder={`Mín $${minBid.toLocaleString()}`}
-            className="border rounded px-2 py-1 flex-1 text-sm"
-          />
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <label className="block text-xs text-gray-500 mb-0.5">Monto</label>
+            <input
+              type="number"
+              min={minBid}
+              step={10000}
+              value={bidAmount}
+              onChange={(e) => setBidAmount(e.target.value)}
+              placeholder={`Mín $${minBid.toLocaleString()}`}
+              className="border rounded px-2 py-1 w-full text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-0.5">Años</label>
+            <input
+              type="number"
+              min={1}
+              max={maxYears}
+              value={years}
+              onChange={(e) => setYears(Math.min(Math.max(1, Number(e.target.value)), maxYears))}
+              title={`Años de contrato (máx. ${maxYears})`}
+              className="border rounded w-16 px-1 py-1 text-sm"
+            />
+          </div>
           <button
             onClick={handleBid}
             disabled={loading}
