@@ -153,6 +153,7 @@ router.post('/:id/collect', async (req, res) => {
           current_skill: p.current_skill,
           salary: p.salary,
           contract_years_remaining: p.contract_years_remaining,
+          rookie_contract: p.rookie_contract,
           team_id: null,
           status: 'scouted',
         },

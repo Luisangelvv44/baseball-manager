@@ -61,6 +61,7 @@ model Player {
   salary                   Decimal @db.Decimal(12, 2)
   contract_years_remaining Int     @default(1)
   rookie_contract          Boolean @default(false)
+  rookie_seasons           Int     @default(0)
   team_id                  Int?
   status                   String  @default("active") @db.VarChar(20)
   injury_days_remaining    Int     @default(0)

@@ -166,13 +166,22 @@ async function endOfSeasonCleanup(season) {
 
   await updatePlayersContracts();
 
-  const expiringRookies = await prisma.player.findMany({
-    where: { status: 'active', rookie_contract: true, contract_years_remaining: { lte: 0 } },
-    select: { id: true, potential_coefficient: true, current_skill: true, age: true },
+  // Incrementa el contador de temporadas para todo rookie vigente (equipo, agente libre o prospecto de scout)
+  await prisma.player.updateMany({
+    where: { rookie_contract: true, status: { in: ['active', 'free_agent', 'scouted'] } },
+    data: { rookie_seasons: { increment: 1 } },
   });
-  for (const p of expiringRookies) {
-    const realSalary = calculateSalary(p.potential_coefficient, p.current_skill, p.age);
-    await prisma.player.update({ where: { id: p.id }, data: { salary: realSalary, rookie_contract: false } });
+
+  // Gradúa a los que acumulan 3+ temporadas como rookie: precio real = salario actual x 10
+  const graduatingRookies = await prisma.player.findMany({
+    where: { rookie_contract: true, rookie_seasons: { gte: 3 }, status: { in: ['active', 'free_agent', 'scouted'] } },
+    select: { id: true, salary: true },
+  });
+  for (const p of graduatingRookies) {
+    await prisma.player.update({
+      where: { id: p.id },
+      data: { salary: Math.round(Number(p.salary) * 10), rookie_contract: false },
+    });
   }
 
   const expiringPlayers = await prisma.player.findMany({
