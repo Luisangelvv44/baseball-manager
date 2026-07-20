@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import TeamBadge from '../components/TeamBadge.jsx';
 
 const USER_TEAM_ID = 1;
 
@@ -104,7 +105,7 @@ export default function Draft() {
               <p className="font-semibold">
                 Turno de:{' '}
                 <span className={currentTeam.id === USER_TEAM_ID ? 'text-blue-600' : 'text-gray-800'}>
-                  {currentTeam.id === USER_TEAM_ID ? 'Tu equipo' : currentTeam.name}
+                  {currentTeam.id === USER_TEAM_ID ? 'Tu equipo' : <TeamBadge name={currentTeam.name} />}
                 </span>
               </p>
             )}
@@ -213,7 +214,7 @@ export default function Draft() {
                   <div>
                     <span className="text-gray-400 mr-2">#{pickNum}</span>
                     <span className={team.id === USER_TEAM_ID ? 'font-bold text-blue-700' : 'text-gray-800'}>
-                      {team.id === USER_TEAM_ID ? 'Tu equipo' : team.name}
+                      {team.id === USER_TEAM_ID ? 'Tu equipo' : <TeamBadge name={team.name} />}
                     </span>
                     {pickedProspect && (
                       <p className="text-xs text-gray-500 mt-0.5 ml-5">{pickedProspect.name} ({pickedProspect.position})</p>

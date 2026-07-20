@@ -46,22 +46,17 @@ const LAST_NAMES = [
 ];
 
 // "Pais ficticio": equipos no en espanol, ciudades inventadas.
-const TEAM_NICKNAMES = [
-  'Hawks', 'Miners', 'Comets', 'Rebels', 'Wolves', 'Pioneers', 'Knights',
-  'Sailors', 'Foxes', 'Giants', 'Raptors', 'Voyagers', 'Outlaws',
-  'Stallions', 'Sentinels', 'Crushers', 'Drifters', 'Marauders',
-];
-
-const FICTIONAL_CITIES = [
-  'Brisko', 'Adalveer', 'Norhaven', 'Calderex', 'Veltmoor', 'Ostrava Bay',
-  'Kantilo', 'Sundermere', 'Ravenholt', 'Marrowick', 'Thalgrove',
-  'Esterfall', 'Drommel', 'Hallowmere', 'Westvane', 'Crownridge',
-  'Pellanor', 'Druvask',
+// Cada nombre tiene un logo SVG correspondiente en frontend/src/assets/logos/
+// (kebab-case del nombre, ej. "Ostrava Bay Comets" -> ostrava-bay-comets.svg).
+const TEAM_NAMES = [
+  'Brisko Wolves', 'Adalveer Outlaws', 'Norhaven Sailors', 'Calderex Voyagers',
+  'Veltmoor Sentinels', 'Ostrava Bay Comets', 'Sundermere Crushers', 'Ravenholt Hawks',
+  'Thalgrove Miners', 'Esterfall Marauders', 'Drommel Raptors', 'Hallowmere Foxes',
+  'Westvane Rebels', 'Crownridge Pioneers', 'Pellanor Giants', 'Druvask Knights',
 ];
 
 module.exports = {
   FIRST_NAMES,
   LAST_NAMES,
-  TEAM_NICKNAMES,
-  FICTIONAL_CITIES,
+  TEAM_NAMES,
 };

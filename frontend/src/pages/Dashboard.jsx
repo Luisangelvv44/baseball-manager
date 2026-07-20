@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import Leaderboard from '../components/Leaderboard.jsx';
+import TeamBadge from '../components/TeamBadge.jsx';
 import { useTeam } from '../context/TeamContext.jsx';
 
 export default function Dashboard() {
@@ -103,7 +104,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow p-4 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold">{myTeam.name}</h2>
+          <TeamBadge name={myTeam.name} size="md" className="text-xl font-bold" />
           <p className="text-gray-600">
             Presupuesto: <span className="font-semibold text-green-700">${Number(myTeam.budget).toLocaleString()}</span>
             {' · '}Reputacion: {myTeam.reputation}

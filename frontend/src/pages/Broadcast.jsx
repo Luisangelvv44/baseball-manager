@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useTeam } from '../context/TeamContext.jsx';
+import TeamBadge from '../components/TeamBadge.jsx';
 
 const GAMES_PER_SEASON = 30;
 
@@ -240,7 +241,7 @@ export default function Broadcast() {
                         {c.contracts.length > 0 && (
                           <div className="flex flex-col text-xs text-gray-400">
                             {c.contracts.map((ct) => (
-                              <span key={ct.id}>{ct.team.name}</span>
+                              <TeamBadge key={ct.id} name={ct.team.name} />
                             ))}
                           </div>
                         )}

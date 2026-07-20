@@ -1,3 +1,5 @@
+import TeamBadge from './TeamBadge.jsx';
+
 export default function Leaderboard({ teams, userTeamId }) {
   const divisions = {};
   teams.forEach((t) => {
@@ -41,7 +43,7 @@ export default function Leaderboard({ teams, userTeamId }) {
                 return (
                   <tr key={team.id} className={`border-b last:border-0 ${isUser ? 'bg-blue-100 font-bold' : ''}`}>
                     <td className="py-1">{idx + 1}</td>
-                    <td className="py-1">{team.name}</td>
+                    <td className="py-1"><TeamBadge name={team.name} /></td>
                     <td className="py-1">{team.wins}</td>
                     <td className="py-1">{team.losses}</td>
                     <td className="py-1">{pct}</td>

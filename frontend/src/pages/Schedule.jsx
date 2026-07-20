@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
+import TeamBadge from '../components/TeamBadge.jsx';
 
 const DAY_HEADERS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 const MONTH_SPLIT = 30;
@@ -273,8 +274,8 @@ export default function Schedule() {
                       } ${finished && isUserGame ? 'cursor-pointer hover:bg-blue-100' : ''}`}
                     >
                       <div className="flex flex-col">
-                        <span className={isUserGame ? 'font-semibold text-blue-900' : 'text-gray-700'}>
-                          {g.away_team?.name ?? '—'} @ {g.home_team?.name ?? '—'}
+                        <span className={`flex items-center gap-1 ${isUserGame ? 'font-semibold text-blue-900' : 'text-gray-700'}`}>
+                          <TeamBadge name={g.away_team?.name ?? '—'} /> @ <TeamBadge name={g.home_team?.name ?? '—'} />
                         </span>
                         {isUserGame && (
                           <span className="text-xs text-blue-500 font-medium">Tu partido{finished ? ' · Ver resumen →' : ''}</span>

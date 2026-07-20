@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import TeamBadge from '../components/TeamBadge.jsx';
 
 const TYPE_CONFIG = {
   game:    { label: 'Partido',  bg: 'bg-blue-600',   border: 'border-blue-500',  text: 'text-blue-400'  },
@@ -123,7 +124,7 @@ export default function News() {
               {sorted.map((team, i) => (
                 <tr key={team.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                   <td className="px-2 py-1.5 text-gray-500 text-xs">{i + 1}</td>
-                  <td className="px-2 py-1.5 font-medium text-gray-800 truncate max-w-[120px]">{team.name}</td>
+                  <td className="px-2 py-1.5 font-medium text-gray-800 max-w-[120px]"><TeamBadge name={team.name} /></td>
                   <td className="px-2 py-1.5 text-center text-green-700 font-semibold">{team.wins}</td>
                   <td className="px-2 py-1.5 text-center text-red-600">{team.losses}</td>
                 </tr>

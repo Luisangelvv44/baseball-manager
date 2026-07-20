@@ -4,7 +4,6 @@ const { generateTeamNames } = require('./generators/teamGenerator');
 const { generateStadiumSections } = require('./generators/stadiumGenerator');
 
 const TEAMS_PER_DIVISION = 8;
-const USER_TEAM_NAME = 'Tu Equipo';
 const USER_STARTING_BUDGET = 10000000;
 
 function randomInt(min, max) {
@@ -33,15 +32,14 @@ async function seed() {
       // ---------- Equipos ----------
       console.log('Creando equipos...');
       const totalTeams = TEAMS_PER_DIVISION * 2;
-      const cpuTeamNames = generateTeamNames(totalTeams - 1);
+      const teamNames = generateTeamNames();
 
       const teamIds = [];
-      let cpuIndex = 0;
 
       for (let i = 0; i < totalTeams; i++) {
         const isUser = i === 0;
         const divisionId = i < TEAMS_PER_DIVISION ? divNorth.id : divSouth.id;
-        const name = isUser ? USER_TEAM_NAME : cpuTeamNames[cpuIndex++];
+        const name = teamNames[i];
         const budget = isUser ? USER_STARTING_BUDGET : randomInt(8000000, 20000000);
         const reputation = isUser ? 50 : randomInt(40, 60);
 

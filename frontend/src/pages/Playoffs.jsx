@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useTeam } from '../context/TeamContext.jsx';
+import TeamBadge from '../components/TeamBadge.jsx';
 
 const ROUND_LABELS = { 1: 'Cuartos de Final', 2: 'Semifinales', 3: 'Gran Final' };
 
@@ -24,7 +25,7 @@ function SeriesCard({ series, onPlay, disabled }) {
             isCompleted && series.winner_id === series.home_team_id ? 'text-green-700' : ''
           }`}
         >
-          {series.home_team.name}
+          <TeamBadge name={series.home_team.name} />
         </span>
         <span className="text-lg font-bold text-gray-800 shrink-0">{series.home_wins}</span>
       </div>
@@ -34,7 +35,7 @@ function SeriesCard({ series, onPlay, disabled }) {
             isCompleted && series.winner_id === series.away_team_id ? 'text-green-700' : ''
           }`}
         >
-          {series.away_team.name}
+          <TeamBadge name={series.away_team.name} />
         </span>
         <span className="text-lg font-bold text-gray-800 shrink-0">{series.away_wins}</span>
       </div>
@@ -42,8 +43,8 @@ function SeriesCard({ series, onPlay, disabled }) {
       <p className="text-xs text-gray-400 mt-1">Mejor de {totalPossible}</p>
 
       {isCompleted ? (
-        <p className="mt-2 text-xs font-semibold text-green-700">
-          Ganador: {series.winner.name}
+        <p className="mt-2 text-xs font-semibold text-green-700 flex items-center gap-1">
+          Ganador: <TeamBadge name={series.winner.name} />
         </p>
       ) : nextGame && isUserSeries ? (
         <button
@@ -165,7 +166,7 @@ export default function Playoffs() {
       {champion && (
         <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-6 text-center">
           <p className="text-3xl mb-1">🏆</p>
-          <p className="text-xl font-bold text-yellow-800">{champion.name}</p>
+          <TeamBadge name={champion.name} size="md" className="text-xl font-bold text-yellow-800 justify-center" />
           <p className="text-yellow-700 text-sm mt-1">¡Campeón de la temporada!</p>
         </div>
       )}

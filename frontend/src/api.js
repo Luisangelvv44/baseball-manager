@@ -20,6 +20,7 @@ export const api = {
   getTeams: () => request('/teams'),
   getMyTeam: () => request('/teams/user'),
   getTeam: (id) => request(`/teams/${id}`),
+  getTeamsOverview: () => request('/teams/overview'),
 
   // Jugadores
   getFreeAgents: () => request('/players/free-agents'),

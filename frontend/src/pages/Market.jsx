@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { useTeam } from '../context/TeamContext.jsx';
 import Pagination from '../components/Pagination.jsx';
+import TeamBadge from '../components/TeamBadge.jsx';
 
 function PlayerTable({ players, onSign, rosterFull }) {
   const [years, setYears] = useState({});
@@ -134,7 +135,7 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
           <div className="truncate">
             <span className="text-gray-500">Mejor puja: </span>
             <span className="font-bold text-green-700">${Number(topBid.amount).toLocaleString()}</span>
-            <span className="text-gray-400 text-xs"> — {topBid.years} año(s) — {topBid.team?.name}</span>
+            <span className="text-gray-400 text-xs inline-flex items-center gap-1"> — {topBid.years} año(s) — <TeamBadge name={topBid.team?.name} /></span>
           </div>
         ) : (
           <span className="text-gray-400 italic text-xs">Sin pujas aún</span>

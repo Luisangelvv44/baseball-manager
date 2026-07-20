@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import TeamBadge from '../components/TeamBadge.jsx';
 
 function SeasonCard({ season }) {
   const hasRecord = season.champion_wins != null && season.champion_losses != null;
@@ -10,7 +11,11 @@ function SeasonCard({ season }) {
         <span className="text-lg">🏆</span>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center text-center gap-1">
-        <p className="font-bold text-lg text-gray-800 leading-tight">{season.champion_name ?? 'N/D'}</p>
+        {season.champion_name ? (
+          <TeamBadge name={season.champion_name} size="md" className="font-bold text-lg text-gray-800 leading-tight justify-center" />
+        ) : (
+          <p className="font-bold text-lg text-gray-800 leading-tight">N/D</p>
+        )}
         {season.champion_division && (
           <p className="text-xs text-gray-400">{season.champion_division}</p>
         )}
@@ -22,7 +27,7 @@ function SeasonCard({ season }) {
       </div>
       <div className="text-xs text-gray-500 text-center border-t pt-2">
         {season.runner_up ? (
-          <span>Subcampeón: <span className="font-medium text-gray-700">{season.runner_up}</span></span>
+          <span className="inline-flex items-center gap-1">Subcampeón: <TeamBadge name={season.runner_up} className="font-medium text-gray-700" /></span>
         ) : (
           <span className="italic text-gray-400">Sin subcampeón registrado</span>
         )}
@@ -66,7 +71,7 @@ export default function History() {
             <tbody>
               {champions.map((c, i) => (
                 <tr key={c.team_id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="px-2 py-1.5 font-medium text-gray-800 truncate max-w-[140px]">{c.name}</td>
+                  <td className="px-2 py-1.5 font-medium text-gray-800 max-w-[140px]"><TeamBadge name={c.name} /></td>
                   <td className="px-2 py-1.5 text-center font-semibold text-yellow-700">
                     {c.championships > 0 ? c.championships : '-'}
                   </td>

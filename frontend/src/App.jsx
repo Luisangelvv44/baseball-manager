@@ -18,6 +18,7 @@ import Draft from './pages/Draft.jsx';
 import Stars from './pages/Stars.jsx';
 import News from './pages/News.jsx';
 import History from './pages/History.jsx';
+import TeamsOverview from './pages/TeamsOverview.jsx';
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/stadium" element={<Stadium />} />
           <Route path="/scouts" element={<Scouts />} />
           <Route path="/finances" element={<Finances />} />
+          <Route path="/teams-overview" element={<TeamsOverview />} />
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/lineup" element={<Lineup />} />
           <Route path="/broadcast" element={<Broadcast />} />

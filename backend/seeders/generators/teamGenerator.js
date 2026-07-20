@@ -1,17 +1,9 @@
-const { TEAM_NICKNAMES, FICTIONAL_CITIES } = require('../data/names');
+const { TEAM_NAMES } = require('../data/names');
 
-// Genera "count" nombres unicos del tipo "Ciudad Apodo" (ej: "Brisko Hawks")
-function generateTeamNames(count) {
-  const cities = [...FICTIONAL_CITIES].sort(() => Math.random() - 0.5);
-  const nicknames = [...TEAM_NICKNAMES].sort(() => Math.random() - 0.5);
-
-  const names = [];
-  for (let i = 0; i < count; i++) {
-    const city = cities[i % cities.length];
-    const nick = nicknames[i % nicknames.length];
-    names.push(`${city} ${nick}`);
-  }
-  return names;
+// Devuelve los 16 nombres de equipo fijos (cada uno con logo correspondiente),
+// en orden aleatorio para decidir que equipo recibe cada nombre.
+function generateTeamNames() {
+  return [...TEAM_NAMES].sort(() => Math.random() - 0.5);
 }
 
 module.exports = { generateTeamNames };

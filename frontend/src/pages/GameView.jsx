@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
+import TeamBadge from '../components/TeamBadge.jsx';
 
 const RESULT_LABELS = {
   SO: 'Strikeout (K)',
@@ -67,7 +68,7 @@ function InningScoreboard({ innings, inningScores, homeTeam, awayTeam, homeTotal
         </thead>
         <tbody>
           <tr className="border-b">
-            <td className="text-left pr-4 py-1 font-semibold truncate max-w-[80px]">{awayTeam?.name}</td>
+            <td className="text-left pr-4 py-1 font-semibold max-w-[80px]"><TeamBadge name={awayTeam?.name} /></td>
             {innings.map((n) => (
               <td key={n} className="px-2 py-1">
                 {inningScores[n] !== undefined ? inningScores[n].away : '-'}
@@ -76,7 +77,7 @@ function InningScoreboard({ innings, inningScores, homeTeam, awayTeam, homeTotal
             <td className="px-3 py-1 font-bold border-l">{awayTotal}</td>
           </tr>
           <tr>
-            <td className="text-left pr-4 py-1 font-semibold truncate max-w-[80px]">{homeTeam?.name}</td>
+            <td className="text-left pr-4 py-1 font-semibold max-w-[80px]"><TeamBadge name={homeTeam?.name} /></td>
             {innings.map((n) => (
               <td key={n} className="px-2 py-1">
                 {inningScores[n] !== undefined ? inningScores[n].home : '-'}
@@ -208,18 +209,18 @@ export default function GameView() {
 
       {/* Marcador total */}
       <div className="bg-white rounded-lg shadow p-6 text-center">
-        <h2 className="text-xl font-bold mb-2">
-          {awayTeam?.name} <span className="text-gray-400">@</span> {homeTeam?.name}
+        <h2 className="text-xl font-bold mb-2 flex items-center justify-center gap-2">
+          <TeamBadge name={awayTeam?.name} /> <span className="text-gray-400">@</span> <TeamBadge name={homeTeam?.name} />
         </h2>
         <div className="flex justify-center items-center gap-8 text-4xl font-bold">
           <div className="flex flex-col items-center">
             <span>{score.away}</span>
-            <span className="text-sm font-normal text-gray-500 mt-1">{awayTeam?.name}</span>
+            <span className="text-sm font-normal text-gray-500 mt-1"><TeamBadge name={awayTeam?.name} /></span>
           </div>
           <span className="text-gray-300">-</span>
           <div className="flex flex-col items-center">
             <span>{score.home}</span>
-            <span className="text-sm font-normal text-gray-500 mt-1">{homeTeam?.name}</span>
+            <span className="text-sm font-normal text-gray-500 mt-1"><TeamBadge name={homeTeam?.name} /></span>
           </div>
         </div>
 

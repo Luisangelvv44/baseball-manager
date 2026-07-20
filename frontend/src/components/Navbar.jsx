@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useTeam } from '../context/TeamContext.jsx';
+import TeamBadge from './TeamBadge.jsx';
 
 const LINKS = [
   { to: '/', label: 'Dashboard' },
@@ -13,6 +14,7 @@ const LINKS = [
   { to: '/scouts', label: 'Scouts' },
   { to: '/coaches', label: 'Coaches' },
   { to: '/finances', label: 'Finanzas' },
+  { to: '/teams-overview', label: 'Equipos' },
   { to: '/broadcast', label: 'Transmisión' },
   { to: '/playoffs', label: 'Playoffs' },
   { to: '/draft', label: 'Draft' },
@@ -32,6 +34,7 @@ export default function Navbar() {
       {/* Main header */}
       <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
         <Link to="/" className="font-bold text-lg shrink-0">⚾ Baseball Manager</Link>
+        {myTeam && <TeamBadge name={myTeam.name} size="md" className="text-white font-semibold" />}
         <div className="flex items-center gap-4 text-sm text-gray-300">
           <span className="font-semibold text-green-400">{budget}</span>
           <span>{fans}</span>
