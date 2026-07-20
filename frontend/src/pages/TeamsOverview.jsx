@@ -33,6 +33,7 @@ export default function TeamsOverview() {
               <th className="px-3 py-2">Equipo</th>
               <th className="px-3 py-2">División</th>
               <th className="px-3 py-2">Roster</th>
+              <th className="px-3 py-2">Fan Base</th>
               <th className="px-3 py-2">Budget</th>
               <th className="px-3 py-2">Revenue est./temporada</th>
               <th className="px-3 py-2">Máx. puja</th>
@@ -44,6 +45,7 @@ export default function TeamsOverview() {
                 <td className="px-3 py-2"><TeamBadge name={t.name} /></td>
                 <td className="px-3 py-2 text-gray-500">{t.division_name}</td>
                 <td className="px-3 py-2">{t.roster_count} / {MAX_ROSTER_SIZE}</td>
+                <td className="px-3 py-2">{(t.fan_base ?? 0).toLocaleString()}</td>
                 <td className="px-3 py-2">{t.budget != null ? formatCompactMoney(t.budget) : '—'}</td>
                 <td className="px-3 py-2">
                   {t.revenue_min != null

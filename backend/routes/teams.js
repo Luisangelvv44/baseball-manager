@@ -53,6 +53,7 @@ router.get('/overview', async (req, res) => {
       division_name: t.division?.name,
       is_user_team: t.is_user_team,
       roster_count: countMap[t.id] ?? 0,
+      fan_base: t.fan_base,
       budget: t.is_user_team ? null : Number(t.budget),
       bid_aggressiveness_pct: t.is_user_team ? null : t.bid_aggressiveness * 100,
       max_bid_amount: t.is_user_team ? null : Math.round(Number(t.budget) * t.bid_aggressiveness),
