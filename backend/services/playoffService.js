@@ -236,9 +236,12 @@ async function advancePlayoffRound(seasonId) {
 async function handleChampion(winnerId, seasonId) {
   const fandomBoost = Math.floor(Math.random() * 100_001) + 50_000;
 
+  const team = await prisma.team.findUnique({ where: { id: winnerId }, select: { fan_base: true } });
+  const championshipPrize = team.fan_base * 30;
+
   await prisma.team.update({
     where: { id: winnerId },
-    data: { reputation: { increment: 20 }, budget: { increment: 3_000_000 }, fan_base: { increment: fandomBoost } },
+    data: { reputation: { increment: 20 }, budget: { increment: championshipPrize }, fan_base: { increment: fandomBoost } },
   });
 
   if (winnerId === USER_TEAM_ID) {
@@ -247,7 +250,7 @@ async function handleChampion(winnerId, seasonId) {
         team_id: USER_TEAM_ID,
         season_day: 999,
         type: 'playoff_bonus',
-        amount: 3_000_000,
+        amount: championshipPrize,
         description: '¡Premio de campeón de playoffs!',
       },
     });
