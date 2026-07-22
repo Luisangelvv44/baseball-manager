@@ -47,6 +47,8 @@ model Team {
   playoff_home        PlayoffSeries[]     @relation("PlayoffHome")
   playoff_away        PlayoffSeries[]     @relation("PlayoffAway")
   playoff_won         PlayoffSeries[]     @relation("PlayoffWinner")
+  trades_proposed     Trade[]             @relation("TradeProposer")
+  trades_received     Trade[]             @relation("TradeRecipient")
 }
 
 model Player {
@@ -72,6 +74,7 @@ model Player {
   game_lineups GameLineup[]
   team_lineups TeamLineup[]
   game_events  GameEvent[]      @relation("PlayerEvent")
+  trade_items  TradeItem[]
 
   @@index([team_id])
   @@index([status])
@@ -91,6 +94,7 @@ model Season {
   playoff_series      PlayoffSeries[]
   draft               Draft?
   season_record       SeasonRecord?
+  trades              Trade[]
 }
 
 model SeasonRecord {
@@ -380,6 +384,44 @@ model DraftProspect {
 
   @@map("draft_prospects")
   @@index([draft_id])
+}
+
+model Trade {
+  id                Int      @id @default(autoincrement())
+  season_id         Int
+  proposer_team_id  Int
+  recipient_team_id Int
+  status            String   @default("pending") @db.VarChar(20) // pending | accepted | rejected | cancelled | expired
+  cash_offered      Decimal  @default(0) @db.Decimal(14, 2) // proposer -> recipient
+  cash_requested    Decimal  @default(0) @db.Decimal(14, 2) // recipient -> proposer
+  created_day       Int
+  expires_day       Int?
+  resolved_day      Int?
+  created_at        DateTime @default(now())
+
+  season         Season      @relation(fields: [season_id], references: [id])
+  proposer_team  Team        @relation("TradeProposer", fields: [proposer_team_id], references: [id])
+  recipient_team Team        @relation("TradeRecipient", fields: [recipient_team_id], references: [id])
+  items          TradeItem[]
+
+  @@map("trades")
+  @@index([status])
+  @@index([recipient_team_id])
+  @@index([proposer_team_id])
+}
+
+model TradeItem {
+  id           Int    @id @default(autoincrement())
+  trade_id     Int
+  player_id    Int
+  from_team_id Int // equipo dueño del jugador al momento de proponer
+
+  trade  Trade  @relation(fields: [trade_id], references: [id])
+  player Player @relation(fields: [player_id], references: [id])
+
+  @@map("trade_items")
+  @@index([trade_id])
+  @@index([player_id])
 }
 
 model NewsItem {

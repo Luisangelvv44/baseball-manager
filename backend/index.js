@@ -22,6 +22,7 @@ app.use('/api/coaches', require('./routes/coaches'));
 app.use('/api/draft', require('./routes/draft'));
 app.use('/api/news', require('./routes/news'));
 app.use('/api/history', require('./routes/history'));
+app.use('/api/trades', require('./routes/trades'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

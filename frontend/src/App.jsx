@@ -19,6 +19,7 @@ import Stars from './pages/Stars.jsx';
 import News from './pages/News.jsx';
 import History from './pages/History.jsx';
 import TeamsOverview from './pages/TeamsOverview.jsx';
+import Trades from './pages/Trades.jsx';
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/newgame" element={<NewGame />} />
           <Route path="/roster" element={<Roster />} />
           <Route path="/market" element={<Market />} />
+          <Route path="/trades" element={<Trades />} />
           <Route path="/stadium" element={<Stadium />} />
           <Route path="/scouts" element={<Scouts />} />
           <Route path="/finances" element={<Finances />} />

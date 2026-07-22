@@ -115,4 +115,17 @@ export const api = {
   rejectOffer: (id) => request(`/broadcast/offers/${id}/reject`, { method: 'POST' }),
   getBroadcastContract: () => request('/broadcast/contract'),
   getBroadcastCompanies: () => request('/broadcast/companies'),
+
+  // Traspasos
+  getSentTrades: () => request('/trades/sent'),
+  getReceivedTrades: () => request('/trades/received'),
+  getTradeHistory: () => request('/trades/history'),
+  proposeTrade: (recipientTeamId, offeredPlayerIds, requestedPlayerIds, cashOffered, cashRequested) =>
+    request('/trades', {
+      method: 'POST',
+      body: JSON.stringify({ recipientTeamId, offeredPlayerIds, requestedPlayerIds, cashOffered, cashRequested }),
+    }),
+  acceptTrade: (id) => request(`/trades/${id}/accept`, { method: 'POST' }),
+  rejectTrade: (id) => request(`/trades/${id}/reject`, { method: 'POST' }),
+  cancelTrade: (id) => request(`/trades/${id}/cancel`, { method: 'POST' }),
 };

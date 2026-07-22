@@ -390,6 +390,7 @@ async function cancelAllActiveAuctions(tx) {
 
 module.exports = {
   calculateGrowthCoefficient,
+  projectPeakSkill,
   createAuctionsForFreeAgents,
   runCpuBidding,
   closeExpiredAuctions,

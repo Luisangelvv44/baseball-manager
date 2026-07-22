@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE } = require('../config');
+const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY } = require('../config');
 const { generateSchedule } = require('../services/scheduleGenerator');
 const { playGame } = require('../services/gamePlay');
 const {
@@ -26,6 +26,7 @@ const { giveCpuTeamsRevenue } = require('../services/cpuTeamManagement');
 const { applyCoachBonuses, deductCoachSalaries } = require('../services/coachService');
 const { createDraft } = require('../services/draftService');
 const { processInjuryRecovery, clearAllInjuries } = require('../services/injuryService');
+const { generateCpuTradeOffers, expireStaleTrades } = require('../services/tradeService');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
@@ -370,6 +371,11 @@ router.post('/advance-day', async (req, res) => {
 
     await runCpuBidding(null, season);
     const auctionsClosed = await closeExpiredAuctions(null, season);
+
+    await expireStaleTrades(null, season);
+    if (day < TRADE_DEADLINE_DAY) {
+      await generateCpuTradeOffers(null, season);
+    }
 
     if (day === OFFER_WINDOW_END_DAY) {
       await finalizeContracts(season);

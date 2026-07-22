@@ -1,6 +1,9 @@
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID } = require('../config');
-const { playGame } = require('./gamePlay');
+const { playGame, applyRandomFanChange } = require('./gamePlay');
+
+const FAN_MIN_PLAYOFF = 2000;
+const FAN_MAX_PLAYOFF = 20000;
 
 async function generatePlayoffBracket(seasonId) {
   const existing = await prisma.playoffSeries.findFirst({ where: { season_id: seasonId } });
@@ -96,6 +99,10 @@ async function updateSeriesAfterGame(game, result) {
   const homeWon = result.homeScore > result.awayScore;
   // Determine if the series home_team won this individual game
   const seriesHomeWon = game.home_team_id === series.home_team_id ? homeWon : !homeWon;
+
+  // Flujo de fans simétrico y aleatorio para ambos participantes (usuario y CPU por igual)
+  await applyRandomFanChange(game.home_team_id, homeWon, FAN_MIN_PLAYOFF, FAN_MAX_PLAYOFF);
+  await applyRandomFanChange(game.away_team_id, !homeWon, FAN_MIN_PLAYOFF, FAN_MAX_PLAYOFF);
 
   const updated = await prisma.playoffSeries.update({
     where: { id: series.id },

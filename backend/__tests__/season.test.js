@@ -37,6 +37,10 @@ jest.mock('../services/injuryService', () => ({
   processInjuryRecovery: jest.fn().mockResolvedValue(undefined),
   clearAllInjuries: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock('../services/tradeService', () => ({
+  generateCpuTradeOffers: jest.fn().mockResolvedValue(undefined),
+  expireStaleTrades: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('../seeders/generators/playerGenerator', () => ({
   calculateSalary: jest.fn().mockReturnValue(100000),
   generatePlayer: jest.fn().mockReturnValue({ name: 'Rookie', position: 'OF', age: 18, current_skill: 50, potential_coefficient: 0.6 }),

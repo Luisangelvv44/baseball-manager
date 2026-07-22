@@ -9,6 +9,7 @@ const LINKS = [
   { to: '/roster', label: 'Roster' },
   { to: '/lineup', label: 'Lineup' },
   { to: '/market', label: 'Mercado' },
+  { to: '/trades', label: 'Traspasos' },
   { to: '/stars', label: 'Estrellas' },
   { to: '/stadium', label: 'Estadio' },
   { to: '/scouts', label: 'Scouts' },

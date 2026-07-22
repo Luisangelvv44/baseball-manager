@@ -28,6 +28,8 @@ const prismaMock = {
   draft: createModel(),
   coach: createModel(),
   newsItem: createModel(),
+  trade: createModel(),
+  tradeItem: createModel(),
   $queryRaw: jest.fn(),
   $transaction: jest.fn(),
 };

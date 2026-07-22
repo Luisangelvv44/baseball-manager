@@ -88,6 +88,20 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
   };
 }
 
+const FAN_MIN_REGULAR = 1000;
+const FAN_MAX_REGULAR = 10000;
+
+function randomFanMagnitude(min, max) {
+  return Math.round(min + Math.random() * (max - min));
+}
+
+async function applyRandomFanChange(teamId, won, min, max) {
+  const team = await prisma.team.findUnique({ where: { id: teamId }, select: { fan_base: true } });
+  const magnitude = randomFanMagnitude(min, max);
+  const newFanBase = Math.max(10000, team.fan_base + (won ? magnitude : -magnitude));
+  await prisma.team.update({ where: { id: teamId }, data: { fan_base: newFanBase } });
+}
+
 async function updateStandings(teamId, runsFor, runsAgainst, won) {
   const team = await prisma.team.findUnique({
     where: { id: teamId },
@@ -95,11 +109,10 @@ async function updateStandings(teamId, runsFor, runsAgainst, won) {
   });
   const newRep = Math.min(100, Math.max(1, team.reputation + (won ? 1 : -1)));
 
-  // Victorias: hasta +20 000 fans; derrotas: hasta −10 000 fans. Rep amplifica/amortigua (±25%).
-  const repMult = 0.75 + 0.5 * (team.reputation / 100);
+  // Ganar o perder mueve la fanaticada un monto aleatorio simétrico entre 1 000 y 10 000.
   const change = won
-    ? Math.round(Math.random() * 20000 * repMult)
-    : -Math.round(Math.random() * 10000 / repMult);
+    ? randomFanMagnitude(FAN_MIN_REGULAR, FAN_MAX_REGULAR)
+    : -randomFanMagnitude(FAN_MIN_REGULAR, FAN_MAX_REGULAR);
   const newFanBase = Math.max(10000, team.fan_base + change);
 
   await prisma.team.update({
@@ -115,4 +128,4 @@ async function updateStandings(teamId, runsFor, runsAgainst, won) {
   });
 }
 
-module.exports = { playGame };
+module.exports = { playGame, randomFanMagnitude, applyRandomFanChange };
