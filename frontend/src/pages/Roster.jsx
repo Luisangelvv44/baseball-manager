@@ -245,7 +245,7 @@ export default function Roster() {
       <h2 className="text-xl font-bold">Tu Roster</h2>
       {team && (
         <p className="text-gray-600">
-          {players.length} jugadores · Presupuesto: ${Number(team.budget).toLocaleString()}
+          {majorPlayers.length}/25 jugadores · Presupuesto: ${Number(team.budget).toLocaleString()}
         </p>
       )}
 

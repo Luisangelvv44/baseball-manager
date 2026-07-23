@@ -241,6 +241,17 @@ router.post('/:id/renew', async (req, res) => {
       return res.status(400).json({ error: `Máximo ${maxYears} año(s) de contrato para este jugador` });
     }
 
+    if (player.level === 'MINOR') {
+      if (newSalary < Number(player.salary)) {
+        return res.status(400).json({ error: 'El nuevo salario debe ser igual o mayor al salario actual' });
+      }
+      const updated = await prisma.player.update({
+        where: { id: Number(id) },
+        data: { salary: newSalary, contract_years_remaining: years },
+      });
+      return res.json({ success: true, player: updated });
+    }
+
     // Renovar un rookie convierte el contrato a precio de mercado real
     const isRookie = player.rookie_contract;
     const marketSalary = isRookie

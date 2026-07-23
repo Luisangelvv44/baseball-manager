@@ -9,7 +9,7 @@ function calculateGrowthCoefficient(player) {
 
 const PROJECTION_MARGIN = 5;        // margen sobre el techo proyectado, en puntos de current_skill
 const OBVIOUS_UPGRADE_GAP = 10;     // diferencia de current_skill que salta la proyeccion por completo
-const GROWTH_RATE = 0.075;          // valor esperado del multiplicador 0.05-0.10 que usa fluctuatePlayerSkills
+const GROWTH_RATE = 0.055;          // valor esperado del multiplicador 0.03-0.08 que usa fluctuatePlayerSkills
 const RELEASE_PENALTY_RATE = 0.30;  // 30% del salario anual por cada anio de contrato restante al cortar
 
 // Proyecta el "techo" de current_skill que un jugador podria alcanzar en los proximos
