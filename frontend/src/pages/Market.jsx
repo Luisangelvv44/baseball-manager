@@ -4,67 +4,6 @@ import { useTeam } from '../context/TeamContext.jsx';
 import Pagination from '../components/Pagination.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
 
-function PlayerTable({ players, onSign, rosterFull }) {
-  const [years, setYears] = useState({});
-
-  if (players.length === 0) {
-    return <p className="text-gray-500 text-sm py-4">No hay jugadores disponibles por ahora.</p>;
-  }
-
-  return (
-    <table className="w-full text-sm">
-      <thead className="bg-gray-50 text-gray-500 text-left">
-        <tr>
-          <th className="p-2">Nombre</th>
-          <th className="p-2">Pos</th>
-          <th className="p-2">Edad</th>
-          <th className="p-2">Destreza</th>
-          <th className="p-2">Potencial</th>
-          <th className="p-2">Edad de uso</th>
-          <th className="p-2">Salario/año</th>
-          <th className="p-2">Años</th>
-          <th className="p-2"></th>
-        </tr>
-      </thead>
-      <tbody>
-        {players.map((p) => {
-          const maxYears = Math.max(1, p.rookie_contract ? Math.min(3, 40 - p.age) : 40 - p.age);
-          return (
-            <tr key={p.id} className="border-t">
-              <td className="p-2 font-medium">{p.first_name} {p.last_name}</td>
-              <td className="p-2">{p.position}</td>
-              <td className="p-2">{p.age}</td>
-              <td className="p-2">{p.current_skill}</td>
-              <td className="p-2 font-semibold text-amber-700">{p.potential_coefficient}</td>
-              <td className="p-2">{p.growth_age}</td>
-              <td className="p-2">${Number(p.salary).toLocaleString()}</td>
-              <td className="p-2">
-                <input
-                  type="number"
-                  min="1"
-                  max={maxYears}
-                  value={Math.min(years[p.id] || 1, maxYears)}
-                  onChange={(e) => setYears({ ...years, [p.id]: Math.min(Number(e.target.value), maxYears) })}
-                  className="border rounded w-16 px-1 py-0.5"
-                />
-              </td>
-              <td className="p-2">
-                <button
-                  onClick={() => onSign(p.id, Math.min(years[p.id] || 1, maxYears))}
-                  disabled={rosterFull}
-                  className="bg-green-600 text-white rounded px-3 py-1 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Fichar
-                </button>
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  );
-}
-
 function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
   const [bidAmount, setBidAmount] = useState('');
   const [years, setYears] = useState(1);
@@ -74,9 +13,11 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
   const p = auction.player;
   const topBid = auction.top_bid;
   const currentDay = season?.current_day ?? 0;
-  const daysLeft = auction.closes_on_day != null
-    ? Math.max(0, auction.closes_on_day - currentDay)
-    : null;
+  const deadlineDay = season?.auctionDeadlineDay ?? 30;
+  const effectiveCloseDay = auction.closes_on_day != null
+    ? Math.min(auction.closes_on_day, deadlineDay)
+    : deadlineDay;
+  const daysLeft = currentDay < deadlineDay ? Math.max(0, effectiveCloseDay - currentDay) : 0;
 
   const minBid = topBid
     ? Math.ceil(Number(topBid.amount) * 1.01)
@@ -140,19 +81,13 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
         ) : (
           <span className="text-gray-400 italic text-xs">Sin pujas aún</span>
         )}
-        {daysLeft != null ? (
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ml-2 whitespace-nowrap ${
-            daysLeft <= 1 ? 'bg-red-100 text-red-700' :
-            daysLeft <= 3 ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-blue-100 text-blue-700'
-          }`}>
-            {daysLeft === 0 ? 'Cierra hoy' : `${daysLeft}d restantes`}
-          </span>
-        ) : (
-          <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full ml-2 whitespace-nowrap">
-            Esperando puja
-          </span>
-        )}
+        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ml-2 whitespace-nowrap ${
+          daysLeft <= 1 ? 'bg-red-100 text-red-700' :
+          daysLeft <= 3 ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-blue-100 text-blue-700'
+        }`}>
+          {daysLeft === 0 ? 'Cierra hoy' : `${daysLeft}d restantes`}
+        </span>
       </div>
 
       {rosterFull ? (
@@ -212,7 +147,6 @@ export default function Market() {
   const { refreshTeam } = useTeam();
   const [auctions, setAuctions] = useState([]);
   const [userRosterCount, setUserRosterCount] = useState(0);
-  const [scouted, setScouted] = useState([]);
   const [season, setSeason] = useState(null);
   const [message, setMessage] = useState('');
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -235,11 +169,7 @@ export default function Market() {
   }
 
   async function load() {
-    const [sc, se] = await Promise.all([
-      api.getScoutedPlayers(),
-      api.getSeason(),
-    ]);
-    setScouted(sc);
+    const se = await api.getSeason();
     setSeason(se);
     await loadAuctions();
   }
@@ -264,17 +194,6 @@ export default function Market() {
     return () => clearTimeout(t);
   }, [filters, page]);
 
-  async function handleSign(id, years) {
-    setMessage('');
-    try {
-      const res = await api.signPlayer(id, years);
-      setMessage(`Fichado. Bono de firma: $${res.signingBonus.toLocaleString()}. Nuevo presupuesto: $${res.newBudget.toLocaleString()}`);
-      await Promise.all([load(), refreshTeam()]);
-    } catch (err) {
-      setMessage(err.message);
-    }
-  }
-
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold">Mercado</h2>
@@ -290,15 +209,9 @@ export default function Market() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow p-4">
-        <h3 className="font-bold mb-1">
-          Prospectos de Scouts
-          <span className="ml-2 text-xs font-normal text-gray-500">{userRosterCount}/25 jugadores</span>
-        </h3>
-        <p className="text-xs text-gray-500 mb-3">
-          Fichaje directo — exclusivos de tu red de scouts. Alto potencial, destreza baja: riesgo/recompensa.
-        </p>
-        <PlayerTable players={scouted} onSign={handleSign} rosterFull={userRosterCount >= 25} />
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
+        Los prospectos de tus scouts se contratan automáticamente en <b>Ligas Menores</b> al completar la misión.
+        Revisa la pestaña <b>Rookie</b> para verlos y subirlos a Mayores.
       </div>
 
       <div>

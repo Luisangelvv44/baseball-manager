@@ -7,6 +7,7 @@ const LINKS = [
   { to: '/news', label: 'Noticias' },
   { to: '/schedule', label: 'Calendario' },
   { to: '/roster', label: 'Roster' },
+  { to: '/rookie', label: 'Rookie' },
   { to: '/lineup', label: 'Lineup' },
   { to: '/market', label: 'Mercado' },
   { to: '/trades', label: 'Traspasos' },

@@ -24,13 +24,12 @@ export const api = {
 
   // Jugadores
   getFreeAgents: () => request('/players/free-agents'),
-  getScoutedPlayers: () => request('/players/scouted'),
-  signPlayer: (id, years, salary) =>
-    request(`/players/${id}/sign`, { method: 'POST', body: JSON.stringify({ years, salary }) }),
   renewContract: (id, salary, years) =>
     request(`/players/${id}/renew`, { method: 'POST', body: JSON.stringify({ salary, years }) }),
   getTeamStats: () => request('/players/team-stats'),
   getPlayerStats: (id) => request(`/players/${id}/stats`),
+  promotePlayer: (id) => request(`/players/${id}/promote`, { method: 'POST' }),
+  demotePlayer: (id) => request(`/players/${id}/demote`, { method: 'POST' }),
 
   // Estadio
   getStadium: () => request('/stadium'),

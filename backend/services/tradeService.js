@@ -67,11 +67,14 @@ async function validateTrade(client, trade, season) {
     if (item.player.team_id !== item.from_team_id) {
       return { ok: false, error: `${item.player.first_name} ${item.player.last_name} ya no pertenece al equipo esperado` };
     }
+    if (item.player.level !== 'MAJOR') {
+      return { ok: false, error: `${item.player.first_name} ${item.player.last_name} está en Ligas Menores — solo puedes traspasar jugadores de las Mayores` };
+    }
   }
 
   const [proposerRosterCount, recipientRosterCount, proposerTeam, recipientTeam] = await Promise.all([
-    client.player.count({ where: { team_id: trade.proposer_team_id, status: 'active' } }),
-    client.player.count({ where: { team_id: trade.recipient_team_id, status: 'active' } }),
+    client.player.count({ where: { team_id: trade.proposer_team_id, level: 'MAJOR', status: 'active' } }),
+    client.player.count({ where: { team_id: trade.recipient_team_id, level: 'MAJOR', status: 'active' } }),
     client.team.findUnique({ where: { id: trade.proposer_team_id }, select: { budget: true } }),
     client.team.findUnique({ where: { id: trade.recipient_team_id }, select: { budget: true } }),
   ]);

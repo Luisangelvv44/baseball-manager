@@ -108,7 +108,7 @@ router.get('/', async (req, res) => {
     }
 
     const userRosterCount = await prisma.player.count({
-      where: { team_id: USER_TEAM_ID, status: 'active' },
+      where: { team_id: USER_TEAM_ID, level: 'MAJOR', status: 'active' },
     });
 
     res.json({
@@ -200,7 +200,7 @@ router.post('/:id/bid', async (req, res) => {
     }
 
     const userRosterCount = await prisma.player.count({
-      where: { team_id: USER_TEAM_ID, status: 'active' },
+      where: { team_id: USER_TEAM_ID, level: 'MAJOR', status: 'active' },
     });
     if (userRosterCount >= MAX_ROSTER_SIZE) {
       return res.status(400).json({ error: `Tu roster está lleno (máximo ${MAX_ROSTER_SIZE} jugadores)` });

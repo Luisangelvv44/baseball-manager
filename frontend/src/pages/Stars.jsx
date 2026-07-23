@@ -34,9 +34,11 @@ function StarAuctionCard({ auction, season, onBidPlaced, rosterFull }) {
   const p = auction.player;
   const topBid = auction.top_bid;
   const currentDay = season?.current_day ?? 0;
-  const daysLeft = auction.closes_on_day != null
-    ? Math.max(0, auction.closes_on_day - currentDay)
-    : null;
+  const deadlineDay = season?.auctionDeadlineDay ?? 30;
+  const effectiveCloseDay = auction.closes_on_day != null
+    ? Math.min(auction.closes_on_day, deadlineDay)
+    : deadlineDay;
+  const daysLeft = currentDay < deadlineDay ? Math.max(0, effectiveCloseDay - currentDay) : 0;
 
   const minBid = topBid
     ? Math.ceil(Number(topBid.amount) * 1.01)
@@ -113,19 +115,13 @@ function StarAuctionCard({ auction, season, onBidPlaced, rosterFull }) {
         ) : (
           <span className="text-gray-400 italic text-xs">Sin pujas aún</span>
         )}
-        {daysLeft != null ? (
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ml-2 whitespace-nowrap ${
-            daysLeft <= 1 ? 'bg-red-100 text-red-700' :
-            daysLeft <= 3 ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-blue-100 text-blue-700'
-          }`}>
-            {daysLeft === 0 ? 'Cierra hoy' : `${daysLeft}d restantes`}
-          </span>
-        ) : (
-          <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full ml-2 whitespace-nowrap">
-            Esperando puja
-          </span>
-        )}
+        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ml-2 whitespace-nowrap ${
+          daysLeft <= 1 ? 'bg-red-100 text-red-700' :
+          daysLeft <= 3 ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-blue-100 text-blue-700'
+        }`}>
+          {daysLeft === 0 ? 'Cierra hoy' : `${daysLeft}d restantes`}
+        </span>
       </div>
 
       {rosterFull ? (

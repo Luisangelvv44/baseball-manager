@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID, MAX_ROSTER_SIZE } = require('../config');
+const { USER_TEAM_ID, MAX_ROSTER_SIZE, MAX_MINOR_ROSTER_SIZE } = require('../config');
 const { calculateSalary } = require('../seeders/generators/playerGenerator');
 const { createNews } = require('../services/newsService');
 
@@ -153,99 +153,69 @@ router.get('/free-agents', async (req, res) => {
   }
 });
 
-// GET /api/players/scouted -> prospectos traidos por scouts, listos para fichar
-router.get('/scouted', async (req, res) => {
-  try {
-    const players = await prisma.player.findMany({
-      where: { team_id: null, status: 'scouted' },
-      orderBy: { potential_coefficient: 'desc' },
-    });
-    res.json(players);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error al obtener prospectos' });
-  }
-});
-
-// POST /api/players/:id/sign  { years, salary }
-// Ficha a un jugador (agente libre o prospecto de scout) para tu equipo.
-router.post('/:id/sign', async (req, res) => {
+// POST /api/players/:id/promote -> sube un jugador de Minors a Mayors
+router.post('/:id/promote', async (req, res) => {
   const { id } = req.params;
-  const years = parseInt(req.body.years, 10) || 1;
-  let salary = req.body.salary;
-
   try {
     const player = await prisma.player.findUnique({ where: { id: Number(id) } });
     if (!player) return res.status(404).json({ error: 'Jugador no encontrado' });
-
-    if (player.team_id !== null) {
-      return res.status(400).json({ error: 'Este jugador ya pertenece a un equipo' });
+    if (player.team_id !== USER_TEAM_ID || player.level !== 'MINOR' || player.status !== 'active') {
+      return res.status(400).json({ error: 'Este jugador no está en tus Ligas Menores' });
     }
 
-    const maxYears = Math.max(0, 40 - player.age);
-    if (maxYears === 0) {
-      return res.status(400).json({ error: 'Este jugador tiene 40 años o más y no puede ser contratado' });
-    }
-    const contractCap = player.rookie_contract ? Math.min(maxYears, 3) : maxYears;
-    if (years > contractCap) {
-      return res.status(400).json({ error: `Contrato rookie: máximo ${contractCap} año(s)` });
-    }
-
-    const rosterCount = await prisma.player.count({
-      where: { team_id: USER_TEAM_ID, status: 'active' },
+    const majorRosterCount = await prisma.player.count({
+      where: { team_id: USER_TEAM_ID, level: 'MAJOR', status: 'active' },
     });
-    if (rosterCount >= MAX_ROSTER_SIZE) {
-      return res.status(400).json({ error: `Tu roster está lleno (máximo ${MAX_ROSTER_SIZE} jugadores)` });
+    if (majorRosterCount >= MAX_ROSTER_SIZE) {
+      return res.status(400).json({ error: `Tu roster de Mayores está lleno (máximo ${MAX_ROSTER_SIZE} jugadores)` });
     }
 
-    if (!salary) salary = player.salary;
-    salary = Math.round(Number(salary));
-
-    const team = await prisma.team.findUnique({ where: { id: USER_TEAM_ID } });
-
-    // Bono de firma: 10% del salario anual, pago unico
-    const signingBonus = Math.round(salary * 0.1);
-    if (Number(team.budget) < signingBonus) {
-      return res.status(400).json({ error: 'No tienes suficiente presupuesto para el bono de firma' });
+    const data = { level: 'MAJOR' };
+    if (player.rookie_contract) {
+      data.salary = Math.round(Number(player.salary) * 10);
+      data.rookie_contract = false;
     }
 
-    await prisma.player.update({
-      where: { id: Number(id) },
-      data: { team_id: USER_TEAM_ID, status: 'active', salary, contract_years_remaining: years },
-    });
-
-    const newBudget = Number(team.budget) - signingBonus;
-    await prisma.team.update({
-      where: { id: USER_TEAM_ID },
-      data: { budget: newBudget },
-    });
+    const updated = await prisma.player.update({ where: { id: Number(id) }, data });
 
     const season = await prisma.season.findFirst({ where: { status: 'active' } });
-    const day = season?.current_day ?? 0;
-
-    await prisma.finance.create({
-      data: {
-        team_id: USER_TEAM_ID,
-        season_day: day,
-        type: 'signing',
-        amount: -signingBonus,
-        description: `Bono de firma: ${player.first_name} ${player.last_name}`,
-      },
-    });
-
-    const totalValue = salary * years;
-    const totalM = (totalValue / 1_000_000).toFixed(1);
-    const salaryM = (salary / 1_000_000).toFixed(2);
     await createNews('signing',
-      `${team.name} firmó a ${player.first_name} ${player.last_name}: ${years} año(s), $${salaryM}M/año ($${totalM}M total)`,
-      day,
+      `${player.first_name} ${player.last_name} fue promovido a las Mayores`,
+      season?.current_day ?? 0,
       season?.id
     );
 
-    res.json({ success: true, signingBonus, newBudget });
+    res.json({ success: true, player: updated });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Error al fichar jugador' });
+    res.status(500).json({ error: 'Error al promover jugador' });
+  }
+});
+
+// POST /api/players/:id/demote -> envia un jugador de Mayors a Minors
+router.post('/:id/demote', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const player = await prisma.player.findUnique({ where: { id: Number(id) } });
+    if (!player) return res.status(404).json({ error: 'Jugador no encontrado' });
+    if (player.team_id !== USER_TEAM_ID || player.level !== 'MAJOR' || player.status !== 'active') {
+      return res.status(400).json({ error: 'Este jugador no está en tu roster de Mayores' });
+    }
+
+    const minorRosterCount = await prisma.player.count({
+      where: { team_id: USER_TEAM_ID, level: 'MINOR' },
+    });
+    if (minorRosterCount >= MAX_MINOR_ROSTER_SIZE) {
+      return res.status(400).json({ error: `Tu roster de Minors está lleno (máximo ${MAX_MINOR_ROSTER_SIZE} jugadores)` });
+    }
+
+    await prisma.teamLineup.deleteMany({ where: { player_id: Number(id) } });
+    const updated = await prisma.player.update({ where: { id: Number(id) }, data: { level: 'MINOR' } });
+
+    res.json({ success: true, player: updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al enviar jugador a Minors' });
   }
 });
 

@@ -55,8 +55,16 @@ export default function Scouts() {
     setMessage('');
     try {
       const res = await api.collectScout(id);
-      setMessage(`Trajo ${res.prospects.length} prospecto(s): ${res.prospects.map((p) => `${p.first_name} ${p.last_name} (pot. ${p.potential_coefficient})`).join(', ')}. Revisalos en el Mercado.`);
-      await load();
+      const names = res.prospects.map((p) => `${p.first_name} ${p.last_name} (pot. ${p.potential_coefficient})`).join(', ');
+      const skippedNote = res.skipped > 0
+        ? ` ${res.skipped} prospecto(s) se perdieron por falta de espacio en Minors o presupuesto.`
+        : '';
+      setMessage(
+        res.prospects.length > 0
+          ? `Fichados automaticamente en Ligas Menores: ${names}.${skippedNote} Revisalos en la pestaña Rookie.`
+          : `No se pudo fichar ningun prospecto (roster de Minors lleno o presupuesto insuficiente).${skippedNote}`
+      );
+      await Promise.all([load(), refreshTeam()]);
     } catch (err) {
       setMessage(err.message);
     }

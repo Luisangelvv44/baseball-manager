@@ -1,5 +1,5 @@
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID, MAX_ROSTER_SIZE } = require('../config');
+const { USER_TEAM_ID, MAX_ROSTER_SIZE, AUCTION_DEADLINE_DAY } = require('../config');
 const { createNews } = require('./newsService');
 
 function calculateGrowthCoefficient(player) {
@@ -253,9 +253,12 @@ async function runCpuBidding(tx, season) {
 async function closeExpiredAuctions(tx, season) {
   const client = tx || prisma;
   const currentDay = season.current_day;
+  const pastDeadline = currentDay >= AUCTION_DEADLINE_DAY;
 
   const expired = await client.freeAgentAuction.findMany({
-    where: { status: 'active', closes_on_day: { lte: currentDay } },
+    where: pastDeadline
+      ? { status: 'active' }
+      : { status: 'active', closes_on_day: { lte: currentDay } },
     include: {
       player: true,
       bids: {
@@ -342,6 +345,7 @@ async function _signPlayerToTeam(client, auction, teamId, amount, years, season)
     data: {
       team_id: teamId,
       status: 'active',
+      level: 'MAJOR',
       salary: amount,
       contract_years_remaining: years,
     },

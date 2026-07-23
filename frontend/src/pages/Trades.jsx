@@ -322,7 +322,7 @@ export default function Trades() {
       api.getSentTrades(),
       api.getTradeHistory(),
     ]);
-    setMyPlayers(myTeamData.players);
+    setMyPlayers(myTeamData.players.filter((p) => p.level !== 'MINOR'));
     setCpuTeams(teams.filter((t) => !t.is_user_team));
     setReceived(receivedTrades);
     setSent(sentTrades.filter((t) => t.status === 'pending'));

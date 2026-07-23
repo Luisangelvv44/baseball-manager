@@ -166,8 +166,19 @@ export default function Roster() {
     return s.batting?.avg ? `.${s.batting.avg.slice(2)}` : '—';
   };
 
-  const activePlayers = players.filter((p) => p.injury_days_remaining === 0);
-  const injuredPlayers = players.filter((p) => p.injury_days_remaining > 0);
+  const majorPlayers = players.filter((p) => p.level !== 'MINOR');
+  const activePlayers = majorPlayers.filter((p) => p.injury_days_remaining === 0);
+  const injuredPlayers = majorPlayers.filter((p) => p.injury_days_remaining > 0);
+
+  const handleDemote = async (e, playerId) => {
+    e.stopPropagation();
+    try {
+      await api.demotePlayer(playerId);
+      await loadRoster();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
   const rosterTable = (list) => (
     <table className="w-full text-sm">
@@ -202,20 +213,26 @@ export default function Roster() {
             <td className="p-2">{p.contract_years_remaining}</td>
             <td className="p-2 font-mono text-xs text-gray-700">{getStatSummary(p)}</td>
             <td className="p-2">
-              {p.injury_days_remaining > 0 ? (
-                <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded font-medium">
-                  Lesionado ({p.injury_days_remaining}d)
-                </span>
-              ) : p.contract_years_remaining <= 2 ? (
+              <div className="flex items-center gap-1.5">
+                {p.injury_days_remaining > 0 ? (
+                  <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded font-medium">
+                    Lesionado ({p.injury_days_remaining}d)
+                  </span>
+                ) : p.contract_years_remaining <= 2 ? (
+                  <button
+                    onClick={(e) => openRenew(e, p)}
+                    className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                  >
+                    Renovar
+                  </button>
+                ) : null}
                 <button
-                  onClick={(e) => openRenew(e, p)}
-                  className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                  onClick={(e) => handleDemote(e, p.id)}
+                  className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300"
                 >
-                  Renovar
+                  Enviar a Minors
                 </button>
-              ) : (
-                <span className="text-gray-300">—</span>
-              )}
+              </div>
             </td>
           </tr>
         ))}

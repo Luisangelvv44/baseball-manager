@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY } = require('../config');
+const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, AUCTION_DEADLINE_DAY } = require('../config');
 const { generateSchedule } = require('../services/scheduleGenerator');
 const { playGame } = require('../services/gamePlay');
 const {
@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
       where: { status: { in: ['active', 'playoffs', 'draft', 'completed'] } },
       orderBy: { id: 'desc' },
     });
-    res.json(season ? { ...season, preSeasonDays: PRE_SEASON_DAYS } : null);
+    res.json(season ? { ...season, preSeasonDays: PRE_SEASON_DAYS, auctionDeadlineDay: AUCTION_DEADLINE_DAY } : null);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener temporada' });
@@ -168,14 +168,15 @@ async function endOfSeasonCleanup(season) {
   await updatePlayersContracts();
 
   // Incrementa el contador de temporadas para todo rookie vigente (equipo, agente libre o prospecto de scout)
+  // Se excluyen jugadores en Minors: su graduacion se congela hasta que sean promovidos manualmente.
   await prisma.player.updateMany({
-    where: { rookie_contract: true, status: { in: ['active', 'free_agent', 'scouted'] } },
+    where: { rookie_contract: true, level: 'MAJOR', status: { in: ['active', 'free_agent', 'scouted'] } },
     data: { rookie_seasons: { increment: 1 } },
   });
 
   // Gradúa a los que acumulan 3+ temporadas como rookie: precio real = salario actual x 10
   const graduatingRookies = await prisma.player.findMany({
-    where: { rookie_contract: true, rookie_seasons: { gte: 3 }, status: { in: ['active', 'free_agent', 'scouted'] } },
+    where: { rookie_contract: true, rookie_seasons: { gte: 3 }, level: 'MAJOR', status: { in: ['active', 'free_agent', 'scouted'] } },
     select: { id: true, salary: true },
   });
   for (const p of graduatingRookies) {

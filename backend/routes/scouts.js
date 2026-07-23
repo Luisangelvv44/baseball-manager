@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID } = require('../config');
+const { USER_TEAM_ID, MAX_MINOR_ROSTER_SIZE } = require('../config');
 const { FIRST_NAMES, LAST_NAMES } = require('../seeders/data/names');
 const { generateScoutedPlayer, randomInt, randomChoice, POSITIONS } = require('../seeders/generators/playerGenerator');
 
@@ -139,9 +139,23 @@ router.post('/:id/collect', async (req, res) => {
     const skillBonus = scout.skill_level >= 65 ? 1 : 0;
     const numProspects = 1 + budgetBonus + (Math.random() < 0.5 ? skillBonus : 0);
 
+    const team = await prisma.team.findUnique({ where: { id: USER_TEAM_ID } });
+    let minorRosterCount = await prisma.player.count({
+      where: { team_id: USER_TEAM_ID, level: 'MINOR' },
+    });
+    let budget = Number(team.budget);
+
     const prospects = [];
+    let skipped = 0;
     for (let i = 0; i < numProspects; i++) {
       const p = generateScoutedPlayer(scout.skill_level, scout.target_position || null);
+      const signingBonus = Math.round(p.salary * 0.1);
+
+      if (minorRosterCount >= MAX_MINOR_ROSTER_SIZE || budget < signingBonus) {
+        skipped++;
+        continue;
+      }
+
       const created = await prisma.player.create({
         data: {
           first_name: p.first_name,
@@ -154,11 +168,30 @@ router.post('/:id/collect', async (req, res) => {
           salary: p.salary,
           contract_years_remaining: p.contract_years_remaining,
           rookie_contract: p.rookie_contract,
-          team_id: null,
-          status: 'scouted',
+          team_id: USER_TEAM_ID,
+          status: 'active',
+          level: 'MINOR',
         },
       });
       prospects.push(created);
+      minorRosterCount++;
+      budget -= signingBonus;
+
+      await prisma.team.update({
+        where: { id: USER_TEAM_ID },
+        data: { budget: { decrement: signingBonus } },
+      });
+
+      const season = await prisma.season.findFirst({ where: { status: 'active' } });
+      await prisma.finance.create({
+        data: {
+          team_id: USER_TEAM_ID,
+          season_day: season?.current_day ?? 0,
+          type: 'signing',
+          amount: -signingBonus,
+          description: `Fichaje automático (Minors): ${p.first_name} ${p.last_name}`,
+        },
+      });
     }
 
     await prisma.scout.update({
@@ -166,7 +199,7 @@ router.post('/:id/collect', async (req, res) => {
       data: { active_mission: false, budget_assigned: 0, mission_end_day: null, target_position: null },
     });
 
-    res.json({ success: true, prospects });
+    res.json({ success: true, prospects, skipped });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al recolectar prospectos' });

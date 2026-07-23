@@ -4,6 +4,7 @@ import { TeamProvider } from './context/TeamContext.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import NewGame from './pages/NewGame.jsx';
 import Roster from './pages/Roster.jsx';
+import Rookie from './pages/Rookie.jsx';
 import Market from './pages/Market.jsx';
 import Stadium from './pages/Stadium.jsx';
 import Scouts from './pages/Scouts.jsx';
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/newgame" element={<NewGame />} />
           <Route path="/roster" element={<Roster />} />
+          <Route path="/rookie" element={<Rookie />} />
           <Route path="/market" element={<Market />} />
           <Route path="/trades" element={<Trades />} />
           <Route path="/stadium" element={<Stadium />} />

@@ -12,14 +12,14 @@ const userPlayer = {
   id: 10, first_name: 'Juan', last_name: 'Perez', position: 'SS', age: 28,
   current_skill: 85, potential_coefficient: 40, growth_age: 30,
   salary: 200000, contract_years_remaining: 1, rookie_contract: false,
-  team_id: 1, status: 'active', injury_days_remaining: 0,
+  team_id: 1, status: 'active', injury_days_remaining: 0, level: 'MAJOR',
 };
 
 const cpuPlayer = {
   id: 20, first_name: 'Pedro', last_name: 'Gomez', position: '2B', age: 24,
   current_skill: 45, potential_coefficient: 25, growth_age: 26,
   salary: 60000, contract_years_remaining: 1, rookie_contract: false,
-  team_id: 2, status: 'active', injury_days_remaining: 0,
+  team_id: 2, status: 'active', injury_days_remaining: 0, level: 'MAJOR',
 };
 
 const userTeamFull = { id: 1, name: 'Test Team', budget: 5000000, is_user_team: true };

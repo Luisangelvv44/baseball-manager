@@ -67,6 +67,7 @@ model Player {
   team_id                  Int?
   status                   String  @default("active") @db.VarChar(20)
   injury_days_remaining    Int     @default(0)
+  level                    String  @default("MAJOR") @db.VarChar(10)
 
   team         Team?            @relation(fields: [team_id], references: [id])
   coach        Coach?
@@ -78,6 +79,7 @@ model Player {
 
   @@index([team_id])
   @@index([status])
+  @@index([team_id, level])
 }
 
 model Season {
