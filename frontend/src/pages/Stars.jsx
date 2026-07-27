@@ -5,25 +5,25 @@ import Pagination from '../components/Pagination.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
 
 function getTier(skill) {
-  if (skill >= 100) return { label: 'Leyenda', bg: 'bg-yellow-400 text-yellow-900' };
-  if (skill >= 90)  return { label: 'Super estrella', bg: 'bg-purple-600 text-white' };
-  if (skill >= 80)  return { label: 'Estrella', bg: 'bg-blue-600 text-white' };
-  if (skill >= 70)  return { label: 'Bueno', bg: 'bg-green-600 text-white' };
+  if (skill >= 110) return { label: 'Leyenda', bg: 'bg-yellow-400 text-yellow-900' };
+  if (skill >= 100) return { label: 'Super estrella', bg: 'bg-purple-600 text-white' };
+  if (skill >= 90)  return { label: 'Estrella', bg: 'bg-blue-600 text-white' };
+  if (skill >= 80)  return { label: 'Bueno', bg: 'bg-green-600 text-white' };
   return null;
 }
 
 const TIER_CHIPS = [
-  { label: 'Todos',          minSkill: '70', maxSkill: '' },
-  { label: 'Bueno',          minSkill: '70', maxSkill: '79' },
-  { label: 'Estrella',       minSkill: '80', maxSkill: '89' },
-  { label: 'Super estrella', minSkill: '90', maxSkill: '99' },
-  { label: 'Leyenda',        minSkill: '100', maxSkill: '' },
+  { label: 'Todos',          minSkill: '80', maxSkill: '' },
+  { label: 'Bueno',          minSkill: '80', maxSkill: '89' },
+  { label: 'Estrella',       minSkill: '90', maxSkill: '99' },
+  { label: 'Super estrella', minSkill: '100', maxSkill: '109' },
+  { label: 'Leyenda',        minSkill: '110', maxSkill: '' },
 ];
 
 const POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
 const PAGE_SIZE = 20;
 
-const DEFAULT_FILTERS = { position: '', minSkill: '70', maxSkill: '' };
+const DEFAULT_FILTERS = { position: '', minSkill: '80', maxSkill: '' };
 
 function StarAuctionCard({ auction, season, onBidPlaced, rosterFull }) {
   const [bidAmount, setBidAmount] = useState('');
@@ -227,7 +227,7 @@ export default function Stars() {
       <div>
         <h2 className="text-xl font-bold">Jugadores Sobresalientes</h2>
         <p className="text-sm text-gray-500 mt-1">
-          Agentes libres con destreza 70+. Usa los filtros para encontrar la estrella que necesitas.
+          Agentes libres con destreza 80+. Usa los filtros para encontrar la estrella que necesitas.
         </p>
       </div>
 
@@ -239,10 +239,10 @@ export default function Stars() {
 
       {/* Tier legend */}
       <div className="flex flex-wrap gap-2 text-xs font-semibold">
-        <span className="bg-green-600 text-white rounded-full px-3 py-1">Bueno 70–79</span>
-        <span className="bg-blue-600 text-white rounded-full px-3 py-1">Estrella 80–89</span>
-        <span className="bg-purple-600 text-white rounded-full px-3 py-1">Super estrella 90–99</span>
-        <span className="bg-yellow-400 text-yellow-900 rounded-full px-3 py-1">Leyenda 100</span>
+        <span className="bg-green-600 text-white rounded-full px-3 py-1">Bueno 80–89</span>
+        <span className="bg-blue-600 text-white rounded-full px-3 py-1">Estrella 90–99</span>
+        <span className="bg-purple-600 text-white rounded-full px-3 py-1">Super estrella 100–109</span>
+        <span className="bg-yellow-400 text-yellow-900 rounded-full px-3 py-1">Leyenda 110–120</span>
       </div>
 
       {/* Tier chips + position filter */}

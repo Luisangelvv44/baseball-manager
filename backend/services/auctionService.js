@@ -24,7 +24,7 @@ function projectPeakSkill(player, years) {
     const delta = age < player.growth_age
       ? Math.round(player.potential_coefficient * GROWTH_RATE)
       : -Math.round(player.potential_coefficient * GROWTH_RATE);
-    skill = Math.min(100, skill + delta);
+    skill = Math.min(120, skill + delta);
     age += 1;
     if (skill > peak) peak = skill;
   }

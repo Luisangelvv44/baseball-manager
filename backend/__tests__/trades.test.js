@@ -75,17 +75,40 @@ describe('POST /api/trades validation', () => {
     expect(res.body.error).toMatch(/día/);
   });
 
-  it('returns 400 when the trade would leave a roster over the max size', async () => {
+  it('allows a trade even when it would leave a roster over the max size', async () => {
+    const cpuPlayer21 = { ...cpuPlayer, id: 21 };
     prisma.season.findFirst.mockResolvedValue(mockSeason);
     prisma.team.findUnique.mockImplementation(teamById);
-    prisma.player.findMany.mockResolvedValue([userPlayer, cpuPlayer, { ...cpuPlayer, id: 21 }]);
-    prisma.player.count.mockResolvedValue(25); // both rosters already at cap
+    prisma.player.findMany.mockResolvedValue([userPlayer, cpuPlayer, cpuPlayer21]);
+    prisma.trade.create.mockResolvedValue({ id: 101 });
+    prisma.trade.findUnique.mockResolvedValue({
+      id: 101,
+      proposer_team_id: 1,
+      recipient_team_id: 2,
+      cash_offered: 0,
+      cash_requested: 0,
+      status: 'pending',
+      proposer_team: { id: 1, name: 'Test Team' },
+      recipient_team: { id: 2, name: 'CPU Team' },
+      items: [
+        { id: 1, trade_id: 101, player_id: 10, from_team_id: 1, player: userPlayer },
+        { id: 2, trade_id: 101, player_id: 20, from_team_id: 2, player: cpuPlayer },
+        { id: 3, trade_id: 101, player_id: 21, from_team_id: 2, player: cpuPlayer21 },
+      ],
+    });
+    prisma.player.update.mockResolvedValue({});
+    prisma.teamLineup.deleteMany.mockResolvedValue({});
+    prisma.team.update.mockResolvedValue({});
+    prisma.finance.create.mockResolvedValue({});
+    prisma.trade.update.mockResolvedValue({});
+    prisma.newsItem.create.mockResolvedValue({});
 
     const res = await request(app).post('/api/trades').send({
       recipientTeamId: 2, offeredPlayerIds: [10], requestedPlayerIds: [20, 21],
     });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/máximo/);
+
+    expect(res.status).toBe(200);
+    expect(prisma.player.count).not.toHaveBeenCalled();
   });
 });
 

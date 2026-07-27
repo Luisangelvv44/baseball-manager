@@ -8,7 +8,7 @@ const SPECIALTY_LABELS = {
   CONDITIONING: { label: 'Acondicionamiento', color: 'bg-green-100 text-green-800', desc: 'Reduce decline en 40%' },
 };
 
-const MAX_COACHES = 3;
+const MAX_COACHES = 6;
 
 export default function Coaches() {
   const { refreshTeam } = useTeam();

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import Pagination from '../components/Pagination.jsx';
 
 const TYPE_LABELS = {
   ticket_sales: 'Venta de entradas',
@@ -14,10 +15,15 @@ const TYPE_LABELS = {
 
 export default function Finances() {
   const [data, setData] = useState(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
-    api.getFinances().then(setData);
-  }, []);
+    api.getFinances({ page, pageSize: 15 }).then((d) => {
+      setData(d);
+      setTotalPages(d.totalPages);
+    });
+  }, [page]);
 
   if (!data) return <p>Cargando...</p>;
 
@@ -70,6 +76,7 @@ export default function Finances() {
             ))}
           </tbody>
         </table>
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
     </div>
   );

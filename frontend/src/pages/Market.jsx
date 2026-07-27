@@ -259,10 +259,10 @@ export default function Market() {
               <div>
                 <p className="text-xs text-gray-500 mb-1">Destreza</p>
                 <div className="flex gap-1">
-                  <input type="number" min="1" max="99" placeholder="Mín" value={filters.minSkill}
+                  <input type="number" min="1" max="120" placeholder="Mín" value={filters.minSkill}
                     onChange={e => setFilter('minSkill', e.target.value)}
                     className="border rounded px-2 py-1 text-xs w-full" />
-                  <input type="number" min="1" max="99" placeholder="Máx" value={filters.maxSkill}
+                  <input type="number" min="1" max="120" placeholder="Máx" value={filters.maxSkill}
                     onChange={e => setFilter('maxSkill', e.target.value)}
                     className="border rounded px-2 py-1 text-xs w-full" />
                 </div>

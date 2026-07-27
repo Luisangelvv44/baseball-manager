@@ -103,7 +103,7 @@ router.post('/:id/simulate', async (req, res) => {
         });
       }
     } else {
-      economy = computeAwayGameRevenue(userTeam.reputation);
+      economy = computeAwayGameRevenue(userTeam.fan_base);
 
       await prisma.team.update({
         where: { id: USER_TEAM_ID },

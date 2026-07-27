@@ -19,7 +19,7 @@ function computeHomeGameRevenue(grandstandSections, reputation, fanBase, isPlayo
   ) / totalCapacity;
 
   const ticketRevenue = Math.round(attendance * weightedPrice);
-  const merchRevenue = Math.round(ticketRevenue * 0.15);
+  const merchRevenue = computeMerchRevenue(fanBase);
   const operatingCost = Math.round(totalCapacity * 0.5); // mantenimiento por partido
 
   return {
@@ -31,9 +31,17 @@ function computeHomeGameRevenue(grandstandSections, reputation, fanBase, isPlayo
   };
 }
 
-// Partido FUERA: solo merch, proporcional a la reputacion del equipo
-function computeAwayGameRevenue(reputation) {
-  const merchRevenue = Math.round(500 * (reputation / 50));
+// Merch: porcentaje aleatorio (1%-5%) de la fan_base que gasta un monto aleatorio ($20-50) por persona
+function computeMerchRevenue(fanBase) {
+  const fanSpendingRate = 0.01 + Math.random() * 0.04;
+  const spendingFans = (fanBase || 0) * fanSpendingRate;
+  const spendPerFan = 20 + Math.random() * 30;
+  return Math.round(spendingFans * spendPerFan);
+}
+
+// Partido FUERA: solo merch, misma dinamica que en casa (basada en la fan_base)
+function computeAwayGameRevenue(fanBase) {
+  const merchRevenue = computeMerchRevenue(fanBase);
   return { merchRevenue, total: merchRevenue };
 }
 

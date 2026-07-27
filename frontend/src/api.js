@@ -50,7 +50,14 @@ export const api = {
   simulateGame: (id) => request(`/games/${id}/simulate`, { method: 'POST' }),
 
   // Finanzas
-  getFinances: () => request('/finances'),
+  getFinances: (params = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, v);
+    });
+    const s = qs.toString();
+    return request(s ? `/finances?${s}` : '/finances');
+  },
 
   // Scouts
   getScouts: () => request('/scouts'),

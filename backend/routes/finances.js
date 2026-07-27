@@ -6,10 +6,15 @@ const { USER_TEAM_ID } = require('../config');
 // GET /api/finances -> historial de transacciones del equipo del usuario
 router.get('/', async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 15));
+
+    const total = await prisma.finance.count({ where: { team_id: USER_TEAM_ID } });
     const transactions = await prisma.finance.findMany({
       where: { team_id: USER_TEAM_ID },
       orderBy: { id: 'desc' },
-      take: 200,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     });
 
     const summary = await prisma.$queryRaw`
@@ -28,6 +33,10 @@ router.get('/', async (req, res) => {
       budget: team?.budget,
       transactions,
       summary,
+      page,
+      pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
     });
   } catch (err) {
     console.error(err);

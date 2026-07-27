@@ -35,7 +35,11 @@ function generateInitialSkill(potential, age, growthAge) {
 
 function calculateSalary(potential, currentSkill, age) {
   let base;
-  if (currentSkill >= 90) {
+  if (currentSkill >= 110) {
+    base = 13_000_000 + (currentSkill - 110) * 800_000;
+  } else if (currentSkill >= 100) {
+    base = 8_000_000 + (currentSkill - 100) * 500_000;
+  } else if (currentSkill >= 90) {
     base = 5_000_000 + (currentSkill - 90) * 300_000;
   } else if (currentSkill >= 80) {
     base = 2_000_000 + (currentSkill - 80) * 300_000;

@@ -9,32 +9,32 @@ const {
 const { createAuctionsForFreeAgents } = require('../services/auctionService');
 
 const STAR_PLAYERS = [
-  // Bueno (70-79)
-  { skill: 75, position: 'P' },
-  { skill: 72, position: 'C' },
-  { skill: 78, position: '1B' },
-  { skill: 71, position: 'SS' },
-  { skill: 74, position: 'LF' },
-  { skill: 77, position: 'RF' },
-  // Estrella (80-89)
+  // Bueno (80-89)
   { skill: 85, position: 'P' },
-  { skill: 83, position: 'P' },
-  { skill: 82, position: '2B' },
-  { skill: 88, position: '3B' },
-  { skill: 84, position: 'CF' },
-  { skill: 81, position: 'DH' },
-  { skill: 86, position: 'C' },
-  // Super estrella (90-99)
+  { skill: 82, position: 'C' },
+  { skill: 88, position: '1B' },
+  { skill: 81, position: 'SS' },
+  { skill: 84, position: 'LF' },
+  { skill: 87, position: 'RF' },
+  // Estrella (90-99)
   { skill: 95, position: 'P' },
-  { skill: 98, position: 'P' },
-  { skill: 92, position: 'SS' },
-  { skill: 97, position: 'CF' },
-  { skill: 91, position: '1B' },
-  { skill: 94, position: 'C' },
-  { skill: 93, position: 'RF' },
-  // Leyenda (100)
-  { skill: 100, position: 'P' },
-  { skill: 100, position: 'SS' },
+  { skill: 93, position: 'P' },
+  { skill: 92, position: '2B' },
+  { skill: 98, position: '3B' },
+  { skill: 94, position: 'CF' },
+  { skill: 91, position: 'DH' },
+  { skill: 96, position: 'C' },
+  // Super Estrella (100-109)
+  { skill: 105, position: 'P' },
+  { skill: 108, position: 'P' },
+  { skill: 102, position: 'SS' },
+  { skill: 107, position: 'CF' },
+  { skill: 101, position: '1B' },
+  { skill: 104, position: 'C' },
+  { skill: 103, position: 'RF' },
+  // Leyenda (110-120)
+  { skill: 115, position: 'P' },
+  { skill: 118, position: 'SS' },
 ];
 
 async function seedStarPlayers() {

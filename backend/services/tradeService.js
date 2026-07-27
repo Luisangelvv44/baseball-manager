@@ -1,5 +1,5 @@
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, TRADE_OFFER_EXPIRY_DAYS } = require('../config');
+const { USER_TEAM_ID, TRADE_DEADLINE_DAY, TRADE_OFFER_EXPIRY_DAYS } = require('../config');
 const { calculateGrowthCoefficient, projectPeakSkill } = require('./auctionService');
 const { createNews } = require('./newsService');
 
@@ -72,18 +72,10 @@ async function validateTrade(client, trade, season) {
     }
   }
 
-  const [proposerRosterCount, recipientRosterCount, proposerTeam, recipientTeam] = await Promise.all([
-    client.player.count({ where: { team_id: trade.proposer_team_id, level: 'MAJOR', status: 'active' } }),
-    client.player.count({ where: { team_id: trade.recipient_team_id, level: 'MAJOR', status: 'active' } }),
+  const [proposerTeam, recipientTeam] = await Promise.all([
     client.team.findUnique({ where: { id: trade.proposer_team_id }, select: { budget: true } }),
     client.team.findUnique({ where: { id: trade.recipient_team_id }, select: { budget: true } }),
   ]);
-
-  const proposerAfter = proposerRosterCount - proposerItems.length + recipientItems.length;
-  const recipientAfter = recipientRosterCount - recipientItems.length + proposerItems.length;
-  if (proposerAfter > MAX_ROSTER_SIZE || recipientAfter > MAX_ROSTER_SIZE) {
-    return { ok: false, error: `El traspaso dejaría a algún equipo por encima del máximo de ${MAX_ROSTER_SIZE} jugadores` };
-  }
 
   if (Number(trade.cash_offered) > Number(proposerTeam.budget)) {
     return { ok: false, error: 'El equipo proponente no tiene presupuesto suficiente para el efectivo ofrecido' };
