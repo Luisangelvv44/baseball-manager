@@ -12,6 +12,7 @@ const LINKS = [
   { to: '/market', label: 'Mercado' },
   { to: '/trades', label: 'Traspasos' },
   { to: '/stars', label: 'Estrellas' },
+  { to: '/derby', label: 'Eventos' },
   { to: '/stadium', label: 'Estadio' },
   { to: '/scouts', label: 'Scouts' },
   { to: '/coaches', label: 'Coaches' },

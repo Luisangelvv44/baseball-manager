@@ -3,11 +3,33 @@ import { api } from '../api';
 import TeamBadge from '../components/TeamBadge.jsx';
 
 const TYPE_CONFIG = {
-  game:    { label: 'Partido',  bg: 'bg-blue-600',   border: 'border-blue-500',  text: 'text-blue-400'  },
-  injury:  { label: 'Lesión',   bg: 'bg-red-600',    border: 'border-red-500',   text: 'text-red-400'   },
-  signing: { label: 'Fichaje',  bg: 'bg-green-600',  border: 'border-green-500', text: 'text-green-400' },
-  auction: { label: 'Subasta',  bg: 'bg-yellow-600', border: 'border-yellow-500',text: 'text-yellow-400'},
+  game:          { label: 'Partido',        bg: 'bg-blue-600',   border: 'border-blue-500',   text: 'text-blue-400'   },
+  injury:        { label: 'Lesión',         bg: 'bg-red-600',    border: 'border-red-500',    text: 'text-red-400'    },
+  signing:       { label: 'Fichaje',        bg: 'bg-green-600',  border: 'border-green-500',  text: 'text-green-400'  },
+  auction:       { label: 'Subasta',        bg: 'bg-yellow-600', border: 'border-yellow-500', text: 'text-yellow-400' },
+  trade:         { label: 'Traspaso',       bg: 'bg-cyan-600',   border: 'border-cyan-500',   text: 'text-cyan-400'   },
+  walkoff:       { label: 'Walk-off',       bg: 'bg-orange-600', border: 'border-orange-500', text: 'text-orange-400' },
+  no_hitter:     { label: 'Hito',           bg: 'bg-purple-600', border: 'border-purple-500', text: 'text-purple-400' },
+  cycle:         { label: 'Ciclo',          bg: 'bg-pink-600',   border: 'border-pink-500',   text: 'text-pink-400'   },
+  multi_hr:      { label: 'Jonrones',       bg: 'bg-indigo-600', border: 'border-indigo-500', text: 'text-indigo-400' },
+  extra_innings: { label: 'Extra innings',  bg: 'bg-teal-600',   border: 'border-teal-500',   text: 'text-teal-400'   },
+  streak:        { label: 'Racha',          bg: 'bg-amber-600',  border: 'border-amber-500',  text: 'text-amber-400'  },
 };
+
+const TYPE_FILTER_CHIPS = [
+  { key: '',              label: 'Todos' },
+  { key: 'game',           label: 'Partidos' },
+  { key: 'walkoff',        label: 'Walk-offs' },
+  { key: 'no_hitter',      label: 'Hitos' },
+  { key: 'cycle',          label: 'Ciclos' },
+  { key: 'multi_hr',       label: 'Jonrones' },
+  { key: 'extra_innings',  label: 'Extra innings' },
+  { key: 'streak',         label: 'Rachas' },
+  { key: 'trade',          label: 'Traspasos' },
+  { key: 'signing',        label: 'Fichajes' },
+  { key: 'auction',        label: 'Subastas' },
+  { key: 'injury',         label: 'Lesiones' },
+];
 
 const DEFAULT_CONFIG = { label: 'Noticia', bg: 'bg-gray-600', border: 'border-gray-500', text: 'text-gray-400' };
 
@@ -18,10 +40,11 @@ export default function News() {
   const [fetchDay, setFetchDay] = useState(null);
   const [inputDay, setInputDay] = useState('');
   const [seasonId, setSeasonId] = useState(null);
+  const [typeFilter, setTypeFilter] = useState('');
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([api.getNews(fetchDay, seasonId), api.getTeams()])
+    Promise.all([api.getNews(fetchDay, seasonId, typeFilter || undefined), api.getTeams()])
       .then(([newsData, teamsData]) => {
         setNews(newsData.items);
         setTeams(teamsData);
@@ -32,7 +55,7 @@ export default function News() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [fetchDay, seasonId]);
+  }, [fetchDay, seasonId, typeFilter]);
 
   const applyFilter = () => {
     const d = parseInt(inputDay, 10);
@@ -79,6 +102,21 @@ export default function News() {
               Último día
             </button>
           </div>
+        </div>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {TYPE_FILTER_CHIPS.map((chip) => (
+            <button
+              key={chip.key || 'all'}
+              onClick={() => setTypeFilter(chip.key)}
+              className={`text-xs px-3 py-1 rounded-full border font-medium transition-colors ${
+                typeFilter === chip.key
+                  ? 'bg-gray-800 text-white border-gray-800'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-gray-500'
+              }`}
+            >
+              {chip.label}
+            </button>
+          ))}
         </div>
         {loading ? (
           <div className="text-center py-10 text-gray-400">Cargando noticias...</div>

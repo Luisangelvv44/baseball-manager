@@ -8,6 +8,7 @@ const createModel = () => ({
   updateMany: jest.fn(),
   deleteMany: jest.fn(),
   count: jest.fn(),
+  groupBy: jest.fn(),
 });
 
 const prismaMock = {
@@ -30,6 +31,9 @@ const prismaMock = {
   newsItem: createModel(),
   trade: createModel(),
   tradeItem: createModel(),
+  homeRunDerbyEvent: createModel(),
+  derbyEntry: createModel(),
+  derbySwing: createModel(),
   $queryRaw: jest.fn(),
   $transaction: jest.fn(),
 };

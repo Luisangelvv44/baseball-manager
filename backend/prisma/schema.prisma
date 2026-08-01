@@ -49,6 +49,7 @@ model Team {
   playoff_won         PlayoffSeries[]     @relation("PlayoffWinner")
   trades_proposed     Trade[]             @relation("TradeProposer")
   trades_received     Trade[]             @relation("TradeRecipient")
+  derby_entries       DerbyEntry[]
 }
 
 model Player {
@@ -76,6 +77,7 @@ model Player {
   team_lineups TeamLineup[]
   game_events  GameEvent[]      @relation("PlayerEvent")
   trade_items  TradeItem[]
+  derby_entries DerbyEntry[]
 
   @@index([team_id])
   @@index([status])
@@ -97,6 +99,7 @@ model Season {
   draft               Draft?
   season_record       SeasonRecord?
   trades              Trade[]
+  derby_events        HomeRunDerbyEvent[]
 }
 
 model SeasonRecord {
@@ -437,4 +440,51 @@ model NewsItem {
   @@map("news_items")
   @@index([season_day])
   @@index([season_id])
+}
+
+model HomeRunDerbyEvent {
+  id              Int      @id @default(autoincrement())
+  season_id       Int
+  day             Int
+  status          String   @default("pending") @db.VarChar(20) // pending | completed
+  winner_entry_id Int?     @unique
+  created_at      DateTime @default(now())
+
+  season  Season       @relation(fields: [season_id], references: [id])
+  entries DerbyEntry[]
+  swings  DerbySwing[]
+
+  @@map("home_run_derby_events")
+  @@index([season_id])
+}
+
+model DerbyEntry {
+  id            Int     @id @default(autoincrement())
+  event_id      Int
+  team_id       Int
+  player_id     Int
+  reward_amount Decimal @db.Decimal(12, 2)
+  home_runs     Int     @default(0)
+
+  event  HomeRunDerbyEvent @relation(fields: [event_id], references: [id])
+  team   Team              @relation(fields: [team_id], references: [id])
+  player Player            @relation(fields: [player_id], references: [id])
+  swings DerbySwing[]
+
+  @@map("derby_entries")
+  @@index([event_id])
+}
+
+model DerbySwing {
+  id          Int     @id @default(autoincrement())
+  event_id    Int
+  entry_id    Int
+  turn_number Int
+  is_home_run Boolean
+
+  event HomeRunDerbyEvent @relation(fields: [event_id], references: [id])
+  entry DerbyEntry        @relation(fields: [entry_id], references: [id])
+
+  @@map("derby_swings")
+  @@index([entry_id])
 }

@@ -17,6 +17,7 @@ function simulateGame(homeLineup, awayLineup, homePitcher, awayPitcher) {
   };
 
   const MAX_INNINGS = 15; // limite de seguridad
+  let walkOff = false;
 
   while (!isGameOver(state) && state.inning <= MAX_INNINGS) {
     const isTop = state.half === 'top';
@@ -49,13 +50,18 @@ function simulateGame(homeLineup, awayLineup, homePitcher, awayPitcher) {
     }
 
     // chequeo de walk-off / fin de juego despues de cada jugada
-    if (checkWalkOff(state)) break;
+    if (checkWalkOff(state)) {
+      walkOff = true;
+      break;
+    }
   }
 
   return {
     homeScore: state.homeScore,
     awayScore: state.awayScore,
     events: state.events,
+    walkOff,
+    finalInning: state.inning,
   };
 }
 
@@ -143,4 +149,4 @@ function checkWalkOff(state) {
   );
 }
 
-module.exports = { simulateGame };
+module.exports = { simulateGame, checkWalkOff };

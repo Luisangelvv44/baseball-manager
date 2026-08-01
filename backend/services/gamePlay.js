@@ -3,10 +3,18 @@ const { getLineup } = require('./lineup');
 const { simulateGame } = require('./gameSimulator');
 const { checkAndApplyGameInjuries } = require('./injuryService');
 const { createNews } = require('./newsService');
+const {
+  detectPitcherGems,
+  detectCycles,
+  detectMultiHomerGames,
+  isExtraInningsGame,
+  computeTrailingStreak,
+} = require('./newsDetection');
+const { NEWS_STREAK_MILESTONE, NEWS_STREAK_LOOKBACK_GAMES } = require('../config');
 
 // Simula un partido (schedule row), actualiza marcador/standings,
 // y opcionalmente guarda el play-by-play en game_events.
-// Devuelve { homeScore, awayScore, events, homeTeam, awayTeam }
+// Devuelve { homeScore, awayScore, events, homeTeam, awayTeam, feats }
 async function playGame(gameRow, saveEvents = false, skipStandings = false) {
   const homeLineup = await getLineup(gameRow.home_team_id, gameRow);
   const awayLineup = await getLineup(gameRow.away_team_id, gameRow);
@@ -26,10 +34,16 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
     data: { home_score: result.homeScore, away_score: result.awayScore, status: 'finished' },
   });
 
+  const homeTeam = await prisma.team.findUnique({ where: { id: gameRow.home_team_id } });
+  const awayTeam = await prisma.team.findUnique({ where: { id: gameRow.away_team_id } });
+
   if (!skipStandings) {
     const homeWon = result.homeScore > result.awayScore;
     await updateStandings(gameRow.home_team_id, result.homeScore, result.awayScore, homeWon);
     await updateStandings(gameRow.away_team_id, result.awayScore, result.homeScore, !homeWon);
+
+    await checkAndCreateStreakNews(gameRow.home_team_id, homeTeam.name, gameRow.day_number, gameRow.season_id);
+    await checkAndCreateStreakNews(gameRow.away_team_id, awayTeam.name, gameRow.day_number, gameRow.season_id);
   }
 
   if (saveEvents) {
@@ -54,14 +68,82 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
     });
   }
 
-  const homeTeam = await prisma.team.findUnique({ where: { id: gameRow.home_team_id } });
-  const awayTeam = await prisma.team.findUnique({ where: { id: gameRow.away_team_id } });
-
   const winner = result.homeScore > result.awayScore ? homeTeam.name : awayTeam.name;
   const loser  = result.homeScore > result.awayScore ? awayTeam.name : homeTeam.name;
   const hi = Math.max(result.homeScore, result.awayScore);
   const lo = Math.min(result.homeScore, result.awayScore);
   await createNews('game', `${winner} derrotó a ${loser} ${hi}-${lo}`, gameRow.day_number, gameRow.season_id);
+
+  if (result.walkOff) {
+    await createNews(
+      'walkoff',
+      `¡Walk-off! ${homeTeam.name} remontó para vencer a ${awayTeam.name} ${hi}-${lo}`,
+      gameRow.day_number,
+      gameRow.season_id
+    );
+  }
+
+  if (isExtraInningsGame(result.finalInning)) {
+    await createNews(
+      'extra_innings',
+      `${winner} superó a ${loser} ${hi}-${lo} en un duelo de innings extra (${result.finalInning} entradas)`,
+      gameRow.day_number,
+      gameRow.season_id
+    );
+  }
+
+  const gems = detectPitcherGems(result.events, {
+    homePitcherId: homeLineup.pitcher.id,
+    awayPitcherId: awayLineup.pitcher.id,
+    homeTeamId: gameRow.home_team_id,
+    awayTeamId: gameRow.away_team_id,
+  });
+  const cycles = detectCycles(result.events);
+  const multiHomers = detectMultiHomerGames(result.events);
+
+  const featPlayerIds = [...new Set([
+    ...gems.map((g) => g.pitcherId),
+    ...cycles.map((c) => c.playerId),
+    ...multiHomers.map((m) => m.playerId),
+  ])];
+
+  if (featPlayerIds.length > 0) {
+    const featPlayers = await prisma.player.findMany({
+      where: { id: { in: featPlayerIds } },
+      select: { id: true, first_name: true, last_name: true },
+    });
+    const nameOf = (id) => {
+      const p = featPlayers.find((pl) => pl.id === id);
+      return p ? `${p.first_name} ${p.last_name}` : 'Un jugador';
+    };
+    const teamName = (teamId) => (teamId === homeTeam.id ? homeTeam.name : awayTeam.name);
+
+    for (const g of gems) {
+      const label = g.perfect ? 'juego perfecto' : 'no-hitter';
+      await createNews(
+        'no_hitter',
+        `${nameOf(g.pitcherId)} (${teamName(g.teamId)}) lanzó un ${label} ante ${teamName(g.opponentTeamId)}`,
+        gameRow.day_number,
+        gameRow.season_id
+      );
+    }
+    for (const c of cycles) {
+      await createNews(
+        'cycle',
+        `${nameOf(c.playerId)} (${teamName(c.teamId)}) completó el ciclo (sencillo, doble, triple y jonrón)`,
+        gameRow.day_number,
+        gameRow.season_id
+      );
+    }
+    for (const m of multiHomers) {
+      await createNews(
+        'multi_hr',
+        `${nameOf(m.playerId)} (${teamName(m.teamId)}) conectó ${m.count} jonrones en el partido`,
+        gameRow.day_number,
+        gameRow.season_id
+      );
+    }
+  }
 
   if (injuredIds.length > 0) {
     const injuredPlayers = await prisma.player.findMany({
@@ -85,7 +167,35 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
     events: result.events,
     homeTeam,
     awayTeam,
+    feats: {
+      walkOff: result.walkOff,
+      finalInning: result.finalInning,
+      noHitters: gems,
+      cycles,
+      multiHomers,
+    },
   };
+}
+
+async function checkAndCreateStreakNews(teamId, teamName, dayNumber, seasonId) {
+  const recentGames = await prisma.gameSchedule.findMany({
+    where: {
+      status: 'finished',
+      season_id: seasonId,
+      OR: [{ home_team_id: teamId }, { away_team_id: teamId }],
+    },
+    orderBy: { day_number: 'desc' },
+    take: NEWS_STREAK_LOOKBACK_GAMES,
+    select: { home_team_id: true, away_team_id: true, home_score: true, away_score: true },
+  });
+
+  const { length, type } = computeTrailingStreak(recentGames, teamId);
+  if (length === 0 || length % NEWS_STREAK_MILESTONE !== 0) return;
+
+  const headline = type === 'W'
+    ? `${teamName} extendió su racha ganadora a ${length} partidos`
+    : `${teamName} acumula ${length} derrotas consecutivas`;
+  await createNews('streak', headline, dayNumber, seasonId);
 }
 
 const FAN_MIN_REGULAR = 1000;

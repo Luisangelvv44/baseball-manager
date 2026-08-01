@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID, MAX_ROSTER_SIZE } = require('../config');
-const { calculateGrowthCoefficient } = require('../services/auctionService');
+const { calculateGrowthCoefficient, calculateSigningCost } = require('../services/auctionService');
 
 function auctionInclude() {
   return {
@@ -207,10 +207,10 @@ router.post('/:id/bid', async (req, res) => {
     }
 
     const userTeam = await prisma.team.findUnique({ where: { id: USER_TEAM_ID } });
-    const requiredNow = Math.round(amount * 0.2);
+    const { total: requiredNow } = calculateSigningCost(amount, years);
     if (Number(userTeam.budget) < requiredNow) {
       return res.status(400).json({
-        error: `Presupuesto insuficiente. Necesitas al menos $${requiredNow.toLocaleString()} disponibles (bono de firma).`,
+        error: `Presupuesto insuficiente. Necesitas al menos $${requiredNow.toLocaleString()} disponibles (bono de firma + salario de la temporada actual).`,
       });
     }
 

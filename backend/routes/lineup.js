@@ -72,7 +72,7 @@ router.put('/', async (req, res) => {
   try {
     const players = await prisma.player.findMany({
       where: { id: { in: allIds }, team_id: USER_TEAM_ID },
-      select: { id: true, position: true },
+      select: { id: true, position: true, level: true },
     });
 
     if (players.length !== allIds.length) {
@@ -80,6 +80,10 @@ router.put('/', async (req, res) => {
     }
 
     const playerMap = new Map(players.map((p) => [p.id, p]));
+
+    if (allIds.some((id) => playerMap.get(id)?.level === 'MINOR')) {
+      return res.status(400).json({ error: 'Los jugadores de las Minors no pueden estar en el lineup.' });
+    }
 
     for (const id of pitcherIds) {
       if (playerMap.get(id)?.position !== 'P') {

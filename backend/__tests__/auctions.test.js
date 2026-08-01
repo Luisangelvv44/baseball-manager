@@ -3,6 +3,7 @@ const request = require('supertest');
 jest.mock('../db/prisma');
 jest.mock('../services/auctionService', () => ({
   calculateGrowthCoefficient: jest.fn().mockReturnValue(1.05),
+  calculateSigningCost: jest.requireActual('../services/auctionService').calculateSigningCost,
   createAuctionsForFreeAgents: jest.fn().mockResolvedValue(0),
   runCpuBidding: jest.fn().mockResolvedValue(undefined),
   closeExpiredAuctions: jest.fn().mockResolvedValue(0),
@@ -100,5 +101,23 @@ describe('POST /api/auctions/:id/bid', () => {
     expect(res.body.newHighBid).toBe(90000);
     expect(res.body.years).toBe(3);
     expect(res.body.closesOnDay).toBe(mockSeason.current_day + 5);
+  });
+
+  it('returns 400 when budget covers only the old bonus-only amount, not the combined bono + salario total', async () => {
+    prisma.freeAgentAuction.findUnique.mockResolvedValue({
+      ...mockAuction,
+      player: mockFreeAgent,
+      bids: [],
+    });
+    prisma.player.count.mockResolvedValue(10);
+    // amount 100000, years 5 -> old formula required only 20000 (100000*0.2);
+    // new formula requires 200000 (100000*5*0.2 bono + 100000 salario). 150000 covers
+    // the old amount but not the new combined total.
+    prisma.team.findUnique.mockResolvedValue({ ...mockTeam, budget: 150000 });
+
+    const res = await request(app).post('/api/auctions/1/bid').send({ amount: 100000, years: 5 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Presupuesto insuficiente/);
+    expect(prisma.auctionBid.create).not.toHaveBeenCalled();
   });
 });

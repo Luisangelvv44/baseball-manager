@@ -4,7 +4,7 @@ const prisma = require('../db/prisma');
 
 router.get('/', async (req, res) => {
   try {
-    const { day, seasonId } = req.query;
+    const { day, seasonId, type } = req.query;
 
     let resolvedSeasonId = seasonId ? parseInt(seasonId, 10) : null;
     if (!resolvedSeasonId) {
@@ -14,6 +14,7 @@ router.get('/', async (req, res) => {
 
     const where = {};
     if (resolvedSeasonId) where.season_id = resolvedSeasonId;
+    if (type) where.type = type;
 
     if (day !== undefined) {
       where.season_day = parseInt(day, 10);
@@ -28,7 +29,7 @@ router.get('/', async (req, res) => {
       take: 100,
     });
 
-    res.json({ items, seasonId: resolvedSeasonId, day: where.season_day });
+    res.json({ items, seasonId: resolvedSeasonId, day: where.season_day, type: type ?? null });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener noticias' });

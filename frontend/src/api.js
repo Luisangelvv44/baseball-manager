@@ -103,10 +103,11 @@ export const api = {
   draftPick: (prospectId) => request('/draft/pick', { method: 'POST', body: JSON.stringify({ prospectId }) }),
 
   // Noticias
-  getNews: (day, seasonId) => {
+  getNews: (day, seasonId, type) => {
     const params = new URLSearchParams();
     if (day != null) params.set('day', day);
     if (seasonId != null) params.set('seasonId', seasonId);
+    if (type) params.set('type', type);
     const qs = params.toString();
     return request(qs ? `/news?${qs}` : '/news');
   },
@@ -134,4 +135,18 @@ export const api = {
   acceptTrade: (id) => request(`/trades/${id}/accept`, { method: 'POST' }),
   rejectTrade: (id) => request(`/trades/${id}/reject`, { method: 'POST' }),
   cancelTrade: (id) => request(`/trades/${id}/cancel`, { method: 'POST' }),
+
+  // Derby de Jonrones
+  getDerbyEvents: (params = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, v);
+    });
+    const s = qs.toString();
+    return request(s ? `/derby?${s}` : '/derby');
+  },
+  getDerbyEvent: (id) => request(`/derby/${id}`),
+  createDerbyEvent: (playerId, rewardAmount) =>
+    request('/derby', { method: 'POST', body: JSON.stringify({ playerId, rewardAmount }) }),
+  simulateDerbyEvent: (id) => request(`/derby/${id}/simulate`, { method: 'POST' }),
 };

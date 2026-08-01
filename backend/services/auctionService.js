@@ -12,6 +12,14 @@ const OBVIOUS_UPGRADE_GAP = 10;     // diferencia de current_skill que salta la 
 const GROWTH_RATE = 0.055;          // valor esperado del multiplicador 0.03-0.08 que usa fluctuatePlayerSkills
 const RELEASE_PENALTY_RATE = 0.30;  // 30% del salario anual por cada anio de contrato restante al cortar
 
+// Costo total exigido al firmar: bono de firma (20% del valor total del contrato,
+// salario_anual * years) mas el salario completo de la temporada en curso.
+function calculateSigningCost(amount, years) {
+  const signingBonus = Math.round(amount * years * 0.2);
+  const seasonSalary = Math.round(amount);
+  return { signingBonus, seasonSalary, total: signingBonus + seasonSalary };
+}
+
 // Proyecta el "techo" de current_skill que un jugador podria alcanzar en los proximos
 // `years`, usando el mismo modelo de crecimiento/declive que fluctuatePlayerSkills
 // (playerService.js): crece mientras age < growth_age, declina despues. Devuelve el pico
@@ -174,6 +182,7 @@ async function runCpuBidding(tx, season) {
 
   const pendingSalaryMap = {};
   const pendingCountMap = {};
+  const pendingLumpSumMap = {};
 
   for (const auc of activeAuctionsSnapshot) {
     if (auc.bids.length === 0) continue;
@@ -181,6 +190,7 @@ async function runCpuBidding(tx, season) {
     const tid = topBid.team_id;
     pendingSalaryMap[tid] = (pendingSalaryMap[tid] ?? 0) + Number(topBid.amount);
     pendingCountMap[tid] = (pendingCountMap[tid] ?? 0) + 1;
+    pendingLumpSumMap[tid] = (pendingLumpSumMap[tid] ?? 0) + calculateSigningCost(Number(topBid.amount), topBid.years).total;
   }
 
   const weakestByTeamPosition = await buildWeakestByTeamPosition(client, cpuTeams.map((t) => t.id));
@@ -222,7 +232,18 @@ async function runCpuBidding(tx, season) {
 
       if (proposed > maxWilling) continue;
 
-      const years = tentativeYears;
+      // Si el desembolso inmediato (bono + salario de esta temporada) no alcanza con
+      // los anios tentativos, se intenta bajarlos (minimo 1) antes de descartar la puja.
+      const pendingLumpSum = pendingLumpSumMap[team.id] ?? 0;
+      const availableCash = Number(team.budget) - pendingLumpSum;
+
+      let years = tentativeYears;
+      let cost = calculateSigningCost(proposed, years);
+      while (cost.total > availableCash && years > 1) {
+        years -= 1;
+        cost = calculateSigningCost(proposed, years);
+      }
+      if (cost.total > availableCash) continue;
 
       await client.auctionBid.create({
         data: {
@@ -243,6 +264,7 @@ async function runCpuBidding(tx, season) {
       });
 
       if (!hasRosterSpace) releaseReliantBids.add(releaseKey);
+      pendingLumpSumMap[team.id] = (pendingLumpSumMap[team.id] ?? 0) + cost.total;
       pendingSalaryMap[team.id] = (pendingSalaryMap[team.id] ?? 0) + proposed;
       pendingCountMap[team.id] = (pendingCountMap[team.id] ?? 0) + 1;
       break; // one CPU bid per auction per day
@@ -282,8 +304,8 @@ async function closeExpiredAuctions(tx, season) {
     let resolved = false;
     for (const bid of auction.bids) {
       const winnerTeam = await client.team.findUnique({ where: { id: bid.team_id } });
-      const signingBonus = Math.round(Number(bid.amount) * 0.1);
-      if (Number(winnerTeam.budget) < signingBonus) continue;
+      const { total } = calculateSigningCost(Number(bid.amount), bid.years);
+      if (Number(winnerTeam.budget) < total) continue;
 
       const signed = await _signPlayerToTeam(client, auction, bid.team_id, Number(bid.amount), bid.years, season);
       if (signed) {
@@ -338,7 +360,7 @@ async function _signPlayerToTeam(client, auction, teamId, amount, years, season)
     if (!madeRoom) return false;
   }
 
-  const signingBonus = Math.round(amount * 0.2);
+  const { signingBonus, seasonSalary, total } = calculateSigningCost(amount, years);
 
   await client.player.update({
     where: { id: auction.player_id },
@@ -353,7 +375,7 @@ async function _signPlayerToTeam(client, auction, teamId, amount, years, season)
 
   await client.team.update({
     where: { id: teamId },
-    data: { budget: { decrement: signingBonus } },
+    data: { budget: { decrement: total } },
   });
 
   await client.freeAgentAuction.update({
@@ -369,6 +391,15 @@ async function _signPlayerToTeam(client, auction, teamId, amount, years, season)
         type: 'signing',
         amount: -signingBonus,
         description: `Bono de firma (subasta): ${auction.player.first_name} ${auction.player.last_name}`,
+      },
+    });
+    await client.finance.create({
+      data: {
+        team_id: USER_TEAM_ID,
+        season_day: season.current_day,
+        type: 'salaries',
+        amount: -seasonSalary,
+        description: `Salario temporada actual (subasta): ${auction.player.first_name} ${auction.player.last_name}`,
       },
     });
   }
@@ -394,6 +425,7 @@ async function cancelAllActiveAuctions(tx) {
 
 module.exports = {
   calculateGrowthCoefficient,
+  calculateSigningCost,
   projectPeakSkill,
   createAuctionsForFreeAgents,
   runCpuBidding,

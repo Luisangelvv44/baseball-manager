@@ -48,6 +48,18 @@ export default function Finances() {
                 </td>
               </tr>
             ))}
+            <tr className="border-t-2 border-gray-300">
+              <td className="p-2 font-bold">Ingresos promedio por temporada</td>
+              <td className={`p-2 text-right font-bold ${Number(data.avgIncomePerSeason) >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                ${Number(data.avgIncomePerSeason).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </td>
+            </tr>
+            <tr className="border-t">
+              <td className="p-2 font-bold">Ganancia promedio por temporada</td>
+              <td className={`p-2 text-right font-bold ${Number(data.avgProfitPerSeason) >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                ${Number(data.avgProfitPerSeason).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>

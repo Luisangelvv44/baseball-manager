@@ -23,6 +23,7 @@ app.use('/api/draft', require('./routes/draft'));
 app.use('/api/news', require('./routes/news'));
 app.use('/api/history', require('./routes/history'));
 app.use('/api/trades', require('./routes/trades'));
+app.use('/api/derby', require('./routes/derby'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

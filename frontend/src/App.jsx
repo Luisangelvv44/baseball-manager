@@ -21,6 +21,8 @@ import News from './pages/News.jsx';
 import History from './pages/History.jsx';
 import TeamsOverview from './pages/TeamsOverview.jsx';
 import Trades from './pages/Trades.jsx';
+import Derby from './pages/Derby.jsx';
+import DerbyView from './pages/DerbyView.jsx';
 
 export default function App() {
   return (
@@ -49,6 +51,8 @@ export default function App() {
           <Route path="/news" element={<News />} />
           <Route path="/history" element={<History />} />
           <Route path="/game/:id" element={<GameView />} />
+          <Route path="/derby" element={<Derby />} />
+          <Route path="/derby/:id" element={<DerbyView />} />
         </Routes>
       </div>
     </div>

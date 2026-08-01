@@ -24,7 +24,7 @@ export default function Broadcast() {
     // Cargar equipo de forma independiente para que el estimado siempre sea visible
     try {
       const team = await api.getMyTeam();
-      setMyTeam(team);
+      setMyTeam(team.team);
     } catch (_) {}
 
     try {

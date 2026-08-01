@@ -24,15 +24,34 @@ router.get('/', async (req, res) => {
       GROUP BY type
     `;
 
+    const [totals] = await prisma.$queryRaw`
+      SELECT
+        COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) as income,
+        COALESCE(SUM(amount), 0) as profit
+      FROM finances
+      WHERE team_id = ${USER_TEAM_ID}
+    `;
+
     const team = await prisma.team.findUnique({
       where: { id: USER_TEAM_ID },
       select: { budget: true },
     });
 
+    const totalIncome = Number(totals.income);
+    const totalProfit = Number(totals.profit);
+    const seasonsCount = await prisma.season.count();
+    const avgIncomePerSeason = seasonsCount > 0 ? totalIncome / seasonsCount : 0;
+    const avgProfitPerSeason = seasonsCount > 0 ? totalProfit / seasonsCount : 0;
+
     res.json({
       budget: team?.budget,
       transactions,
       summary,
+      totalIncome,
+      totalProfit,
+      seasonsCount,
+      avgIncomePerSeason,
+      avgProfitPerSeason,
       page,
       pageSize,
       total,

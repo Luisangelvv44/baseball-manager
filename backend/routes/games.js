@@ -134,6 +134,7 @@ router.post('/:id/simulate', async (req, res) => {
       events: result.events,
       homeTeam: result.homeTeam,
       awayTeam: result.awayTeam,
+      feats: result.feats,
       isUserHome,
       economy,
       isPlayoff,

@@ -43,10 +43,10 @@ export default function Lineup() {
 
   const activePitcherCount = pitchers.filter(Boolean).length;
   const availablePitchers = roster.filter(
-    (p) => p.position === 'P' && !assignedIds.has(p.id) && p.injury_days_remaining === 0
+    (p) => p.position === 'P' && !assignedIds.has(p.id) && p.injury_days_remaining === 0 && p.level !== 'MINOR'
   );
   const availableBatters = roster.filter(
-    (p) => p.position !== 'P' && !assignedIds.has(p.id) && p.injury_days_remaining === 0
+    (p) => p.position !== 'P' && !assignedIds.has(p.id) && p.injury_days_remaining === 0 && p.level !== 'MINOR'
   );
   const inactivePlayers = roster.filter((p) => p.injury_days_remaining > 0);
 
