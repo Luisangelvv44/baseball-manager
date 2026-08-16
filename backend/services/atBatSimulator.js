@@ -1,3 +1,5 @@
+const { effectiveSkill } = require('./skillCurve');
+
 // Probabilidades base para un enfrentamiento "promedio" (skill 50 vs 50).
 // Orden de mas probable a menos probable, como pidio el usuario.
 const BASE_PROBABILITIES = {
@@ -12,8 +14,11 @@ const BASE_PROBABILITIES = {
 };
 
 function simulateAtBat(batterSkill, pitcherSkill) {
-  // skillDiff entre -1 y 1. Positivo favorece al bateador.
-  const skillDiff = (batterSkill - pitcherSkill) / 100;
+  // skillDiff no lineal (skill^1.5): la misma brecha de puntos pesa mas entre
+  // jugadores de nivel alto que entre jugadores de nivel bajo. Normalizado por
+  // effectiveSkill(100) para preservar el mismo punto de anclaje que el /100 original.
+  // Positivo favorece al bateador.
+  const skillDiff = (effectiveSkill(batterSkill) - effectiveSkill(pitcherSkill)) / effectiveSkill(100);
 
   const probs = { ...BASE_PROBABILITIES };
 

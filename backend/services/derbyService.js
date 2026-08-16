@@ -11,13 +11,22 @@ const {
   DERBY_MAX_TIEBREAK_ROUNDS,
 } = require('../config');
 const { createNews } = require('./newsService');
+const { effectiveSkill } = require('./skillCurve');
 
 // Probabilidad de jonron por swing en base a la destreza (current_skill) del bateador.
 // A diferencia de atBatSimulator (bateador vs pitcher), aqui no hay pitcher rival: el
 // derby usa una maquina de lanzamiento, asi que la probabilidad depende solo del bateador
 // y es mucho mas alta que en un at-bat real.
+//
+// La brecha respecto al skill promedio (50) se mide en escala no lineal (skill^1.5) en vez
+// de lineal, para que la ventaja de un bateador de elite se sienta mas marcada. El coeficiente
+// se reescala por la derivada de skill^1.5 en skill=50 (1.5*sqrt(50)) para que el caso promedio
+// (skill=50) siga dando exactamente DERBY_BASE_HR_PROB, igual que con la formula lineal anterior.
+const DERBY_SKILL_SLOPE_AT_50 = 1.5 * Math.sqrt(50);
+const DERBY_EFFECTIVE_COEFFICIENT = DERBY_SKILL_COEFFICIENT / DERBY_SKILL_SLOPE_AT_50;
+
 function swingHrProbability(skill) {
-  const raw = DERBY_BASE_HR_PROB + (skill - 50) * DERBY_SKILL_COEFFICIENT;
+  const raw = DERBY_BASE_HR_PROB + (effectiveSkill(skill) - effectiveSkill(50)) * DERBY_EFFECTIVE_COEFFICIENT;
   return Math.min(DERBY_MAX_HR_PROB, Math.max(DERBY_MIN_HR_PROB, raw));
 }
 
