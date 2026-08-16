@@ -3,6 +3,7 @@
 module.exports = {
   USER_TEAM_ID: 1,
   PRE_SEASON_DAYS: 15,
+  ROSTER_CHECK_DAY: 15, // mismo valor que PRE_SEASON_DAYS por diseno: ultimo dia de pre-temporada
   OFFER_WINDOW_END_DAY: 3,
   GAMES_PER_SEASON: 30,
   MAX_ROSTER_SIZE: 25,

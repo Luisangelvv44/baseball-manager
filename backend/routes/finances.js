@@ -43,6 +43,34 @@ router.get('/', async (req, res) => {
     const avgIncomePerSeason = seasonsCount > 0 ? totalIncome / seasonsCount : 0;
     const avgProfitPerSeason = seasonsCount > 0 ? totalProfit / seasonsCount : 0;
 
+    const activeMajorWhere = { level: 'MAJOR', status: 'active' };
+
+    const leagueSalaryAgg = await prisma.player.aggregate({
+      where: activeMajorWhere,
+      _avg: { salary: true },
+      _count: { _all: true },
+    });
+
+    const teamSalaryAgg = await prisma.player.aggregate({
+      where: { ...activeMajorWhere, team_id: USER_TEAM_ID },
+      _avg: { salary: true },
+      _count: { _all: true },
+    });
+
+    const topSalaries = await prisma.player.findMany({
+      where: activeMajorWhere,
+      orderBy: { salary: 'desc' },
+      take: 3,
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        position: true,
+        salary: true,
+        team: { select: { id: true, name: true } },
+      },
+    });
+
     res.json({
       budget: team?.budget,
       transactions,
@@ -52,6 +80,11 @@ router.get('/', async (req, res) => {
       seasonsCount,
       avgIncomePerSeason,
       avgProfitPerSeason,
+      leagueAvgSalary: Number(leagueSalaryAgg._avg.salary) || 0,
+      leagueActivePlayerCount: leagueSalaryAgg._count._all,
+      teamAvgSalary: Number(teamSalaryAgg._avg.salary) || 0,
+      teamActivePlayerCount: teamSalaryAgg._count._all,
+      topSalaries,
       page,
       pageSize,
       total,

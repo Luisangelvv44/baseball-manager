@@ -326,6 +326,27 @@ async function closeExpiredAuctions(tx, season) {
   return closed;
 }
 
+// Libera a `player` del equipo `teamId`, cobrando la multa estandar (30% del salario anual
+// por cada anio de contrato restante) descontada del budget. Devuelve false sin tocar nada
+// si el budget no alcanza para la multa.
+async function releasePlayerWithPenalty(client, teamId, player) {
+  const releasePenalty = Math.round(
+    Number(player.salary) * RELEASE_PENALTY_RATE * Math.max(0, player.contract_years_remaining)
+  );
+
+  const team = await client.team.findUnique({ where: { id: teamId }, select: { budget: true } });
+  if (Number(team.budget) < releasePenalty) return false;
+
+  await client.teamLineup.deleteMany({ where: { player_id: player.id } });
+  await client.player.update({ where: { id: player.id }, data: { team_id: null, status: 'free_agent' } });
+
+  if (releasePenalty > 0) {
+    await client.team.update({ where: { id: teamId }, data: { budget: { decrement: releasePenalty } } });
+  }
+
+  return true;
+}
+
 // Si el equipo (no-usuario) esta al tope, intenta liberar a su jugador mas debil de esa
 // posicion (nunca un rookie) para hacer espacio. Devuelve false si no se puede hacer de
 // forma coherente (nadie cortable en esa posicion, o ya no es mejora clara).
@@ -337,21 +358,7 @@ async function _makeRoomIfNeeded(client, teamId, incomingPlayer, incomingYears) 
   if (!weakest) return false;
   if (!isClearRosterUpgrade(weakest, incomingPlayer, incomingYears)) return false;
 
-  const releasePenalty = Math.round(
-    Number(weakest.salary) * RELEASE_PENALTY_RATE * Math.max(0, weakest.contract_years_remaining)
-  );
-
-  const team = await client.team.findUnique({ where: { id: teamId }, select: { budget: true } });
-  if (Number(team.budget) < releasePenalty) return false;
-
-  await client.teamLineup.deleteMany({ where: { player_id: weakest.id } });
-  await client.player.update({ where: { id: weakest.id }, data: { team_id: null, status: 'free_agent' } });
-
-  if (releasePenalty > 0) {
-    await client.team.update({ where: { id: teamId }, data: { budget: { decrement: releasePenalty } } });
-  }
-
-  return true;
+  return releasePlayerWithPenalty(client, teamId, weakest);
 }
 
 async function _signPlayerToTeam(client, auction, teamId, amount, years, season) {
@@ -431,4 +438,6 @@ module.exports = {
   runCpuBidding,
   closeExpiredAuctions,
   cancelAllActiveAuctions,
+  releasePlayerWithPenalty,
+  findWeakestRosterPlayer,
 };

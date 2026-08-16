@@ -9,6 +9,7 @@ const createModel = () => ({
   deleteMany: jest.fn(),
   count: jest.fn(),
   groupBy: jest.fn(),
+  aggregate: jest.fn(),
 });
 
 const prismaMock = {

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, AUCTION_DEADLINE_DAY } = require('../config');
+const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, AUCTION_DEADLINE_DAY, ROSTER_CHECK_DAY } = require('../config');
 const { generateSchedule } = require('../services/scheduleGenerator');
 const { playGame } = require('../services/gamePlay');
 const {
@@ -22,7 +22,7 @@ const { calculateSalary, generatePlayer } = require('../seeders/generators/playe
 const { generatePlayoffBracket, updateSeriesAfterGame, advancePlayoffRound } = require('../services/playoffService');
 const { retireOldPlayers } = require('../services/retiredPlayer');
 const { fluctuatePlayerSkills, updatePlayersContracts } = require('../services/playerService');
-const { giveCpuTeamsRevenue } = require('../services/cpuTeamManagement');
+const { giveCpuTeamsRevenue, fillMissingPositions } = require('../services/cpuTeamManagement');
 const { applyCoachBonuses, deductCoachSalaries } = require('../services/coachService');
 const { createDraft } = require('../services/draftService');
 const { processInjuryRecovery, clearAllInjuries } = require('../services/injuryService');
@@ -380,6 +380,10 @@ router.post('/advance-day', async (req, res) => {
 
     if (day === OFFER_WINDOW_END_DAY) {
       await finalizeContracts(season);
+    }
+
+    if (day === ROSTER_CHECK_DAY) {
+      await fillMissingPositions(season);
     }
 
     const newDay = day + 1;

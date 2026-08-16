@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Pagination from '../components/Pagination.jsx';
 
+const USER_TEAM_ID = 1;
+
 const TYPE_LABELS = {
   ticket_sales: 'Venta de entradas',
   merch_sales: 'Merchandising',
@@ -34,6 +36,46 @@ export default function Finances() {
         <p className="text-lg">
           Presupuesto actual: <span className="font-bold text-green-700">${Number(data.budget).toLocaleString()}</span>
         </p>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-4">
+        <h3 className="font-bold mb-2">Salarios de la liga (roster activo)</h3>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <p className="text-sm text-gray-500">Promedio de la liga</p>
+            <p className="text-lg font-bold">
+              ${Number(data.leagueAvgSalary).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            </p>
+            <p className="text-xs text-gray-400">{data.leagueActivePlayerCount} jugadores</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Promedio de tu equipo</p>
+            <p className={`text-lg font-bold ${Number(data.teamAvgSalary) > Number(data.leagueAvgSalary) ? 'text-red-600' : 'text-green-700'}`}>
+              ${Number(data.teamAvgSalary).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            </p>
+            <p className="text-xs text-gray-400">{data.teamActivePlayerCount} jugadores</p>
+          </div>
+        </div>
+
+        <h4 className="font-semibold text-sm text-gray-500 mb-1">Top 3 salarios de la liga</h4>
+        {data.topSalaries && data.topSalaries.length > 0 ? (
+          <table className="w-full text-sm">
+            <tbody>
+              {data.topSalaries.map((p) => (
+                <tr key={p.id} className={`border-t ${p.team?.id === USER_TEAM_ID ? 'bg-yellow-50' : ''}`}>
+                  <td className="p-2">{p.first_name} {p.last_name}</td>
+                  <td className="p-2 text-gray-500">{p.position}</td>
+                  <td className="p-2 text-gray-500">{p.team?.name}</td>
+                  <td className="p-2 text-right font-semibold text-green-700">
+                    ${Number(p.salary).toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="text-sm text-gray-400">Sin datos de jugadores activos.</p>
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow p-4">
