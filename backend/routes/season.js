@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, AUCTION_DEADLINE_DAY, ROSTER_CHECK_DAY } = require('../config');
+const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, AUCTION_DEADLINE_DAY, ROSTER_CHECK_DAY, LUXURY_TAX_PROJECTION_DAY } = require('../config');
 const { generateSchedule } = require('../services/scheduleGenerator');
 const { playGame } = require('../services/gamePlay');
 const {
@@ -24,6 +24,7 @@ const { retireOldPlayers } = require('../services/retiredPlayer');
 const { fluctuatePlayerSkills, updatePlayersContracts } = require('../services/playerService');
 const { giveCpuTeamsRevenue, fillMissingPositions } = require('../services/cpuTeamManagement');
 const { applyCoachBonuses, deductCoachSalaries } = require('../services/coachService');
+const { recordLuxuryTaxProjection, applyLuxuryTax } = require('../services/luxuryTaxService');
 const { createDraft } = require('../services/draftService');
 const { processInjuryRecovery, clearAllInjuries } = require('../services/injuryService');
 const { generateCpuTradeOffers, expireStaleTrades } = require('../services/tradeService');
@@ -204,6 +205,7 @@ async function endOfSeasonCleanup(season) {
   await fluctuatePlayerSkills();
   await applyCoachBonuses();
   await giveCpuTeamsRevenue();
+  await applyLuxuryTax(season, 999); // Impuesto al lujo: cobro real con roster final, antes del recorte de roster CPU
 
   const CPU_TARGET_ROSTER = MAX_ROSTER_SIZE;
   const ROOKIE_SLOT_BUFFER = 50000;
@@ -384,6 +386,10 @@ router.post('/advance-day', async (req, res) => {
 
     if (day === ROSTER_CHECK_DAY) {
       await fillMissingPositions(season);
+    }
+
+    if (day === LUXURY_TAX_PROJECTION_DAY) {
+      await recordLuxuryTaxProjection(season);
     }
 
     const newDay = day + 1;

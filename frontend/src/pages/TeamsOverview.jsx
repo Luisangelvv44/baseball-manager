@@ -34,6 +34,8 @@ export default function TeamsOverview() {
               <th className="px-3 py-2">División</th>
               <th className="px-3 py-2">Roster</th>
               <th className="px-3 py-2">Fan Base</th>
+              <th className="px-3 py-2">Nómina</th>
+              <th className="px-3 py-2">Impuesto al lujo</th>
               <th className="px-3 py-2">Budget</th>
               <th className="px-3 py-2">Revenue est./temporada</th>
               <th className="px-3 py-2">Máx. puja</th>
@@ -46,6 +48,19 @@ export default function TeamsOverview() {
                 <td className="px-3 py-2 text-gray-500">{t.division_name}</td>
                 <td className="px-3 py-2">{t.roster_count} / {MAX_ROSTER_SIZE}</td>
                 <td className="px-3 py-2">{(t.fan_base ?? 0).toLocaleString()}</td>
+                <td className="px-3 py-2">{formatCompactMoney(t.payroll ?? 0)}</td>
+                <td className="px-3 py-2">
+                  {t.luxury_tax
+                    ? (
+                      <span className={t.luxury_tax.totalTax > 0 ? 'text-red-600 font-semibold' : 'text-gray-500'}>
+                        {formatCompactMoney(t.luxury_tax.totalTax)}
+                        <span className="ml-1 text-xs font-normal text-gray-400">
+                          ({t.luxury_tax.charged ? 'cobrado' : 'proyectado'})
+                        </span>
+                      </span>
+                    )
+                    : '—'}
+                </td>
                 <td className="px-3 py-2">{t.budget != null ? formatCompactMoney(t.budget) : '—'}</td>
                 <td className="px-3 py-2">
                   {t.revenue_min != null

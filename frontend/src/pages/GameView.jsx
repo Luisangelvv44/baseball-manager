@@ -3,17 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import TeamBadge from '../components/TeamBadge.jsx';
 
-const RESULT_LABELS = {
-  SO: 'Strikeout (K)',
-  GO: 'Out en rodado',
-  FO: 'Out de fly',
-  '1B': 'Sencillo',
-  '2B': 'Doble',
-  '3B': 'Triple',
-  HR: '¡Jonron!',
-  BB: 'Base por bolas',
-};
-
 function BasesDiamond({ bases }) {
   const [first, second, third] = bases;
   const occupied = 'bg-yellow-400 border-yellow-600';
@@ -49,6 +38,60 @@ function OutsIndicator({ outs }) {
           />
         ))}
       </div>
+    </div>
+  );
+}
+
+function PitchersCard({ homeTeam, awayTeam, homeLineup, awayLineup }) {
+  if (!homeLineup?.pitcher || !awayLineup?.pitcher) return null;
+
+  return (
+    <div className="bg-white rounded-lg shadow p-4">
+      <h3 className="font-bold mb-3">Pitchers</h3>
+      <div className="grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <div className="text-xs text-gray-500 mb-1"><TeamBadge name={awayTeam?.name} /></div>
+          <div className="font-semibold">{awayLineup.pitcher.name}</div>
+          <div className="text-gray-600">Skill: {awayLineup.pitcher.current_skill}</div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-500 mb-1"><TeamBadge name={homeTeam?.name} /></div>
+          <div className="font-semibold">{homeLineup.pitcher.name}</div>
+          <div className="text-gray-600">Skill: {homeLineup.pitcher.current_skill}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LineupTable({ teamName, lineup }) {
+  return (
+    <div className="bg-white rounded-lg shadow p-4">
+      <h3 className="font-bold mb-2"><TeamBadge name={teamName} /></h3>
+      {lineup?.batters?.length > 0 ? (
+        <table className="text-sm w-full">
+          <thead>
+            <tr className="text-left text-gray-500 border-b">
+              <th className="p-1 w-6">#</th>
+              <th className="p-1">Nombre</th>
+              <th className="p-1">Pos</th>
+              <th className="p-1">Skill</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lineup.batters.map((p, idx) => (
+              <tr key={p.id} className="border-t">
+                <td className="p-1 text-gray-400">{idx + 1}</td>
+                <td className="p-1">{p.name}</td>
+                <td className="p-1">{p.position}</td>
+                <td className="p-1">{p.current_skill}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="text-gray-400 text-sm">Lineup no disponible.</p>
+      )}
     </div>
   );
 }
@@ -99,6 +142,8 @@ export default function GameView() {
   const [awayTeam, setAwayTeam] = useState(null);
   const [events, setEvents] = useState([]);
   const [visibleEvents, setVisibleEvents] = useState([]);
+  const [homeLineup, setHomeLineup] = useState(null);
+  const [awayLineup, setAwayLineup] = useState(null);
   const [score, setScore] = useState({ home: 0, away: 0 });
   const [economy, setEconomy] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -119,6 +164,8 @@ export default function GameView() {
       setGame(info.game);
       setHomeTeam(info.homeTeam);
       setAwayTeam(info.awayTeam);
+      setHomeLineup(info.homeLineup);
+      setAwayLineup(info.awayLineup);
 
       if (info.game.status === 'finished') {
         setEvents(info.events);
@@ -143,6 +190,8 @@ export default function GameView() {
       const result = await api.simulateGame(id);
       setHomeTeam(result.homeTeam);
       setAwayTeam(result.awayTeam);
+      setHomeLineup(result.homeLineup);
+      setAwayLineup(result.awayLineup);
       setEvents(result.events);
       setEconomy({ ...result.economy, isUserHome: result.isUserHome });
       setVisibleEvents([]);
@@ -279,23 +328,13 @@ export default function GameView() {
         </div>
       )}
 
-      {/* Play by play */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <h3 className="font-bold mb-2">Play by play</h3>
-        <div className="max-h-96 overflow-y-auto space-y-1 text-sm">
-          {visibleEvents.length === 0 && <p className="text-gray-400">Aun no hay jugadas.</p>}
-          {visibleEvents.map((ev, idx) => (
-            <div key={idx} className="border-b py-1">
-              <span className="text-gray-400 mr-2">
-                {ev.half === 'top' ? 'Alta' : 'Baja'} {ev.inning}
-              </span>
-              {RESULT_LABELS[ev.result] || ev.result}
-              {ev.runs_scored > 0 && (
-                <span className="text-green-700 font-semibold ml-2">+{ev.runs_scored} carrera(s)</span>
-              )}
-            </div>
-          ))}
-        </div>
+      {/* Pitchers */}
+      <PitchersCard homeTeam={homeTeam} awayTeam={awayTeam} homeLineup={homeLineup} awayLineup={awayLineup} />
+
+      {/* Lineups */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <LineupTable teamName={awayTeam?.name} lineup={awayLineup} />
+        <LineupTable teamName={homeTeam?.name} lineup={homeLineup} />
       </div>
 
       {finished && game.status !== 'finished' && (

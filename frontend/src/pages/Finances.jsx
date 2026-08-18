@@ -13,6 +13,7 @@ const TYPE_LABELS = {
   signing: 'Fichajes',
   operating_cost: 'Costos operativos',
   broadcast_revenue: 'Ingresos Transmisión',
+  luxury_tax: 'Impuesto al lujo',
 };
 
 export default function Finances() {
@@ -77,6 +78,34 @@ export default function Finances() {
           <p className="text-sm text-gray-400">Sin datos de jugadores activos.</p>
         )}
       </div>
+
+      {data.userLuxuryTax && (
+        <div className="bg-white rounded-lg shadow p-4">
+          <h3 className="font-bold mb-2">Impuesto al lujo</h3>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-sm text-gray-500">Nómina de tu equipo</p>
+              <p className="text-lg font-bold">
+                ${Number(data.userLuxuryTax.payroll).toLocaleString()}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Umbral de la liga</p>
+              <p className="text-lg font-bold">
+                ${Number(data.userLuxuryTax.threshold).toLocaleString()}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">
+                Impuesto {data.userLuxuryTax.charged ? 'cobrado' : 'proyectado'} (día {data.userLuxuryTax.day})
+              </p>
+              <p className={`text-lg font-bold ${data.userLuxuryTax.totalTax > 0 ? 'text-red-600' : 'text-green-700'}`}>
+                ${Number(data.userLuxuryTax.totalTax).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow p-4">
         <h3 className="font-bold mb-2">Resumen por categoria</h3>

@@ -71,6 +71,29 @@ router.get('/', async (req, res) => {
       },
     });
 
+    const activeSeason = await prisma.season.findFirst({
+      where: { status: { in: ['active', 'playoffs', 'draft', 'completed'] } },
+      orderBy: { id: 'desc' },
+    });
+    let userLuxuryTax = null;
+    if (activeSeason) {
+      const record = await prisma.luxuryTaxRecord.findFirst({
+        where: { season_id: activeSeason.id, team_id: USER_TEAM_ID },
+        orderBy: { created_at: 'desc' },
+      });
+      if (record) {
+        userLuxuryTax = {
+          payroll: Number(record.payroll),
+          threshold: Number(record.threshold),
+          totalTax: Number(record.total_tax),
+          bracketTax: Number(record.bracket_tax),
+          inefficiencyTax: Number(record.inefficiency_tax),
+          charged: record.charged,
+          day: record.day,
+        };
+      }
+    }
+
     res.json({
       budget: team?.budget,
       transactions,
@@ -85,6 +108,7 @@ router.get('/', async (req, res) => {
       teamAvgSalary: Number(teamSalaryAgg._avg.salary) || 0,
       teamActivePlayerCount: teamSalaryAgg._count._all,
       topSalaries,
+      userLuxuryTax,
       page,
       pageSize,
       total,

@@ -64,6 +64,20 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
       data: [
         { game_id: gameRow.id, player_id: homeLineup.pitcher.id, team_id: homeLineup.teamId, position: 'P' },
         { game_id: gameRow.id, player_id: awayLineup.pitcher.id, team_id: awayLineup.teamId, position: 'P' },
+        ...homeLineup.players.map((p, i) => ({
+          game_id: gameRow.id,
+          player_id: p.id,
+          team_id: homeLineup.teamId,
+          position: p.position,
+          batting_order: i + 1,
+        })),
+        ...awayLineup.players.map((p, i) => ({
+          game_id: gameRow.id,
+          player_id: p.id,
+          team_id: awayLineup.teamId,
+          position: p.position,
+          batting_order: i + 1,
+        })),
       ],
     });
   }
@@ -167,6 +181,8 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
     events: result.events,
     homeTeam,
     awayTeam,
+    homeLineup: formatLineup(homeLineup),
+    awayLineup: formatLineup(awayLineup),
     feats: {
       walkOff: result.walkOff,
       finalInning: result.finalInning,
@@ -174,6 +190,22 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
       cycles,
       multiHomers,
     },
+  };
+}
+
+function formatLineup(lineup) {
+  return {
+    pitcher: {
+      id: lineup.pitcher.id,
+      name: `${lineup.pitcher.first_name} ${lineup.pitcher.last_name}`,
+      current_skill: lineup.pitcher.current_skill,
+    },
+    batters: lineup.players.map((p) => ({
+      id: p.id,
+      name: `${p.first_name} ${p.last_name}`,
+      position: p.position,
+      current_skill: p.current_skill,
+    })),
   };
 }
 

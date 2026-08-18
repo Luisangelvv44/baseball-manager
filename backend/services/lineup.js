@@ -4,7 +4,7 @@ const { FIELD_POSITIONS } = require('../seeders/generators/playerGenerator');
 async function getSavedLineup(teamId, gameRow) {
   const rows = await prisma.teamLineup.findMany({
     where: { team_id: teamId },
-    include: { player: { select: { id: true, current_skill: true, position: true, team_id: true, injury_days_remaining: true, level: true } } },
+    include: { player: { select: { id: true, first_name: true, last_name: true, current_skill: true, position: true, team_id: true, injury_days_remaining: true, level: true } } },
   });
 
   if (rows.length === 0) return null;
@@ -39,11 +39,18 @@ async function getSavedLineup(teamId, gameRow) {
 
   return {
     teamId,
-    pitcher: { id: selectedPitcher.id, current_skill: selectedPitcher.current_skill },
+    pitcher: {
+      id: selectedPitcher.id,
+      current_skill: selectedPitcher.current_skill,
+      first_name: selectedPitcher.first_name,
+      last_name: selectedPitcher.last_name,
+    },
     players: batterRows.slice(0, 9).map((r) => ({
       id: r.player.id,
       current_skill: r.player.current_skill,
       position: r.player.position,
+      first_name: r.player.first_name,
+      last_name: r.player.last_name,
     })),
   };
 }
@@ -87,11 +94,18 @@ async function autoGenerateLineup(teamId) {
 
   return {
     teamId,
-    pitcher: { id: pitcher.id, current_skill: pitcher.current_skill },
+    pitcher: {
+      id: pitcher.id,
+      current_skill: pitcher.current_skill,
+      first_name: pitcher.first_name,
+      last_name: pitcher.last_name,
+    },
     players: battingOrder.slice(0, 9).map((p) => ({
       id: p.id,
       current_skill: p.current_skill,
       position: p.assigned_position,
+      first_name: p.first_name,
+      last_name: p.last_name,
     })),
   };
 }

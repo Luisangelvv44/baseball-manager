@@ -47,6 +47,34 @@ router.get('/overview', async (req, res) => {
     });
     const countMap = Object.fromEntries(rosterCounts.map((r) => [r.team_id, r._count.id]));
 
+    const payrolls = await prisma.player.groupBy({
+      by: ['team_id'],
+      where: { team_id: { in: teams.map((t) => t.id) }, status: 'active', level: 'MAJOR' },
+      _sum: { salary: true },
+    });
+    const payrollMap = Object.fromEntries(payrolls.map((p) => [p.team_id, Number(p._sum.salary) || 0]));
+
+    const activeSeason = await prisma.season.findFirst({
+      where: { status: { in: ['active', 'playoffs', 'draft', 'completed'] } },
+      orderBy: { id: 'desc' },
+    });
+    let luxuryTaxMap = {};
+    if (activeSeason) {
+      const records = await prisma.luxuryTaxRecord.findMany({
+        where: { season_id: activeSeason.id },
+        orderBy: { created_at: 'desc' },
+      });
+      for (const r of records) {
+        if (luxuryTaxMap[r.team_id]) continue; // ya tenemos el mas reciente para este equipo
+        luxuryTaxMap[r.team_id] = {
+          totalTax: Number(r.total_tax),
+          threshold: Number(r.threshold),
+          charged: r.charged,
+          day: r.day,
+        };
+      }
+    }
+
     res.json(teams.map((t) => ({
       id: t.id,
       name: t.name,
@@ -54,6 +82,8 @@ router.get('/overview', async (req, res) => {
       is_user_team: t.is_user_team,
       roster_count: countMap[t.id] ?? 0,
       fan_base: t.fan_base,
+      payroll: payrollMap[t.id] ?? 0,
+      luxury_tax: luxuryTaxMap[t.id] ?? null,
       budget: t.is_user_team ? null : Number(t.budget),
       bid_aggressiveness_pct: t.is_user_team ? null : t.bid_aggressiveness * 100,
       max_bid_amount: t.is_user_team ? null : Math.round(Number(t.budget) * t.bid_aggressiveness),

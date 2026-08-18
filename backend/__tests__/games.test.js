@@ -2,6 +2,7 @@ const request = require('supertest');
 
 jest.mock('../db/prisma');
 jest.mock('../services/gamePlay', () => ({ playGame: jest.fn() }));
+jest.mock('../services/lineup', () => ({ getLineup: jest.fn() }));
 jest.mock('../services/economy', () => ({
   computeHomeGameRevenue: jest.fn(),
   computeAwayGameRevenue: jest.fn(),
@@ -12,6 +13,7 @@ jest.mock('../services/playoffService', () => ({
 
 const prisma = require('../db/prisma');
 const { playGame } = require('../services/gamePlay');
+const { getLineup } = require('../services/lineup');
 const { computeHomeGameRevenue, computeAwayGameRevenue } = require('../services/economy');
 const { mockGame, mockFinishedGame, mockTeam, mockCpuTeam, mockGameEvent, mockSeason } = require('./mockData');
 
@@ -34,6 +36,11 @@ describe('GET /api/games/:id', () => {
       .mockResolvedValueOnce(mockTeam)
       .mockResolvedValueOnce(mockCpuTeam);
     prisma.gameEvent.findMany.mockResolvedValue([mockGameEvent]);
+    getLineup.mockResolvedValue({
+      teamId: 1,
+      pitcher: { id: 10, current_skill: 70, first_name: 'Ray', last_name: 'Ortiz' },
+      players: [{ id: 11, current_skill: 65, position: 'OF', first_name: 'Sam', last_name: 'Diaz' }],
+    });
 
     const res = await request(app).get('/api/games/100');
     expect(res.status).toBe(200);
@@ -41,6 +48,8 @@ describe('GET /api/games/:id', () => {
     expect(res.body.homeTeam.id).toBe(1);
     expect(res.body.awayTeam.id).toBe(2);
     expect(res.body.events).toHaveLength(1);
+    expect(res.body.homeLineup.pitcher.name).toBe('Ray Ortiz');
+    expect(res.body.awayLineup.batters[0].name).toBe('Sam Diaz');
   });
 });
 

@@ -50,6 +50,7 @@ model Team {
   trades_proposed     Trade[]             @relation("TradeProposer")
   trades_received     Trade[]             @relation("TradeRecipient")
   derby_entries       DerbyEntry[]
+  luxury_tax_records  LuxuryTaxRecord[]
 }
 
 model Player {
@@ -100,6 +101,7 @@ model Season {
   season_record       SeasonRecord?
   trades              Trade[]
   derby_events        HomeRunDerbyEvent[]
+  luxury_tax_records  LuxuryTaxRecord[]
 }
 
 model SeasonRecord {
@@ -189,6 +191,31 @@ model Finance {
   team Team? @relation(fields: [team_id], references: [id])
 
   @@map("finances")
+  @@index([team_id])
+}
+
+model LuxuryTaxRecord {
+  id                            Int      @id @default(autoincrement())
+  season_id                     Int
+  team_id                       Int
+  day                           Int
+  charged                       Boolean  @default(false)
+  payroll                       Decimal  @db.Decimal(14, 2)
+  threshold                     Decimal  @db.Decimal(14, 2)
+  league_median_cost_per_skill  Decimal  @db.Decimal(14, 4)
+  cost_per_skill                Decimal  @db.Decimal(14, 4)
+  ratio                         Float
+  extra_points                  Float
+  bracket_tax                   Decimal  @db.Decimal(14, 2)
+  inefficiency_tax              Decimal  @db.Decimal(14, 2)
+  total_tax                     Decimal  @db.Decimal(14, 2)
+  created_at                    DateTime @default(now())
+
+  season Season @relation(fields: [season_id], references: [id])
+  team   Team   @relation(fields: [team_id], references: [id])
+
+  @@map("luxury_tax_records")
+  @@index([season_id, team_id])
   @@index([team_id])
 }
 
