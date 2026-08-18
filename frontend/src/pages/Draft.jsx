@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import TeamBadge from '../components/TeamBadge.jsx';
+import SkillTierBadge from '../components/SkillTierBadge.jsx';
 
 const USER_TEAM_ID = 1;
 
@@ -172,9 +173,10 @@ export default function Draft() {
                       </td>
                       <td className="p-2">{p.age}</td>
                       <td className="p-2">
-                        <span className={`font-semibold ${p.current_skill >= 30 ? 'text-green-600' : 'text-gray-700'}`}>
-                          {p.current_skill}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold">{p.current_skill}</span>
+                          <SkillTierBadge skill={p.current_skill} />
+                        </div>
                       </td>
                       <td className="p-2">
                         <span className={`font-semibold ${p.potential_coefficient >= 80 ? 'text-purple-600' : p.potential_coefficient >= 65 ? 'text-blue-600' : 'text-gray-600'}`}>

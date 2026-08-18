@@ -32,7 +32,7 @@ const STAR_PLAYERS = [
   { skill: 101, position: '1B' },
   { skill: 104, position: 'C' },
   { skill: 103, position: 'RF' },
-  // Leyenda (110-120)
+  // Leyenda (110-150)
   { skill: 115, position: 'P' },
   { skill: 118, position: 'SS' },
 ];

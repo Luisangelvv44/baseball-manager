@@ -16,13 +16,13 @@ async function applyCoachBonuses() {
 
     if (coach.specialty === 'BATTING' || coach.specialty === 'PITCHING') {
       const bonus = Math.round(coach.skill_level / 30); // 2-3 pts/year
-      const newSkill = Math.min(120, player.current_skill + bonus);
+      const newSkill = Math.min(150,player.current_skill + bonus);
       await prisma.player.update({ where: { id: player.id }, data: { current_skill: newSkill } });
     } else if (coach.specialty === 'CONDITIONING') {
       if (player.age >= player.growth_age) {
         const recovery = Math.round(player.potential_coefficient * 0.05);
         if (recovery > 0) {
-          const newSkill = Math.min(120, player.current_skill + recovery);
+          const newSkill = Math.min(150,player.current_skill + recovery);
           await prisma.player.update({ where: { id: player.id }, data: { current_skill: newSkill } });
         }
       }

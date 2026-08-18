@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { useTeam } from '../context/TeamContext.jsx';
 import Pagination from '../components/Pagination.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
+import SkillTierBadge from '../components/SkillTierBadge.jsx';
 
 function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
   const [bidAmount, setBidAmount] = useState('');
@@ -51,9 +52,12 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
           <p className="font-bold text-base">{p.first_name} {p.last_name}</p>
           <p className="text-sm text-gray-500">{p.position} · Edad {p.age} · Destreza {p.current_skill}</p>
         </div>
-        <span className="text-xs bg-amber-100 text-amber-800 rounded-full px-2 py-0.5 font-semibold whitespace-nowrap">
-          Coef. {auction.growth_coefficient.toFixed(2)}
-        </span>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <SkillTierBadge skill={p.current_skill} />
+          <span className="text-xs bg-amber-100 text-amber-800 rounded-full px-2 py-0.5 font-semibold whitespace-nowrap">
+            Coef. {auction.growth_coefficient.toFixed(2)}
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-2 text-sm text-center">
@@ -259,10 +263,10 @@ export default function Market() {
               <div>
                 <p className="text-xs text-gray-500 mb-1">Destreza</p>
                 <div className="flex gap-1">
-                  <input type="number" min="1" max="120" placeholder="Mín" value={filters.minSkill}
+                  <input type="number" min="1" max="150" placeholder="Mín" value={filters.minSkill}
                     onChange={e => setFilter('minSkill', e.target.value)}
                     className="border rounded px-2 py-1 text-xs w-full" />
-                  <input type="number" min="1" max="120" placeholder="Máx" value={filters.maxSkill}
+                  <input type="number" min="1" max="150" placeholder="Máx" value={filters.maxSkill}
                     onChange={e => setFilter('maxSkill', e.target.value)}
                     className="border rounded px-2 py-1 text-xs w-full" />
                 </div>

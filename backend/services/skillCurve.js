@@ -3,7 +3,7 @@
 // una misma brecha de puntos pese mas entre jugadores de nivel alto que entre jugadores de
 // nivel bajo. Indexada por valor de skill (0-130), no por jugador ni por temporada: cubre de
 // antemano cualquier current_skill posible, asi que nunca necesita recalcularse.
-const MAX_SKILL = 130; // headroom sobre el tope actual de 120 (ver playerService/coachService/auctionService)
+const MAX_SKILL = 160; // headroom sobre el tope actual de 150 (ver playerService/coachService/auctionService)
 
 const EFFECTIVE_SKILL_TABLE = new Array(MAX_SKILL + 1);
 for (let s = 0; s <= MAX_SKILL; s++) {

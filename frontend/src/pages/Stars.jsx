@@ -3,21 +3,15 @@ import { api } from '../api.js';
 import { useTeam } from '../context/TeamContext.jsx';
 import Pagination from '../components/Pagination.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
-
-function getTier(skill) {
-  if (skill >= 110) return { label: 'Leyenda', bg: 'bg-yellow-400 text-yellow-900' };
-  if (skill >= 100) return { label: 'Super estrella', bg: 'bg-purple-600 text-white' };
-  if (skill >= 90)  return { label: 'Estrella', bg: 'bg-blue-600 text-white' };
-  if (skill >= 80)  return { label: 'Bueno', bg: 'bg-green-600 text-white' };
-  return null;
-}
+import SkillTierBadge from '../components/SkillTierBadge.jsx';
+import { SKILL_TIERS, SKILL_TIER_COLORS } from '../utils/skillTier.js';
 
 const TIER_CHIPS = [
-  { label: 'Todos',          minSkill: '80', maxSkill: '' },
-  { label: 'Bueno',          minSkill: '80', maxSkill: '89' },
-  { label: 'Estrella',       minSkill: '90', maxSkill: '99' },
-  { label: 'Super estrella', minSkill: '100', maxSkill: '109' },
-  { label: 'Leyenda',        minSkill: '110', maxSkill: '' },
+  { label: 'Todos',                  minSkill: '80', maxSkill: '' },
+  { label: SKILL_TIERS.BUENO,                minSkill: '80', maxSkill: '94' },
+  { label: SKILL_TIERS.ESTRELLA_EN_POTENCIA, minSkill: '95', maxSkill: '99' },
+  { label: SKILL_TIERS.SUPERESTRELLA,        minSkill: '100', maxSkill: '120' },
+  { label: SKILL_TIERS.LEYENDA,              minSkill: '121', maxSkill: '' },
 ];
 
 const POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
@@ -46,8 +40,6 @@ function StarAuctionCard({ auction, season, onBidPlaced, rosterFull }) {
 
   const maxYears = Math.max(1, Math.min(9, 40 - p.age));
 
-  const tier = getTier(p.current_skill);
-
   async function handleBid() {
     const amount = Math.round(Number(bidAmount));
     if (!amount || amount < minBid) {
@@ -75,11 +67,7 @@ function StarAuctionCard({ auction, season, onBidPlaced, rosterFull }) {
           <p className="text-sm text-gray-500">{p.position} · Edad {p.age}</p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
-          {tier && (
-            <span className={`text-xs rounded-full px-2 py-0.5 font-semibold ${tier.bg}`}>
-              {tier.label}
-            </span>
-          )}
+          <SkillTierBadge skill={p.current_skill} />
           <span className="text-xs bg-amber-100 text-amber-800 rounded-full px-2 py-0.5 font-semibold">
             Coef. {auction.growth_coefficient.toFixed(2)}
           </span>
@@ -237,12 +225,13 @@ export default function Stars() {
         </div>
       )}
 
-      {/* Tier legend */}
+      {/* Tier legend — derivado de TIER_CHIPS/SKILL_TIER_COLORS para no desincronizarse */}
       <div className="flex flex-wrap gap-2 text-xs font-semibold">
-        <span className="bg-green-600 text-white rounded-full px-3 py-1">Bueno 80–89</span>
-        <span className="bg-blue-600 text-white rounded-full px-3 py-1">Estrella 90–99</span>
-        <span className="bg-purple-600 text-white rounded-full px-3 py-1">Super estrella 100–109</span>
-        <span className="bg-yellow-400 text-yellow-900 rounded-full px-3 py-1">Leyenda 110–120</span>
+        {TIER_CHIPS.filter(chip => chip.label !== 'Todos').map(chip => (
+          <span key={chip.label} className={`rounded-full px-3 py-1 ${SKILL_TIER_COLORS[chip.label]}`}>
+            {chip.label} {chip.minSkill}{chip.maxSkill ? `–${chip.maxSkill}` : '+'}
+          </span>
+        ))}
       </div>
 
       {/* Tier chips + position filter */}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useTeam } from '../context/TeamContext.jsx';
+import SkillTierBadge from '../components/SkillTierBadge.jsx';
 
 const MAX_MINOR_ROSTER_SIZE = 15;
 
@@ -113,7 +114,12 @@ export default function Rookie() {
                   <td className="p-2 font-medium">{p.first_name} {p.last_name}</td>
                   <td className="p-2">{p.position}</td>
                   <td className="p-2">{p.age}</td>
-                  <td className="p-2">{p.current_skill}</td>
+                  <td className="p-2">
+                    <div className="flex items-center gap-1.5">
+                      <span>{p.current_skill}</span>
+                      <SkillTierBadge skill={p.current_skill} />
+                    </div>
+                  </td>
                   <td className="p-2 font-semibold text-amber-700">{p.potential_coefficient}</td>
                   <td className="p-2">{p.growth_age}</td>
                   <td className="p-2">${Number(p.salary).toLocaleString()}</td>
