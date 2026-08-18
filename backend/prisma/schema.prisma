@@ -79,6 +79,7 @@ model Player {
   game_events  GameEvent[]      @relation("PlayerEvent")
   trade_items  TradeItem[]
   derby_entries DerbyEntry[]
+  draft_prospect_sources DraftProspect[]
 
   @@index([team_id])
   @@index([status])
@@ -411,11 +412,14 @@ model DraftProspect {
   growth_age           Int
   picked_by_team_id    Int?
   pick_number          Int?
+  source_player_id     Int?
 
-  draft Draft @relation(fields: [draft_id], references: [id])
+  draft         Draft   @relation(fields: [draft_id], references: [id])
+  source_player Player? @relation(fields: [source_player_id], references: [id])
 
   @@map("draft_prospects")
   @@index([draft_id])
+  @@index([source_player_id])
 }
 
 model Trade {

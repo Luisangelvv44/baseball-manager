@@ -9,6 +9,8 @@ module.exports = {
   MAX_ROSTER_SIZE: 25,
   MAX_MINOR_ROSTER_SIZE: 15,
   AUCTION_DEADLINE_DAY: 30,
+  DRAFT_POOL_SIZE: 100,
+  MARKET_PLAYER_CAP: 1250,
   LUXURY_TAX_PROJECTION_DAY: 30, // mitad de temporada (30 dias de juego / 45 dias totales con pre-temporada)
   TRADE_DEADLINE_DAY: 35,
   TRADE_OFFER_EXPIRY_DAYS: 5,

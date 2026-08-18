@@ -18,7 +18,6 @@ const {
   decrementContractSeasons,
   OFFER_WINDOW_END_DAY,
 } = require('../services/broadcastService');
-const { calculateSalary, generatePlayer } = require('../seeders/generators/playerGenerator');
 const { generatePlayoffBracket, updateSeriesAfterGame, advancePlayoffRound } = require('../services/playoffService');
 const { retireOldPlayers } = require('../services/retiredPlayer');
 const { fluctuatePlayerSkills, updatePlayersContracts } = require('../services/playerService');
@@ -226,28 +225,20 @@ async function endOfSeasonCleanup(season) {
       totalSalary -= Number(player.salary);
       rosterSize--;
     }
-    const slotsToFill = Math.max(0, CPU_TARGET_ROSTER - rosterSize);
-    for (let i = 0; i < slotsToFill; i++) {
-      const rookieAge = Math.floor(Math.random() * 5) + 18;
-      const rookie = generatePlayer({ age: rookieAge });
-      const rookieSalary = Math.max(5000, Math.round(
-        calculateSalary(rookie.potential_coefficient, rookie.current_skill, rookieAge) / 10 / 100
-      ) * 100);
-      await prisma.player.create({
-        data: { ...rookie, team_id: cpuTeam.id, status: 'active', salary: rookieSalary, contract_years_remaining: Math.floor(Math.random() * 3) + 1, rookie_contract: true },
-      });
-    }
   }
 
   await decrementContractSeasons();
+
+  // Create annual draft BEFORE regenerating season auctions: players pulled into the
+  // draft pool are marked 'draft_reserved', so they're excluded from the fresh auction batch.
+  await createDraft(season.id);
+
   await cancelAllActiveAuctions(null);
   const updatedSeason = await prisma.season.findUnique({ where: { id: season.id } });
   await createAuctionsForFreeAgents(null, updatedSeason);
 
   await clearAllInjuries();
 
-  // Create annual draft and switch season to 'draft' phase
-  await createDraft(season.id);
   await prisma.season.update({ where: { id: season.id }, data: { status: 'draft' } });
 
   return expired.count;
