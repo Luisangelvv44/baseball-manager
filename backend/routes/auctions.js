@@ -39,6 +39,10 @@ router.get('/', async (req, res) => {
 
     const playerWhere = {};
     if (req.query.position) playerWhere.position = req.query.position;
+    if (req.query.playerIds) {
+      const ids = req.query.playerIds.split(',').map(Number).filter(Number.isInteger);
+      if (ids.length) playerWhere.id = { in: ids };
+    }
     if (minSkill !== undefined || maxSkill !== undefined) {
       playerWhere.current_skill = {};
       if (minSkill !== undefined) playerWhere.current_skill.gte = minSkill;

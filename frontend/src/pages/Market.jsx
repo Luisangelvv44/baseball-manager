@@ -4,6 +4,8 @@ import { useTeam } from '../context/TeamContext.jsx';
 import Pagination from '../components/Pagination.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
 import SkillTierBadge from '../components/SkillTierBadge.jsx';
+import FavoriteButton from '../components/FavoriteButton.jsx';
+import { useFavorites } from '../utils/favorites.js';
 
 function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
   const [bidAmount, setBidAmount] = useState('');
@@ -53,7 +55,10 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
           <p className="text-sm text-gray-500">{p.position} · Edad {p.age} · Destreza {p.current_skill}</p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
-          <SkillTierBadge skill={p.current_skill} />
+          <div className="flex items-center gap-1">
+            <FavoriteButton playerId={p.id} />
+            <SkillTierBadge skill={p.current_skill} />
+          </div>
           <span className="text-xs bg-amber-100 text-amber-800 rounded-full px-2 py-0.5 font-semibold whitespace-nowrap">
             Coef. {auction.growth_coefficient.toFixed(2)}
           </span>
@@ -149,7 +154,9 @@ const EMPTY_FILTERS = {
 
 export default function Market() {
   const { refreshTeam } = useTeam();
+  const { favoriteIds } = useFavorites();
   const [auctions, setAuctions] = useState([]);
+  const [favoriteAuctions, setFavoriteAuctions] = useState([]);
   const [userRosterCount, setUserRosterCount] = useState(0);
   const [season, setSeason] = useState(null);
   const [message, setMessage] = useState('');
@@ -172,15 +179,31 @@ export default function Market() {
     setTotalPages(aucData.totalPages);
   }
 
+  async function loadFavorites() {
+    if (favoriteIds.size === 0) {
+      setFavoriteAuctions([]);
+      return;
+    }
+    const data = await api.getAuctions({
+      playerIds: [...favoriteIds].join(','),
+      pageSize: Math.max(favoriteIds.size, 1),
+    });
+    setFavoriteAuctions(data.auctions);
+  }
+
   async function load() {
     const se = await api.getSeason();
     setSeason(se);
-    await loadAuctions();
+    await Promise.all([loadAuctions(), loadFavorites()]);
   }
 
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    loadFavorites();
+  }, [favoriteIds]);
 
   useEffect(() => {
     setPage(1);
@@ -217,6 +240,29 @@ export default function Market() {
         Los prospectos de tus scouts se contratan automáticamente en <b>Ligas Menores</b> al completar la misión.
         Revisa la pestaña <b>Rookie</b> para verlos y subirlos a Mayores.
       </div>
+
+      {favoriteIds.size > 0 && (
+        <div>
+          <h3 className="font-bold text-lg mb-3">⭐ Favoritos</h3>
+          {favoriteAuctions.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-4 text-center text-gray-500 text-sm">
+              Tus jugadores favoritos ya no están en subasta activa.
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {favoriteAuctions.map((a) => (
+                <AuctionCard
+                  key={a.id}
+                  auction={a}
+                  season={season}
+                  onBidPlaced={() => Promise.all([load(), refreshTeam()])}
+                  rosterFull={userRosterCount >= 25}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div>
         <h3 className="font-bold text-lg mb-1">Subastas de Agentes Libres</h3>

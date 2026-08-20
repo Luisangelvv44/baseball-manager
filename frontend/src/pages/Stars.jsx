@@ -4,6 +4,8 @@ import { useTeam } from '../context/TeamContext.jsx';
 import Pagination from '../components/Pagination.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
 import SkillTierBadge from '../components/SkillTierBadge.jsx';
+import FavoriteButton from '../components/FavoriteButton.jsx';
+import { useFavorites } from '../utils/favorites.js';
 import { SKILL_TIERS, SKILL_TIER_COLORS } from '../utils/skillTier.js';
 
 const TIER_CHIPS = [
@@ -67,7 +69,10 @@ function StarAuctionCard({ auction, season, onBidPlaced, rosterFull }) {
           <p className="text-sm text-gray-500">{p.position} · Edad {p.age}</p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
-          <SkillTierBadge skill={p.current_skill} />
+          <div className="flex items-center gap-1">
+            <FavoriteButton playerId={p.id} />
+            <SkillTierBadge skill={p.current_skill} />
+          </div>
           <span className="text-xs bg-amber-100 text-amber-800 rounded-full px-2 py-0.5 font-semibold">
             Coef. {auction.growth_coefficient.toFixed(2)}
           </span>
@@ -156,7 +161,9 @@ function StarAuctionCard({ auction, season, onBidPlaced, rosterFull }) {
 
 export default function Stars() {
   const { refreshTeam } = useTeam();
+  const { favoriteIds } = useFavorites();
   const [auctions, setAuctions] = useState([]);
+  const [favoriteAuctions, setFavoriteAuctions] = useState([]);
   const [userRosterCount, setUserRosterCount] = useState(0);
   const [season, setSeason] = useState(null);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
@@ -190,7 +197,21 @@ export default function Stars() {
     setSeason(se);
   }
 
-  useEffect(() => { load(); }, []);
+  async function loadFavorites() {
+    if (favoriteIds.size === 0) {
+      setFavoriteAuctions([]);
+      return;
+    }
+    const data = await api.getAuctions({
+      playerIds: [...favoriteIds].join(','),
+      pageSize: Math.max(favoriteIds.size, 1),
+    });
+    setFavoriteAuctions(data.auctions);
+  }
+
+  useEffect(() => { load(); loadFavorites(); }, []);
+
+  useEffect(() => { loadFavorites(); }, [favoriteIds]);
 
   useEffect(() => {
     setPage(1);
@@ -222,6 +243,29 @@ export default function Stars() {
       {rosterFull && (
         <div className="bg-red-50 border border-red-200 text-red-800 rounded p-3 text-sm font-medium">
           Roster lleno ({userRosterCount}/25). Libera jugadores para poder pujar.
+        </div>
+      )}
+
+      {favoriteIds.size > 0 && (
+        <div>
+          <h3 className="font-bold text-lg mb-3">⭐ Favoritos</h3>
+          {favoriteAuctions.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-4 text-center text-gray-500 text-sm">
+              Tus jugadores favoritos ya no están en subasta activa.
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {favoriteAuctions.map(a => (
+                <StarAuctionCard
+                  key={a.id}
+                  auction={a}
+                  season={season}
+                  onBidPlaced={() => Promise.all([load(), loadFavorites(), refreshTeam()])}
+                  rosterFull={rosterFull}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -281,7 +325,7 @@ export default function Stars() {
                 key={a.id}
                 auction={a}
                 season={season}
-                onBidPlaced={() => Promise.all([load(), refreshTeam()])}
+                onBidPlaced={() => Promise.all([load(), loadFavorites(), refreshTeam()])}
                 rosterFull={rosterFull}
               />
             ))}
