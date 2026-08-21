@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, AUCTION_DEADLINE_DAY, ROSTER_CHECK_DAY, LUXURY_TAX_PROJECTION_DAY } = require('../config');
+const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, AUCTION_DEADLINE_DAY, ROSTER_CHECK_DAY, LUXURY_TAX_PROJECTION_DAY, PLAYER_INVESTMENT_DAY } = require('../config');
 const { generateSchedule } = require('../services/scheduleGenerator');
 const { playGame } = require('../services/gamePlay');
 const {
@@ -27,6 +27,7 @@ const { recordLuxuryTaxProjection, applyLuxuryTax } = require('../services/luxur
 const { createDraft } = require('../services/draftService');
 const { processInjuryRecovery, clearAllInjuries } = require('../services/injuryService');
 const { generateCpuTradeOffers, expireStaleTrades } = require('../services/tradeService');
+const { investInPlayers } = require('../services/playerInvestmentService');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
@@ -377,6 +378,10 @@ router.post('/advance-day', async (req, res) => {
 
     if (day === ROSTER_CHECK_DAY) {
       await fillMissingPositions(season);
+    }
+
+    if (day === PLAYER_INVESTMENT_DAY) {
+      await investInPlayers(season);
     }
 
     if (day === LUXURY_TAX_PROJECTION_DAY) {

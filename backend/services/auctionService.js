@@ -144,6 +144,7 @@ async function runCpuBidding(tx, season) {
       budget: true,
       bid_aggressiveness: true,
       min_growth_threshold: true,
+      desperation_index: true,
     },
   });
 
@@ -224,7 +225,7 @@ async function runCpuBidding(tx, season) {
       const pendingSalary = pendingSalaryMap[team.id] ?? 0;
       if (existingSalary + pendingSalary + Number(player.salary) > Number(team.budget)) continue;
 
-      const maxWilling = Number(team.budget) * team.bid_aggressiveness;
+      const maxWilling = Number(team.budget) * team.bid_aggressiveness * (1 + team.desperation_index);
       if (maxWilling < Number(player.salary)) continue;
 
       const increment = 0.05 + Math.random() * 0.05;

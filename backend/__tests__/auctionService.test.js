@@ -187,7 +187,7 @@ describe('_makeRoomIfNeeded (via closeExpiredAuctions release path)', () => {
 
 describe('runCpuBidding', () => {
   it('lowers the offered years (never below 1) when the tentative years would exceed available cash', async () => {
-    const cpuTeam = { id: 2, budget: 120000, bid_aggressiveness: 1.0, min_growth_threshold: 0 };
+    const cpuTeam = { id: 2, budget: 120000, bid_aggressiveness: 1.0, min_growth_threshold: 0, desperation_index: 0 };
     const player = {
       id: 20, position: '1B', current_skill: 65, potential_coefficient: 50,
       growth_age: 25, age: 30, salary: 80000,

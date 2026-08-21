@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import TeamBadge from '../components/TeamBadge.jsx';
+import AllTimePlayers from './AllTimePlayers.jsx';
 
 function SeasonCard({ season }) {
   const hasRecord = season.champion_wins != null && season.champion_losses != null;
@@ -36,7 +37,13 @@ function SeasonCard({ season }) {
   );
 }
 
+const TABS = [
+  { key: 'seasons', label: 'Temporadas' },
+  { key: 'alltime', label: 'All-Time Players' },
+];
+
 export default function History() {
+  const [tab, setTab] = useState('seasons');
   const [champions, setChampions] = useState([]);
   const [seasons, setSeasons] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,10 +58,36 @@ export default function History() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return <div className="text-center py-10 text-gray-400">Cargando históricos...</div>;
-  }
+  return (
+    <div>
+      <div className="flex gap-2 border-b border-gray-200 mb-6">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+              tab === t.key
+                ? 'border-gray-800 text-gray-800'
+                : 'border-transparent text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
+      {tab === 'alltime' ? (
+        <AllTimePlayers />
+      ) : loading ? (
+        <div className="text-center py-10 text-gray-400">Cargando históricos...</div>
+      ) : (
+        <SeasonsTab champions={champions} seasons={seasons} />
+      )}
+    </div>
+  );
+}
+
+function SeasonsTab({ champions, seasons }) {
   return (
     <div className="flex gap-6 items-start">
       {/* Champions by team */}

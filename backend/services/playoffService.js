@@ -13,7 +13,7 @@ async function generatePlayoffBracket(seasonId) {
   const teams = await prisma.team.findMany({
     where: { division_id: { not: null } },
     orderBy: [{ wins: 'desc' }, { losses: 'asc' }],
-    select: { id: true, division_id: true, wins: true, losses: true },
+    select: { id: true, division_id: true, wins: true, losses: true, desperation_index: true },
   });
 
   const divGroups = {};
@@ -22,6 +22,18 @@ async function generatePlayoffBracket(seasonId) {
     if (!divGroups[d]) divGroups[d] = [];
     if (divGroups[d].length < 4) divGroups[d].push(team);
   }
+
+  // Indice de desesperacion: se acumula temporada a temporada segun clasificacion a playoffs.
+  // Quedar fuera del top 4 de la division sube el indice; clasificar lo baja. Clamped [0, 2].
+  const qualifiedIds = new Set();
+  for (const list of Object.values(divGroups)) {
+    for (const t of list) qualifiedIds.add(t.id);
+  }
+  await Promise.all(teams.map((t) => {
+    const delta = qualifiedIds.has(t.id) ? -0.1 : 0.2;
+    const next = Math.round(Math.max(0, Math.min(2, t.desperation_index + delta)) * 100) / 100;
+    return prisma.team.update({ where: { id: t.id }, data: { desperation_index: next } });
+  }));
 
   let order = 0;
   for (const [, divTeams] of Object.entries(divGroups)) {

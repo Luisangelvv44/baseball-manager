@@ -25,6 +25,8 @@ model Team {
   runs_scored          Int     @default(0)
   runs_allowed         Int     @default(0)
   bid_aggressiveness   Float   @default(0.10)
+  player_investment_rate Float @default(0.1)
+  desperation_index    Float   @default(0)
   min_growth_threshold Float   @default(1.5)
   fan_base             Int     @default(0)
   stadium_floors       Int     @default(1)
@@ -70,6 +72,10 @@ model Player {
   status                   String  @default("active") @db.VarChar(20)
   injury_days_remaining    Int     @default(0)
   level                    String  @default("MAJOR") @db.VarChar(10)
+  career_home_runs        Int       @default(0)
+  career_hits             Int       @default(0)
+  career_rbi              Int       @default(0)
+  career_stats_updated_at DateTime?
 
   team         Team?            @relation(fields: [team_id], references: [id])
   coach        Coach?

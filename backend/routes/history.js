@@ -75,4 +75,74 @@ router.get('/seasons', async (req, res) => {
   }
 });
 
+// GET /api/history/alltime -> ranking historico de bateadores (activos y retirados)
+router.get('/alltime', async (req, res) => {
+  try {
+    const players = await prisma.player.findMany({
+      where: { position: { not: 'P' } },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        status: true,
+        career_home_runs: true,
+        career_hits: true,
+        career_rbi: true,
+        career_stats_updated_at: true,
+      },
+    });
+
+    const last_calculated = players.reduce((max, p) => {
+      if (!p.career_stats_updated_at) return max;
+      if (!max || p.career_stats_updated_at > max) return p.career_stats_updated_at;
+      return max;
+    }, null);
+
+    const result = players
+      .map((p) => ({
+        id: p.id,
+        first_name: p.first_name,
+        last_name: p.last_name,
+        retired: p.status === 'retired',
+        home_runs: p.career_home_runs,
+        hits: p.career_hits,
+        rbi: p.career_rbi,
+      }))
+      .sort((a, b) => (b.home_runs * 2 + b.hits + b.rbi) - (a.home_runs * 2 + a.hits + a.rbi));
+
+    res.json({ players: result, last_calculated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener el ranking historico' });
+  }
+});
+
+// POST /api/history/alltime/recalculate -> recalcula HR/H/RBI de todos los jugadores desde game_events
+router.post('/alltime/recalculate', async (req, res) => {
+  try {
+    const now = new Date();
+    await prisma.$executeRaw`
+      UPDATE "Player" p
+      SET career_hits = agg.hits,
+          career_home_runs = agg.hr,
+          career_rbi = agg.rbi,
+          career_stats_updated_at = ${now}
+      FROM (
+        SELECT player_id,
+               COUNT(*) FILTER (WHERE result IN ('1B','2B','3B','HR')) AS hits,
+               COUNT(*) FILTER (WHERE result = 'HR') AS hr,
+               COALESCE(SUM(runs_scored), 0) AS rbi
+        FROM game_events
+        WHERE player_id IS NOT NULL
+        GROUP BY player_id
+      ) agg
+      WHERE p.id = agg.player_id
+    `;
+    res.json({ updated_at: now });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al recalcular el ranking historico' });
+  }
+});
+
 module.exports = router;

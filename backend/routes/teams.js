@@ -86,7 +86,7 @@ router.get('/overview', async (req, res) => {
       luxury_tax: luxuryTaxMap[t.id] ?? null,
       budget: t.is_user_team ? null : Number(t.budget),
       bid_aggressiveness_pct: t.is_user_team ? null : t.bid_aggressiveness * 100,
-      max_bid_amount: t.is_user_team ? null : Math.round(Number(t.budget) * t.bid_aggressiveness),
+      max_bid_amount: t.is_user_team ? null : Math.round(Number(t.budget) * t.bid_aggressiveness * (1 + t.desperation_index)),
       revenue_min: t.is_user_team ? null : t.fan_base * 50,
       revenue_max: t.is_user_team ? null : t.fan_base * 100,
     })));

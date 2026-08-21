@@ -14,6 +14,7 @@ const TYPE_LABELS = {
   operating_cost: 'Costos operativos',
   broadcast_revenue: 'Ingresos Transmisión',
   luxury_tax: 'Impuesto al lujo',
+  player_upgrade: 'Inversión en jugadores',
 };
 
 export default function Finances() {

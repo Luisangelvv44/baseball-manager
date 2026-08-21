@@ -115,6 +115,8 @@ export const api = {
   // Históricos
   getChampionsHistory: () => request('/history/champions'),
   getSeasonHistory: () => request('/history/seasons'),
+  getAllTimeStats: () => request('/history/alltime'),
+  recalculateAllTimeStats: () => request('/history/alltime/recalculate', { method: 'POST' }),
 
   // Transmisión
   getBroadcastOffers: () => request('/broadcast/offers'),
