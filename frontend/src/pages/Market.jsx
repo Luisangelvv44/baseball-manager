@@ -85,7 +85,7 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
           <div className="truncate">
             <span className="text-gray-500">Mejor puja: </span>
             <span className="font-bold text-green-700">${Number(topBid.amount).toLocaleString()}</span>
-            <span className="text-gray-400 text-xs inline-flex items-center gap-1"> — {topBid.years} año(s) — <TeamBadge name={topBid.team?.name} /></span>
+            <span className="text-gray-400 text-xs"> — {topBid.years} año(s)</span>
           </div>
         ) : (
           <span className="text-gray-400 italic text-xs">Sin pujas aún</span>
@@ -98,6 +98,13 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
           {daysLeft === 0 ? 'Cierra hoy' : `${daysLeft}d restantes`}
         </span>
       </div>
+
+      {topBid && (
+        <div className="bg-green-50 border border-green-200 rounded p-2 flex items-center gap-2">
+          <span className="text-xs text-green-800 font-medium shrink-0">Equipo líder:</span>
+          <TeamBadge name={topBid.team?.name} size="md" className="text-green-900 font-semibold" />
+        </div>
+      )}
 
       {rosterFull ? (
         <p className="text-center text-sm text-red-600 font-medium py-1">Roster lleno (máx. 25)</p>
