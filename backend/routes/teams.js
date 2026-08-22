@@ -87,8 +87,8 @@ router.get('/overview', async (req, res) => {
       budget: t.is_user_team ? null : Number(t.budget),
       bid_aggressiveness_pct: t.is_user_team ? null : t.bid_aggressiveness * (1 + t.desperation_index) * 100,
       max_bid_amount: t.is_user_team ? null : Math.round(Number(t.budget) * t.bid_aggressiveness * (1 + t.desperation_index)),
-      revenue_min: t.is_user_team ? null : t.fan_base * 50,
-      revenue_max: t.is_user_team ? null : t.fan_base * 100,
+      revenue_min: t.is_user_team ? null : t.fan_base * 75,
+      revenue_max: t.is_user_team ? null : t.fan_base * 125,
     })));
   } catch (err) {
     console.error(err);
