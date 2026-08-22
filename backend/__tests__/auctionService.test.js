@@ -24,6 +24,28 @@ describe('calculateSigningCost', () => {
   });
 });
 
+describe('findWeakestRosterPlayer', () => {
+  it('only considers non-rookies or rookies with at least one completed rookie season as cuttable', async () => {
+    prisma.player.findFirst.mockResolvedValue(null);
+
+    await auctionService.findWeakestRosterPlayer(prisma, 2, '1B');
+
+    expect(prisma.player.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          team_id: 2,
+          status: 'active',
+          position: '1B',
+          OR: [
+            { rookie_contract: false },
+            { rookie_seasons: { gte: 1 } },
+          ],
+        },
+      })
+    );
+  });
+});
+
 describe('closeExpiredAuctions', () => {
   it('charges bono de firma + salario de temporada actual and logs two Finance rows for a USER_TEAM_ID winner', async () => {
     const auction = {

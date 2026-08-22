@@ -11,6 +11,16 @@ const PROJECTION_MARGIN = 5;        // margen sobre el techo proyectado, en punt
 const OBVIOUS_UPGRADE_GAP = 10;     // diferencia de current_skill que salta la proyeccion por completo
 const GROWTH_RATE = 0.04;           // valor esperado del multiplicador 0.02-0.06 que usa fluctuatePlayerSkills
 const RELEASE_PENALTY_RATE = 0.30;  // 30% del salario anual por cada anio de contrato restante al cortar
+const MIN_ROOKIE_SEASONS_TO_RELEASE = 1; // temporadas como rookie antes de ser cortable por un equipo CPU
+
+// Filtro Prisma: jugador cortable por un equipo CPU. No es rookie, o ya completo al menos
+// MIN_ROOKIE_SEASONS_TO_RELEASE temporadas como tal (los rookies de primer anio son intocables).
+const CPU_RELEASABLE_FILTER = {
+  OR: [
+    { rookie_contract: false },
+    { rookie_seasons: { gte: MIN_ROOKIE_SEASONS_TO_RELEASE } },
+  ],
+};
 
 // Costo total exigido al firmar: bono de firma (20% del valor total del contrato,
 // salario_anual * years) mas el salario completo de la temporada en curso.
@@ -39,13 +49,13 @@ function projectPeakSkill(player, years) {
   return peak;
 }
 
-// Snapshot en lote: jugador activo mas debil por equipo+posicion, EXCLUYENDO
-// rookie_contract (nunca se cortan prospectos en desarrollo). Solo para decidir
-// elegibilidad de puja, no se usa para el release real.
+// Snapshot en lote: jugador activo mas debil por equipo+posicion, excluyendo rookies de
+// primer anio (ver CPU_RELEASABLE_FILTER). Solo para decidir elegibilidad de puja, no se
+// usa para el release real.
 async function buildWeakestByTeamPosition(client, teamIds) {
   if (teamIds.length === 0) return {};
   const rosterPlayers = await client.player.findMany({
-    where: { team_id: { in: teamIds }, status: 'active', rookie_contract: false },
+    where: { team_id: { in: teamIds }, status: 'active', ...CPU_RELEASABLE_FILTER },
     select: {
       id: true, team_id: true, position: true, current_skill: true,
       age: true, growth_age: true, potential_coefficient: true, contract_years_remaining: true,
@@ -60,8 +70,8 @@ async function buildWeakestByTeamPosition(client, teamIds) {
   return map;
 }
 
-// true si no hay nadie cortable en esa posicion (rookies no cuentan = necesidad real); o si
-// la diferencia de current_skill ya es obvia (>= OBVIOUS_UPGRADE_GAP), en cuyo caso se corta
+// true si no hay nadie cortable en esa posicion (rookies de primer anio no cuentan = necesidad
+// real); o si la diferencia de current_skill ya es obvia (>= OBVIOUS_UPGRADE_GAP), en cuyo caso se corta
 // directo sin mirar proyeccion de crecimiento; o si, en el caso mas parejo, el techo
 // proyectado del agente libre (durante `incomingYears`) supera claramente al techo
 // proyectado del jugador actual (durante lo que le queda de contrato).
@@ -74,10 +84,11 @@ function isClearRosterUpgrade(weakestAtPosition, incomingPlayer, incomingYears) 
 }
 
 // Recalculo EN VIVO (sin snapshot) del jugador activo mas debil de un equipo en una
-// posicion, excluyendo rookie_contract. Se usa solo al cerrar la subasta.
+// posicion, excluyendo rookies de primer anio (ver CPU_RELEASABLE_FILTER). Se usa al cerrar
+// la subasta y al rellenar posiciones vacias del roster CPU.
 async function findWeakestRosterPlayer(client, teamId, position) {
   return client.player.findFirst({
-    where: { team_id: teamId, status: 'active', position, rookie_contract: false },
+    where: { team_id: teamId, status: 'active', position, ...CPU_RELEASABLE_FILTER },
     orderBy: { current_skill: 'asc' },
     select: {
       id: true, current_skill: true, age: true, growth_age: true,
@@ -349,8 +360,8 @@ async function releasePlayerWithPenalty(client, teamId, player) {
 }
 
 // Si el equipo (no-usuario) esta al tope, intenta liberar a su jugador mas debil de esa
-// posicion (nunca un rookie) para hacer espacio. Devuelve false si no se puede hacer de
-// forma coherente (nadie cortable en esa posicion, o ya no es mejora clara).
+// posicion (nunca un rookie de primer anio) para hacer espacio. Devuelve false si no se
+// puede hacer de forma coherente (nadie cortable en esa posicion, o ya no es mejora clara).
 async function _makeRoomIfNeeded(client, teamId, incomingPlayer, incomingYears) {
   const activeCount = await client.player.count({ where: { team_id: teamId, status: 'active' } });
   if (activeCount < MAX_ROSTER_SIZE) return true;

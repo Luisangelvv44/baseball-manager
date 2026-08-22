@@ -68,7 +68,9 @@ async function autoGenerateLineup(teamId) {
   if (pitchers.length === 0) return null;
   const pitcher = pitchers[0];
 
-  const nonPitchers = players.filter((p) => p.position !== 'P');
+  const nonPitchers = players
+    .filter((p) => p.position !== 'P')
+    .sort((a, b) => b.current_skill - a.current_skill);
   if (nonPitchers.length < 9) return null;
 
   const used = new Set();
