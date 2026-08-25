@@ -53,6 +53,7 @@ model Team {
   trades_received     Trade[]             @relation("TradeRecipient")
   derby_entries       DerbyEntry[]
   luxury_tax_records  LuxuryTaxRecord[]
+  season_awards       SeasonAward[]
 }
 
 model Player {
@@ -75,6 +76,10 @@ model Player {
   career_home_runs        Int       @default(0)
   career_hits             Int       @default(0)
   career_rbi              Int       @default(0)
+  career_wins             Int       @default(0)
+  career_strikeouts       Int       @default(0)
+  career_innings_pitched  Decimal   @default(0) @db.Decimal(8, 1)
+  career_earned_runs      Int       @default(0)
   career_stats_updated_at DateTime?
 
   team         Team?            @relation(fields: [team_id], references: [id])
@@ -86,6 +91,7 @@ model Player {
   trade_items  TradeItem[]
   derby_entries DerbyEntry[]
   draft_prospect_sources DraftProspect[]
+  season_awards SeasonAward[]
 
   @@index([team_id])
   @@index([status])
@@ -109,6 +115,7 @@ model Season {
   trades              Trade[]
   derby_events        HomeRunDerbyEvent[]
   luxury_tax_records  LuxuryTaxRecord[]
+  season_awards       SeasonAward[]
 }
 
 model SeasonRecord {
@@ -524,4 +531,21 @@ model DerbySwing {
 
   @@map("derby_swings")
   @@index([entry_id])
+}
+
+model SeasonAward {
+  id         Int      @id @default(autoincrement())
+  season_id  Int
+  category   String   @db.VarChar(30) // MVP | CY_YOUNG | ROOKIE_OF_YEAR | SEASON_HR_RECORD | SEASON_ERA_RECORD | SEASON_WIN_STREAK_RECORD
+  player_id  Int?     // null para logros de equipo (p.ej. SEASON_WIN_STREAK_RECORD)
+  team_id    Int?
+  value      Float
+  created_at DateTime @default(now())
+
+  season Season  @relation(fields: [season_id], references: [id])
+  player Player? @relation(fields: [player_id], references: [id])
+  team   Team?   @relation(fields: [team_id], references: [id])
+
+  @@map("season_awards")
+  @@index([season_id])
 }

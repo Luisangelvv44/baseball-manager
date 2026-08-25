@@ -117,6 +117,8 @@ export const api = {
   getSeasonHistory: () => request('/history/seasons'),
   getAllTimeStats: () => request('/history/alltime'),
   recalculateAllTimeStats: () => request('/history/alltime/recalculate', { method: 'POST' }),
+  getSeasonAwards: (seasonId) => request(seasonId != null ? `/history/awards?season_id=${seasonId}` : '/history/awards'),
+  getRecords: () => request('/history/records'),
 
   // Transmisión
   getBroadcastOffers: () => request('/broadcast/offers'),

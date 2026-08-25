@@ -29,4 +29,6 @@ module.exports = {
   NEWS_EXTRA_INNINGS_THRESHOLD: 10,
   NEWS_STREAK_MILESTONE: 5,
   NEWS_STREAK_LOOKBACK_GAMES: 50,
+  SEASON_AWARD_MIN_AB: 45, // ~1.5x GAMES_PER_SEASON: jugador debe haber bateado la mayor parte de la temporada
+  SEASON_AWARD_MIN_IP: 20, // suficientes aperturas dado que un pitcher lanza el juego completo cuando le toca
 };

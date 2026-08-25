@@ -28,6 +28,7 @@ const { createDraft } = require('../services/draftService');
 const { processInjuryRecovery, clearAllInjuries } = require('../services/injuryService');
 const { generateCpuTradeOffers, expireStaleTrades } = require('../services/tradeService');
 const { investInPlayers } = require('../services/playerInvestmentService');
+const { computeSeasonAwards } = require('../services/seasonAwardsService');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
@@ -165,6 +166,8 @@ async function endOfSeasonCleanup(season) {
       })),
     },
   });
+
+  await computeSeasonAwards(season);
 
   await updatePlayersContracts();
 
