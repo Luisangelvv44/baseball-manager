@@ -18,11 +18,11 @@ const { effectiveSkill } = require('./skillCurve');
 // derby usa una maquina de lanzamiento, asi que la probabilidad depende solo del bateador
 // y es mucho mas alta que en un at-bat real.
 //
-// La brecha respecto al skill promedio (50) se mide en escala no lineal (skill^1.5) en vez
+// La brecha respecto al skill promedio (50) se mide en escala no lineal (skill^2) en vez
 // de lineal, para que la ventaja de un bateador de elite se sienta mas marcada. El coeficiente
-// se reescala por la derivada de skill^1.5 en skill=50 (1.5*sqrt(50)) para que el caso promedio
+// se reescala por la derivada de skill^2 en skill=50 (2*50) para que el caso promedio
 // (skill=50) siga dando exactamente DERBY_BASE_HR_PROB, igual que con la formula lineal anterior.
-const DERBY_SKILL_SLOPE_AT_50 = 1.5 * Math.sqrt(50);
+const DERBY_SKILL_SLOPE_AT_50 = 2 * 50;
 const DERBY_EFFECTIVE_COEFFICIENT = DERBY_SKILL_COEFFICIENT / DERBY_SKILL_SLOPE_AT_50;
 
 function swingHrProbability(skill) {
