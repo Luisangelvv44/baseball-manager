@@ -139,4 +139,176 @@ async function computeSeasonStats(seasonId, { teamId } = {}) {
   return { stats };
 }
 
-module.exports = { computeSeasonStats };
+// Historial completo por temporada y equipo de un jugador (para el modal "CV" en
+// Mercado/Estrellas). A diferencia de computeSeasonStats, no se limita a una
+// temporada ni usa el team_id actual del jugador: agrupa por (season_id, team_id)
+// usando batting_team_id/GameLineup.team_id de cada juego, que reflejan el equipo
+// real en ese momento (soporta traspasos a mitad de temporada).
+async function getPlayerCareerHistory(playerId) {
+  const player = await prisma.player.findUnique({
+    where: { id: playerId },
+    select: { id: true, first_name: true, last_name: true, position: true },
+  });
+  if (!player) return null;
+
+  const batterEvents = await prisma.gameEvent.findMany({
+    where: { player_id: playerId, game: { status: 'finished' } },
+    select: {
+      game_id: true,
+      result: true,
+      runs_scored: true,
+      batting_team_id: true,
+      game: { select: { season_id: true, day_number: true, season: { select: { year: true } } } },
+    },
+  });
+
+  const pitcherLineups = await prisma.gameLineup.findMany({
+    where: { player_id: playerId, position: 'P', game: { status: 'finished' } },
+    select: {
+      game_id: true,
+      team_id: true,
+      game: {
+        select: {
+          season_id: true,
+          day_number: true,
+          season: { select: { year: true } },
+          home_team_id: true,
+          away_team_id: true,
+          home_score: true,
+          away_score: true,
+        },
+      },
+    },
+  });
+
+  const pitcherGameIds = [...new Set(pitcherLineups.map((l) => l.game_id))];
+  const pitcherGameEvents = pitcherGameIds.length > 0
+    ? await prisma.gameEvent.findMany({
+        where: { game_id: { in: pitcherGameIds } },
+        select: { game_id: true, batting_team_id: true, result: true, runs_scored: true },
+      })
+    : [];
+  const eventsByGame = {};
+  for (const e of pitcherGameEvents) {
+    if (!eventsByGame[e.game_id]) eventsByGame[e.game_id] = [];
+    eventsByGame[e.game_id].push(e);
+  }
+
+  const rows = new Map();
+  function getRow(seasonId, year, teamId, dayNumber) {
+    const key = `${seasonId}:${teamId}`;
+    if (!rows.has(key)) {
+      rows.set(key, { season_id: seasonId, year, team_id: teamId, min_day: dayNumber, batting: null, pitching: null });
+    } else if (dayNumber < rows.get(key).min_day) {
+      rows.get(key).min_day = dayNumber;
+    }
+    return rows.get(key);
+  }
+
+  const battingAgg = new Map();
+  for (const e of batterEvents) {
+    if (!e.game || e.batting_team_id == null) continue;
+    const key = `${e.game.season_id}:${e.batting_team_id}`;
+    if (!battingAgg.has(key)) {
+      battingAgg.set(key, {
+        season_id: e.game.season_id,
+        year: e.game.season.year,
+        team_id: e.batting_team_id,
+        min_day: e.game.day_number,
+        games: new Set(),
+        ab: 0, h: 0, hr: 0, bb: 0, so: 0, rbi: 0,
+      });
+    }
+    const s = battingAgg.get(key);
+    s.games.add(e.game_id);
+    if (e.game.day_number < s.min_day) s.min_day = e.game.day_number;
+    if (['SO', 'GO', 'FO', '1B', '2B', '3B', 'HR'].includes(e.result)) s.ab++;
+    if (['1B', '2B', '3B', 'HR'].includes(e.result)) s.h++;
+    if (e.result === 'HR') s.hr++;
+    if (e.result === 'BB') s.bb++;
+    if (e.result === 'SO') s.so++;
+    s.rbi += e.runs_scored || 0;
+  }
+  for (const s of battingAgg.values()) {
+    const row = getRow(s.season_id, s.year, s.team_id, s.min_day);
+    row.batting = {
+      g: s.games.size,
+      ab: s.ab,
+      h: s.h,
+      avg: s.ab > 0 ? (s.h / s.ab).toFixed(3) : null,
+      hr: s.hr,
+      rbi: s.rbi,
+      bb: s.bb,
+      so: s.so,
+    };
+  }
+
+  const pitchingAgg = new Map();
+  for (const l of pitcherLineups) {
+    if (!l.game) continue;
+    const key = `${l.game.season_id}:${l.team_id}`;
+    if (!pitchingAgg.has(key)) {
+      pitchingAgg.set(key, {
+        season_id: l.game.season_id,
+        year: l.game.season.year,
+        team_id: l.team_id,
+        min_day: l.game.day_number,
+        games: new Set(),
+        outs: 0, er: 0, so: 0, bb: 0, h: 0, w: 0, l: 0,
+      });
+    }
+    const ps = pitchingAgg.get(key);
+    ps.games.add(l.game_id);
+    if (l.game.day_number < ps.min_day) ps.min_day = l.game.day_number;
+    const events = (eventsByGame[l.game_id] || []).filter((e) => e.batting_team_id !== l.team_id);
+    for (const e of events) {
+      if (['SO', 'GO', 'FO'].includes(e.result)) ps.outs++;
+      if (e.result === 'SO') ps.so++;
+      if (e.result === 'BB') ps.bb++;
+      if (['1B', '2B', '3B', 'HR'].includes(e.result)) ps.h++;
+      ps.er += e.runs_scored || 0;
+    }
+    const g = l.game;
+    const won = (g.home_team_id === l.team_id && g.home_score > g.away_score) ||
+                (g.away_team_id === l.team_id && g.away_score > g.home_score);
+    if (won) ps.w++; else ps.l++;
+  }
+  for (const ps of pitchingAgg.values()) {
+    const row = getRow(ps.season_id, ps.year, ps.team_id, ps.min_day);
+    const ip = ps.outs / 3;
+    row.pitching = {
+      g: ps.games.size,
+      w: ps.w,
+      l: ps.l,
+      ip: ip.toFixed(1),
+      era: ip > 0 ? ((ps.er / ip) * 9).toFixed(2) : null,
+      so: ps.so,
+      bb: ps.bb,
+      whip: ip > 0 ? ((ps.bb + ps.h) / ip).toFixed(2) : null,
+    };
+  }
+
+  const teamIds = [...new Set([...rows.values()].map((r) => r.team_id))];
+  const teams = teamIds.length > 0
+    ? await prisma.team.findMany({ where: { id: { in: teamIds } }, select: { id: true, name: true } })
+    : [];
+  const teamNameById = Object.fromEntries(teams.map((t) => [t.id, t.name]));
+
+  // year no es único por temporada (se fija al año real de creación, ver routes/season.js),
+  // así que el orden cronológico real es season_id; min_day solo desempata estadías
+  // de distintos equipos dentro de la misma temporada (traspasos).
+  const seasons = [...rows.values()]
+    .sort((a, b) => b.season_id - a.season_id || a.min_day - b.min_day)
+    .map((r) => ({
+      season_id: r.season_id,
+      year: r.year,
+      team_id: r.team_id,
+      team_name: teamNameById[r.team_id] || 'Desconocido',
+      batting: r.batting,
+      pitching: r.pitching,
+    }));
+
+  return { player, seasons };
+}
+
+module.exports = { computeSeasonStats, getPlayerCareerHistory };

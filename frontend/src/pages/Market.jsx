@@ -5,6 +5,7 @@ import Pagination from '../components/Pagination.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
 import SkillTierBadge from '../components/SkillTierBadge.jsx';
 import FavoriteButton from '../components/FavoriteButton.jsx';
+import PlayerCareerModal from '../components/PlayerCareerModal.jsx';
 import { useFavorites } from '../utils/favorites.js';
 
 function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
@@ -12,6 +13,7 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
   const [years, setYears] = useState(1);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showCV, setShowCV] = useState(false);
 
   const p = auction.player;
   const topBid = auction.top_bid;
@@ -51,7 +53,12 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
     <div className="bg-white rounded-lg shadow p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between">
         <div>
-          <p className="font-bold text-base">{p.first_name} {p.last_name}</p>
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowCV(true); }}
+            className="font-bold text-base hover:underline text-left"
+          >
+            {p.first_name} {p.last_name}
+          </button>
           <p className="text-sm text-gray-500">{p.position} · Edad {p.age} · Destreza {p.current_skill}</p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
@@ -144,6 +151,7 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
         </div>
       )}
       {error && <p className="text-red-600 text-xs">{error}</p>}
+      {showCV && <PlayerCareerModal playerId={p.id} onClose={() => setShowCV(false)} />}
     </div>
   );
 }

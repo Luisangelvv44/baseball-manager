@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useTeam } from '../context/TeamContext.jsx';
 import SkillTierBadge from '../components/SkillTierBadge.jsx';
+import PlayerCareerModal from '../components/PlayerCareerModal.jsx';
 
 function StatsModal({ player, stats, onClose }) {
   const isPitcher = player.position === 'P';
@@ -102,6 +103,7 @@ export default function Roster() {
   const [renewYears, setRenewYears] = useState('');
   const [renewError, setRenewError] = useState('');
   const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [historyPlayer, setHistoryPlayer] = useState(null);
 
   const loadRoster = () => {
     api.getMyTeam().then((data) => {
@@ -129,6 +131,11 @@ export default function Roster() {
     setRenewSalary('');
     setRenewYears('');
     setRenewError('');
+  };
+
+  const openHistory = (e, player) => {
+    e.stopPropagation();
+    setHistoryPlayer(player);
   };
 
   const closeRenew = () => {
@@ -233,6 +240,12 @@ export default function Roster() {
                   </button>
                 ) : null}
                 <button
+                  onClick={(e) => openHistory(e, p)}
+                  className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300"
+                >
+                  Historial
+                </button>
+                <button
                   onClick={(e) => handleDemote(e, p.id)}
                   className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300"
                 >
@@ -284,6 +297,10 @@ export default function Roster() {
           stats={statsMap[selectedPlayer.id]}
           onClose={() => setSelectedPlayer(null)}
         />
+      )}
+
+      {historyPlayer && (
+        <PlayerCareerModal playerId={historyPlayer.id} onClose={() => setHistoryPlayer(null)} />
       )}
 
       {renewingPlayer && (

@@ -4,7 +4,7 @@ const prisma = require('../db/prisma');
 const { USER_TEAM_ID, MAX_ROSTER_SIZE, MAX_MINOR_ROSTER_SIZE } = require('../config');
 const { calculateSalary } = require('../seeders/generators/playerGenerator');
 const { createNews } = require('../services/newsService');
-const { computeSeasonStats } = require('../services/statsService');
+const { computeSeasonStats, getPlayerCareerHistory } = require('../services/statsService');
 
 // GET /api/players/team-stats -> estadísticas de la temporada actual para todos los jugadores del usuario
 router.get('/team-stats', async (req, res) => {
@@ -289,6 +289,19 @@ router.get('/:id/stats', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener estadísticas del jugador' });
+  }
+});
+
+// GET /api/players/:id/career-history -> resumen por temporada y equipo (bateo/pitcheo), para el modal "CV"
+router.get('/:id/career-history', async (req, res) => {
+  const playerId = Number(req.params.id);
+  try {
+    const data = await getPlayerCareerHistory(playerId);
+    if (!data) return res.status(404).json({ error: 'Jugador no encontrado' });
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener el historial del jugador' });
   }
 });
 

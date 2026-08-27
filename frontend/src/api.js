@@ -28,6 +28,7 @@ export const api = {
     request(`/players/${id}/renew`, { method: 'POST', body: JSON.stringify({ salary, years }) }),
   getTeamStats: () => request('/players/team-stats'),
   getPlayerStats: (id) => request(`/players/${id}/stats`),
+  getPlayerCareerHistory: (id) => request(`/players/${id}/career-history`),
   promotePlayer: (id) => request(`/players/${id}/promote`, { method: 'POST' }),
   demotePlayer: (id) => request(`/players/${id}/demote`, { method: 'POST' }),
 

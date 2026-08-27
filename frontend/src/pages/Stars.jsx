@@ -5,6 +5,7 @@ import Pagination from '../components/Pagination.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
 import SkillTierBadge from '../components/SkillTierBadge.jsx';
 import FavoriteButton from '../components/FavoriteButton.jsx';
+import PlayerCareerModal from '../components/PlayerCareerModal.jsx';
 import { useFavorites } from '../utils/favorites.js';
 import { SKILL_TIERS, SKILL_TIER_COLORS } from '../utils/skillTier.js';
 
@@ -26,6 +27,7 @@ function StarAuctionCard({ auction, season, onBidPlaced, rosterFull }) {
   const [years, setYears] = useState(1);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showCV, setShowCV] = useState(false);
 
   const p = auction.player;
   const topBid = auction.top_bid;
@@ -65,7 +67,12 @@ function StarAuctionCard({ auction, season, onBidPlaced, rosterFull }) {
     <div className="bg-white rounded-lg shadow p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-bold text-base truncate">{p.first_name} {p.last_name}</p>
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowCV(true); }}
+            className="font-bold text-base truncate hover:underline text-left block"
+          >
+            {p.first_name} {p.last_name}
+          </button>
           <p className="text-sm text-gray-500">{p.position} · Edad {p.age}</p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
@@ -162,6 +169,7 @@ function StarAuctionCard({ auction, season, onBidPlaced, rosterFull }) {
         </div>
       )}
       {error && <p className="text-red-600 text-xs">{error}</p>}
+      {showCV && <PlayerCareerModal playerId={p.id} onClose={() => setShowCV(false)} />}
     </div>
   );
 }
