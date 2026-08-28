@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const { SEASON_AWARD_MIN_IP } = require('../config');
+const { recalculateCareerStats } = require('../services/allTimeStatsService');
 
 // GET /api/history/champions -> cantidad de campeonatos ganados por cada equipo
 router.get('/champions', async (req, res) => {
@@ -121,63 +122,8 @@ router.get('/alltime', async (req, res) => {
 // POST /api/history/alltime/recalculate -> recalcula HR/H/RBI (bateo) y W/K/IP/ER (pitcheo) de todos los jugadores
 router.post('/alltime/recalculate', async (req, res) => {
   try {
-    const now = new Date();
-    await prisma.$executeRaw`
-      UPDATE "Player" p
-      SET career_hits = agg.hits,
-          career_home_runs = agg.hr,
-          career_rbi = agg.rbi,
-          career_stats_updated_at = ${now}
-      FROM (
-        SELECT player_id,
-               COUNT(*) FILTER (WHERE result IN ('1B','2B','3B','HR')) AS hits,
-               COUNT(*) FILTER (WHERE result = 'HR') AS hr,
-               COALESCE(SUM(runs_scored), 0) AS rbi
-        FROM game_events
-        WHERE player_id IS NOT NULL
-        GROUP BY player_id
-      ) agg
-      WHERE p.id = agg.player_id
-    `;
-
-    await prisma.$executeRaw`
-      WITH pitcher_games AS (
-        SELECT DISTINCT gl.player_id, gl.game_id, gl.team_id
-        FROM game_lineups gl
-        WHERE gl.position = 'P'
-      ),
-      pitcher_agg AS (
-        SELECT pg.player_id,
-               COUNT(*) FILTER (WHERE ge.result IN ('SO','GO','FO')) AS outs,
-               COUNT(*) FILTER (WHERE ge.result = 'SO') AS so,
-               COALESCE(SUM(ge.runs_scored), 0) AS er
-        FROM pitcher_games pg
-        JOIN game_events ge ON ge.game_id = pg.game_id AND ge.batting_team_id <> pg.team_id
-        GROUP BY pg.player_id
-      ),
-      pitcher_wins AS (
-        SELECT pg.player_id,
-               COUNT(*) FILTER (WHERE
-                 (s.home_team_id = pg.team_id AND s.home_score > s.away_score) OR
-                 (s.away_team_id = pg.team_id AND s.away_score > s.home_score)
-               ) AS wins
-        FROM pitcher_games pg
-        JOIN schedule s ON s.id = pg.game_id
-        GROUP BY pg.player_id
-      )
-      UPDATE "Player" p
-      SET career_wins = COALESCE(pw.wins, 0),
-          career_strikeouts = COALESCE(pa.so, 0),
-          career_innings_pitched = COALESCE(pa.outs, 0) / 3.0,
-          career_earned_runs = COALESCE(pa.er, 0),
-          career_stats_updated_at = ${now}
-      FROM (SELECT DISTINCT player_id FROM pitcher_games) dp
-      LEFT JOIN pitcher_agg pa ON pa.player_id = dp.player_id
-      LEFT JOIN pitcher_wins pw ON pw.player_id = dp.player_id
-      WHERE p.id = dp.player_id
-    `;
-
-    res.json({ updated_at: now });
+    const { updated_at } = await recalculateCareerStats();
+    res.json({ updated_at });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al recalcular el ranking historico' });

@@ -82,7 +82,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `economy.js` | Home game revenue: attendance (4–14% of fan_base regular season, 14–25% playoffs, capped at capacity) × capacity-weighted ticket price + merch (1–5% of fan_base × $20–50/fan) − operating cost (capacity × 0.5); away games earn merch only |
 | `lineup.js` | Converts DB roster to ordered lineup array |
 | `gamePlay.js` | Orchestrates a single game: builds lineups, runs `gameSimulator`, applies injuries, updates standings/fan base, persists results |
-| `cpuTeamManagement.js` | End-of-season CPU revenue distribution (flat $75–125/fan payout) and CPU roster upkeep (detects/fills missing positions via cut-and-replace) |
+| `cpuTeamManagement.js` | End-of-season CPU revenue distribution (flat $100–300/fan payout) and CPU roster upkeep (detects/fills missing positions via cut-and-replace) |
 | `playerService.js` | End-of-season skill fluctuation (growth/decline vs. `growth_age`) and annual contract-years decrement |
 | `playerInvestmentService.js` | CPU teams spend a budget-derived pool to buy up `current_skill` points on their weakest players, at skill-tiered marginal cost |
 | `retiredPlayer.js` | Retires active/free-agent players aged 40+ each season, clearing them from lineups and rosters |
@@ -117,5 +117,5 @@ Requires a PostgreSQL instance. Copy `backend/.env.example` to `backend/.env` an
 - Game simulation is stateless: `gameSimulator.js` computes the full game result in memory and persists events to `GameEvent` in bulk.
 - CPU teams in auctions bid automatically when the user advances a season day; no real-time loop.
 - Stadium sections are pre-seeded (not user-created); upgrades increase capacity/level on existing rows.
-- CPU teams get a flat end-of-season revenue payout (`cpuTeamManagement.js`, $75–125/fan) separate from the per-game attendance/ticket/merch formula in `economy.js` — don't conflate the two when touching economy code.
+- CPU teams get a flat end-of-season revenue payout (`cpuTeamManagement.js`, $100–300/fan, from `CPU_REVENUE_PER_FAN_MIN`/`CPU_REVENUE_PER_FAN_MAX` in `config.js`) separate from the per-game attendance/ticket/merch formula in `economy.js` — don't conflate the two when touching economy code.
 - Playoff seeding/desperation index is tracked per-team directly on the `Team` model (`desperation_index`, `min_growth_threshold`), not a separate table.

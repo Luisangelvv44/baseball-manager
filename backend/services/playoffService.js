@@ -149,7 +149,7 @@ async function simulatePlayoffGame(seriesId) {
   if (!nextGame) throw new Error('No hay partidos pendientes en esta serie');
 
   // skipStandings = true for playoff games
-  const result = await playGame(nextGame, false, true);
+  const result = await playGame(nextGame, true, true);
   await updateSeriesAfterGame(nextGame, result);
   return result;
 }
@@ -175,7 +175,7 @@ async function simulateRound(seasonId) {
         orderBy: { id: 'asc' },
       });
       if (!nextGame) break;
-      const result = await playGame(nextGame, false, true);
+      const result = await playGame(nextGame, true, true);
       await updateSeriesAfterGame(nextGame, result);
       active = await prisma.playoffSeries.findUnique({ where: { id: active.id } });
     }

@@ -48,7 +48,7 @@ export default function PlayerCareerModal({ playerId, onClose }) {
                       <table className="w-full text-sm text-center">
                         <thead>
                           <tr className="text-xs text-gray-500 border-b">
-                            <th className="py-1 px-2 text-left">Año</th>
+                            <th className="py-1 px-2 text-left">Temporada</th>
                             <th className="py-1 px-2 text-left">Equipo</th>
                             <th className="py-1 px-2">G</th>
                             <th className="py-1 px-2">AB</th>
@@ -63,7 +63,7 @@ export default function PlayerCareerModal({ playerId, onClose }) {
                         <tbody>
                           {battingRows.map((s) => (
                             <tr key={`bat-${s.season_id}-${s.team_id}`} className="border-b last:border-0">
-                              <td className="py-1 px-2 text-left font-medium">{s.year}</td>
+                              <td className="py-1 px-2 text-left font-medium">{s.season_id}</td>
                               <td className="py-1 px-2 text-left"><TeamBadge name={s.team_name} /></td>
                               <td className="py-1 px-2">{s.batting.g}</td>
                               <td className="py-1 px-2">{s.batting.ab}</td>
@@ -88,7 +88,7 @@ export default function PlayerCareerModal({ playerId, onClose }) {
                       <table className="w-full text-sm text-center">
                         <thead>
                           <tr className="text-xs text-gray-500 border-b">
-                            <th className="py-1 px-2 text-left">Año</th>
+                            <th className="py-1 px-2 text-left">Temporada</th>
                             <th className="py-1 px-2 text-left">Equipo</th>
                             <th className="py-1 px-2">G</th>
                             <th className="py-1 px-2">W-L</th>
@@ -102,7 +102,7 @@ export default function PlayerCareerModal({ playerId, onClose }) {
                         <tbody>
                           {pitchingRows.map((s) => (
                             <tr key={`pit-${s.season_id}-${s.team_id}`} className="border-b last:border-0">
-                              <td className="py-1 px-2 text-left font-medium">{s.year}</td>
+                              <td className="py-1 px-2 text-left font-medium">{s.season_id}</td>
                               <td className="py-1 px-2 text-left"><TeamBadge name={s.team_name} /></td>
                               <td className="py-1 px-2">{s.pitching.g}</td>
                               <td className="py-1 px-2">{s.pitching.w}-{s.pitching.l}</td>

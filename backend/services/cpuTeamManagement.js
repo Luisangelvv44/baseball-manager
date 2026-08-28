@@ -1,6 +1,7 @@
 const prisma = require('../db/prisma');
 const { generatePlayer, POSITIONS, randomInt } = require('../seeders/generators/playerGenerator');
 const { releasePlayerWithPenalty, findWeakestRosterPlayer } = require('./auctionService');
+const { CPU_REVENUE_PER_FAN_MIN, CPU_REVENUE_PER_FAN_MAX } = require('../config');
 
 async function giveCpuTeamsRevenue() {
     const cpuTeamsRevenue = await prisma.team.findMany({
@@ -9,7 +10,8 @@ async function giveCpuTeamsRevenue() {
     });
 
     for (const ct of cpuTeamsRevenue) {
-        const revenuePerFan = Math.floor(Math.random() * 51) + 75; // $75–$125 entero por fan
+        const span = CPU_REVENUE_PER_FAN_MAX - CPU_REVENUE_PER_FAN_MIN + 1;
+        const revenuePerFan = Math.floor(Math.random() * span) + CPU_REVENUE_PER_FAN_MIN; // entero en [MIN, MAX] por fan
         const revenue = ct.fan_base * revenuePerFan;
         if (revenue > 0) {
             await prisma.team.update({

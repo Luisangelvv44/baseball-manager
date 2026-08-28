@@ -44,6 +44,9 @@ jest.mock('../services/tradeService', () => ({
 jest.mock('../services/seasonAwardsService', () => ({
   computeSeasonAwards: jest.fn().mockResolvedValue([]),
 }));
+jest.mock('../services/seasonArchiveService', () => ({
+  archiveAndCleanupSeason: jest.fn().mockResolvedValue({ archived: 0 }),
+}));
 jest.mock('../seeders/generators/playerGenerator', () => ({
   calculateSalary: jest.fn().mockReturnValue(100000),
   generatePlayer: jest.fn().mockReturnValue({ name: 'Rookie', position: 'OF', age: 18, current_skill: 50, potential_coefficient: 0.6 }),

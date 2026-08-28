@@ -29,6 +29,7 @@ const { processInjuryRecovery, clearAllInjuries } = require('../services/injuryS
 const { generateCpuTradeOffers, expireStaleTrades } = require('../services/tradeService');
 const { investInPlayers } = require('../services/playerInvestmentService');
 const { computeSeasonAwards } = require('../services/seasonAwardsService');
+const { archiveAndCleanupSeason } = require('../services/seasonArchiveService');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
@@ -169,6 +170,11 @@ async function endOfSeasonCleanup(season) {
 
   await computeSeasonAwards(season);
 
+  // Congela el resumen de la temporada por jugador y borra sus game_events/game_lineups
+  // crudos (ver seasonArchiveService.js) — debe ir después de computeSeasonAwards, que es
+  // el último consumidor de los eventos en vivo de esta temporada.
+  await archiveAndCleanupSeason(season.id);
+
   await updatePlayersContracts();
 
   // Incrementa el contador de temporadas para todo rookie vigente (equipo, agente libre o prospecto de scout)
@@ -287,7 +293,7 @@ router.post('/advance-day', async (req, res) => {
         if (!nextGameRef) continue;
         const nextGame = await prisma.gameSchedule.findUnique({ where: { id: nextGameRef.id } });
         try {
-          const result = await playGame(nextGame, false, true);
+          const result = await playGame(nextGame, true, true);
           await updateSeriesAfterGame(nextGame, result);
           simulated++;
         } catch (err) {
@@ -353,7 +359,7 @@ router.post('/advance-day', async (req, res) => {
     for (const g of games) {
       if (g.status !== 'scheduled') continue;
       try {
-        await playGame(g, false);
+        await playGame(g, true);
         simulated++;
       } catch (err) {
         if (err.code === 'ROSTER_INCOMPLETO') {

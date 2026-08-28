@@ -10,6 +10,8 @@ module.exports = {
   MAX_ROSTER_SIZE: 25,
   MAX_MINOR_ROSTER_SIZE: 15,
   AUCTION_DEADLINE_DAY: 30,
+  CPU_REVENUE_PER_FAN_MIN: 100, // pago plano de fin de temporada por fan (equipos CPU)
+  CPU_REVENUE_PER_FAN_MAX: 300,
   DRAFT_POOL_SIZE: 100,
   MARKET_PLAYER_CAP: 1250,
   LUXURY_TAX_PROJECTION_DAY: 30, // mitad de temporada (30 dias de juego / 45 dias totales con pre-temporada)

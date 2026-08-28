@@ -14,84 +14,86 @@ model Division {
 }
 
 model Team {
-  id                   Int     @id @default(autoincrement())
-  name                 String  @db.VarChar(100)
-  division_id          Int?
-  is_user_team         Boolean @default(false)
-  budget               Decimal @default(0) @db.Decimal(14, 2)
-  reputation           Int     @default(50)
-  wins                 Int     @default(0)
-  losses               Int     @default(0)
-  runs_scored          Int     @default(0)
-  runs_allowed         Int     @default(0)
-  bid_aggressiveness   Float   @default(0.10)
-  player_investment_rate Float @default(0.1)
-  desperation_index    Float   @default(0)
-  min_growth_threshold Float   @default(1.5)
-  fan_base             Int     @default(0)
-  stadium_floors       Int     @default(1)
+  id                     Int     @id @default(autoincrement())
+  name                   String  @db.VarChar(100)
+  division_id            Int?
+  is_user_team           Boolean @default(false)
+  budget                 Decimal @default(0) @db.Decimal(14, 2)
+  reputation             Int     @default(50)
+  wins                   Int     @default(0)
+  losses                 Int     @default(0)
+  runs_scored            Int     @default(0)
+  runs_allowed           Int     @default(0)
+  bid_aggressiveness     Float   @default(0.10)
+  player_investment_rate Float   @default(0.1)
+  desperation_index      Float   @default(0)
+  min_growth_threshold   Float   @default(1.5)
+  fan_base               Int     @default(0)
+  stadium_floors         Int     @default(1)
 
-  division            Division?          @relation(fields: [division_id], references: [id])
-  players             Player[]
-  finances            Finance[]
-  scouts              Scout[]
-  coaches             Coach[]
-  stadium_sections    StadiumSection[]
-  home_games          GameSchedule[]     @relation("HomeTeam")
-  away_games          GameSchedule[]     @relation("AwayTeam")
-  game_lineups        GameLineup[]
-  team_lineups        TeamLineup[]
-  batting_events      GameEvent[]        @relation("BattingTeam")
-  won_auctions        FreeAgentAuction[] @relation("AuctionWinner")
-  auction_bids        AuctionBid[]
-  broadcast_offers    BroadcastOffer[]
-  broadcast_contracts BroadcastContract[]
-  playoff_home        PlayoffSeries[]     @relation("PlayoffHome")
-  playoff_away        PlayoffSeries[]     @relation("PlayoffAway")
-  playoff_won         PlayoffSeries[]     @relation("PlayoffWinner")
-  trades_proposed     Trade[]             @relation("TradeProposer")
-  trades_received     Trade[]             @relation("TradeRecipient")
-  derby_entries       DerbyEntry[]
-  luxury_tax_records  LuxuryTaxRecord[]
-  season_awards       SeasonAward[]
+  division              Division?            @relation(fields: [division_id], references: [id])
+  players               Player[]
+  finances              Finance[]
+  scouts                Scout[]
+  coaches               Coach[]
+  stadium_sections      StadiumSection[]
+  home_games            GameSchedule[]       @relation("HomeTeam")
+  away_games            GameSchedule[]       @relation("AwayTeam")
+  game_lineups          GameLineup[]
+  team_lineups          TeamLineup[]
+  batting_events        GameEvent[]          @relation("BattingTeam")
+  won_auctions          FreeAgentAuction[]   @relation("AuctionWinner")
+  auction_bids          AuctionBid[]
+  broadcast_offers      BroadcastOffer[]
+  broadcast_contracts   BroadcastContract[]
+  playoff_home          PlayoffSeries[]      @relation("PlayoffHome")
+  playoff_away          PlayoffSeries[]      @relation("PlayoffAway")
+  playoff_won           PlayoffSeries[]      @relation("PlayoffWinner")
+  trades_proposed       Trade[]              @relation("TradeProposer")
+  trades_received       Trade[]              @relation("TradeRecipient")
+  derby_entries         DerbyEntry[]
+  luxury_tax_records    LuxuryTaxRecord[]
+  season_awards         SeasonAward[]
+  player_season_records PlayerSeasonRecord[]
 }
 
 model Player {
-  id                       Int     @id @default(autoincrement())
-  first_name               String  @db.VarChar(50)
-  last_name                String  @db.VarChar(50)
+  id                       Int       @id @default(autoincrement())
+  first_name               String    @db.VarChar(50)
+  last_name                String    @db.VarChar(50)
   age                      Int
-  position                 String  @db.VarChar(10)
+  position                 String    @db.VarChar(10)
   potential_coefficient    Int
   growth_age               Int
   current_skill            Int
-  salary                   Decimal @db.Decimal(12, 2)
-  contract_years_remaining Int     @default(1)
-  rookie_contract          Boolean @default(false)
-  rookie_seasons           Int     @default(0)
+  salary                   Decimal   @db.Decimal(12, 2)
+  contract_years_remaining Int       @default(1)
+  rookie_contract          Boolean   @default(false)
+  rookie_seasons           Int       @default(0)
   team_id                  Int?
-  status                   String  @default("active") @db.VarChar(20)
-  injury_days_remaining    Int     @default(0)
-  level                    String  @default("MAJOR") @db.VarChar(10)
-  career_home_runs        Int       @default(0)
-  career_hits             Int       @default(0)
-  career_rbi              Int       @default(0)
-  career_wins             Int       @default(0)
-  career_strikeouts       Int       @default(0)
-  career_innings_pitched  Decimal   @default(0) @db.Decimal(8, 1)
-  career_earned_runs      Int       @default(0)
-  career_stats_updated_at DateTime?
+  status                   String    @default("active") @db.VarChar(20)
+  injury_days_remaining    Int       @default(0)
+  level                    String    @default("MAJOR") @db.VarChar(10)
+  career_home_runs         Int       @default(0)
+  career_hits              Int       @default(0)
+  career_rbi               Int       @default(0)
+  career_wins              Int       @default(0)
+  career_strikeouts        Int       @default(0)
+  career_innings_pitched   Decimal   @default(0) @db.Decimal(8, 1)
+  career_earned_runs       Int       @default(0)
+  career_stats_updated_at  DateTime?
 
-  team         Team?            @relation(fields: [team_id], references: [id])
-  coach        Coach?
-  auctions     FreeAgentAuction[]
-  game_lineups GameLineup[]
-  team_lineups TeamLineup[]
-  game_events  GameEvent[]      @relation("PlayerEvent")
-  trade_items  TradeItem[]
-  derby_entries DerbyEntry[]
+  team                   Team?                @relation(fields: [team_id], references: [id])
+  coach                  Coach?
+  auctions               FreeAgentAuction[]
+  game_lineups           GameLineup[]
+  team_lineups           TeamLineup[]
+  game_events            GameEvent[]          @relation("PlayerEvent")
+  trade_items            TradeItem[]
+  derby_entries          DerbyEntry[]
   draft_prospect_sources DraftProspect[]
-  season_awards SeasonAward[]
+  season_awards          SeasonAward[]
+  player_season_records  PlayerSeasonRecord[]
 
   @@index([team_id])
   @@index([status])
@@ -105,17 +107,18 @@ model Season {
   total_days  Int    @default(0)
   status      String @default("active") @db.VarChar(20)
 
-  schedule            GameSchedule[]
-  auctions            FreeAgentAuction[]
-  broadcast_offers    BroadcastOffer[]
-  broadcast_contracts BroadcastContract[]
-  playoff_series      PlayoffSeries[]
-  draft               Draft?
-  season_record       SeasonRecord?
-  trades              Trade[]
-  derby_events        HomeRunDerbyEvent[]
-  luxury_tax_records  LuxuryTaxRecord[]
-  season_awards       SeasonAward[]
+  schedule              GameSchedule[]
+  auctions              FreeAgentAuction[]
+  broadcast_offers      BroadcastOffer[]
+  broadcast_contracts   BroadcastContract[]
+  playoff_series        PlayoffSeries[]
+  draft                 Draft?
+  season_record         SeasonRecord?
+  trades                Trade[]
+  derby_events          HomeRunDerbyEvent[]
+  luxury_tax_records    LuxuryTaxRecord[]
+  season_awards         SeasonAward[]
+  player_season_records PlayerSeasonRecord[]
 }
 
 model SeasonRecord {
@@ -130,7 +133,6 @@ model SeasonRecord {
   @@map("season_records")
 }
 
-
 model GameSchedule {
   id                Int     @id @default(autoincrement())
   season_id         Int?
@@ -143,15 +145,15 @@ model GameSchedule {
   is_user_game      Boolean @default(false)
   playoff_series_id Int?
 
-  season         Season?       @relation(fields: [season_id], references: [id])
-  home_team      Team?         @relation("HomeTeam", fields: [home_team_id], references: [id])
-  away_team      Team?         @relation("AwayTeam", fields: [away_team_id], references: [id])
+  season         Season?        @relation(fields: [season_id], references: [id])
+  home_team      Team?          @relation("HomeTeam", fields: [home_team_id], references: [id])
+  away_team      Team?          @relation("AwayTeam", fields: [away_team_id], references: [id])
   playoff_series PlayoffSeries? @relation(fields: [playoff_series_id], references: [id])
   game_lineups   GameLineup[]
   game_events    GameEvent[]
 
-  @@map("schedule")
   @@index([season_id, day_number])
+  @@map("schedule")
 }
 
 model PlayoffSeries {
@@ -167,10 +169,10 @@ model PlayoffSeries {
   status       String @default("active")
   winner_id    Int?
 
-  season    Season        @relation(fields: [season_id], references: [id])
-  home_team Team          @relation("PlayoffHome", fields: [home_team_id], references: [id])
-  away_team Team          @relation("PlayoffAway", fields: [away_team_id], references: [id])
-  winner    Team?         @relation("PlayoffWinner", fields: [winner_id], references: [id])
+  season    Season         @relation(fields: [season_id], references: [id])
+  home_team Team           @relation("PlayoffHome", fields: [home_team_id], references: [id])
+  away_team Team           @relation("PlayoffAway", fields: [away_team_id], references: [id])
+  winner    Team?          @relation("PlayoffWinner", fields: [winner_id], references: [id])
   games     GameSchedule[]
 
   @@map("playoff_series")
@@ -189,8 +191,8 @@ model StadiumSection {
 
   team Team? @relation(fields: [team_id], references: [id])
 
-  @@map("stadium_sections")
   @@index([team_id])
+  @@map("stadium_sections")
 }
 
 model Finance {
@@ -204,33 +206,33 @@ model Finance {
 
   team Team? @relation(fields: [team_id], references: [id])
 
-  @@map("finances")
   @@index([team_id])
+  @@map("finances")
 }
 
 model LuxuryTaxRecord {
-  id                            Int      @id @default(autoincrement())
-  season_id                     Int
-  team_id                       Int
-  day                           Int
-  charged                       Boolean  @default(false)
-  payroll                       Decimal  @db.Decimal(14, 2)
-  threshold                     Decimal  @db.Decimal(14, 2)
-  league_median_cost_per_skill  Decimal  @db.Decimal(14, 4)
-  cost_per_skill                Decimal  @db.Decimal(14, 4)
-  ratio                         Float
-  extra_points                  Float
-  bracket_tax                   Decimal  @db.Decimal(14, 2)
-  inefficiency_tax              Decimal  @db.Decimal(14, 2)
-  total_tax                     Decimal  @db.Decimal(14, 2)
-  created_at                    DateTime @default(now())
+  id                           Int      @id @default(autoincrement())
+  season_id                    Int
+  team_id                      Int
+  day                          Int
+  charged                      Boolean  @default(false)
+  payroll                      Decimal  @db.Decimal(14, 2)
+  threshold                    Decimal  @db.Decimal(14, 2)
+  league_median_cost_per_skill Decimal  @db.Decimal(14, 4)
+  cost_per_skill               Decimal  @db.Decimal(14, 4)
+  ratio                        Float
+  extra_points                 Float
+  bracket_tax                  Decimal  @db.Decimal(14, 2)
+  inefficiency_tax             Decimal  @db.Decimal(14, 2)
+  total_tax                    Decimal  @db.Decimal(14, 2)
+  created_at                   DateTime @default(now())
 
   season Season @relation(fields: [season_id], references: [id])
   team   Team   @relation(fields: [team_id], references: [id])
 
-  @@map("luxury_tax_records")
   @@index([season_id, team_id])
   @@index([team_id])
+  @@map("luxury_tax_records")
 }
 
 model Scout {
@@ -260,6 +262,7 @@ model GameLineup {
   team   Team?         @relation(fields: [team_id], references: [id])
   player Player?       @relation(fields: [player_id], references: [id])
 
+  @@index([player_id])
   @@map("game_lineups")
 }
 
@@ -279,8 +282,9 @@ model GameEvent {
   batting_team Team?         @relation("BattingTeam", fields: [batting_team_id], references: [id])
   player       Player?       @relation("PlayerEvent", fields: [player_id], references: [id])
 
-  @@map("game_events")
   @@index([game_id])
+  @@index([player_id])
+  @@map("game_events")
 }
 
 model TeamLineup {
@@ -294,8 +298,8 @@ model TeamLineup {
   team   Team   @relation(fields: [team_id], references: [id])
   player Player @relation(fields: [player_id], references: [id])
 
-  @@map("team_lineup")
   @@index([team_id])
+  @@map("team_lineup")
 }
 
 model FreeAgentAuction {
@@ -309,14 +313,14 @@ model FreeAgentAuction {
   winning_team_id Int?
   created_at      DateTime @default(now())
 
-  player       Player     @relation(fields: [player_id], references: [id])
-  season       Season     @relation(fields: [season_id], references: [id])
-  winning_team Team?      @relation("AuctionWinner", fields: [winning_team_id], references: [id])
+  player       Player       @relation(fields: [player_id], references: [id])
+  season       Season       @relation(fields: [season_id], references: [id])
+  winning_team Team?        @relation("AuctionWinner", fields: [winning_team_id], references: [id])
   bids         AuctionBid[]
 
-  @@map("free_agent_auctions")
   @@index([status])
   @@index([closes_on_day])
+  @@map("free_agent_auctions")
 }
 
 model AuctionBid {
@@ -331,8 +335,8 @@ model AuctionBid {
   auction FreeAgentAuction @relation(fields: [auction_id], references: [id])
   team    Team             @relation(fields: [team_id], references: [id])
 
-  @@map("auction_bids")
   @@index([auction_id])
+  @@map("auction_bids")
 }
 
 model BroadcastCompany {
@@ -362,9 +366,9 @@ model BroadcastOffer {
   team    Team             @relation(fields: [team_id], references: [id])
   season  Season           @relation(fields: [season_id], references: [id])
 
-  @@map("broadcast_offers")
   @@index([team_id])
   @@index([status])
+  @@map("broadcast_offers")
 }
 
 model BroadcastContract {
@@ -381,31 +385,31 @@ model BroadcastContract {
   team    Team             @relation(fields: [team_id], references: [id])
   season  Season           @relation(fields: [signed_season_id], references: [id])
 
-  @@map("broadcast_contracts")
   @@index([team_id])
+  @@map("broadcast_contracts")
 }
 
 model Coach {
-  id                 Int     @id @default(autoincrement())
+  id                 Int    @id @default(autoincrement())
   team_id            Int
-  name               String  @db.VarChar(100)
-  specialty          String  @db.VarChar(20)
+  name               String @db.VarChar(100)
+  specialty          String @db.VarChar(20)
   skill_level        Int
   salary             Int
-  assigned_player_id Int?    @unique
+  assigned_player_id Int?   @unique
 
   team            Team    @relation(fields: [team_id], references: [id])
   assigned_player Player? @relation(fields: [assigned_player_id], references: [id])
 
-  @@map("coaches")
   @@index([team_id])
+  @@map("coaches")
 }
 
 model Draft {
-  id           Int             @id @default(autoincrement())
-  season_id    Int             @unique
-  status       String          @default("active") @db.VarChar(20)
-  current_pick Int             @default(1)
+  id           Int    @id @default(autoincrement())
+  season_id    Int    @unique
+  status       String @default("active") @db.VarChar(20)
+  current_pick Int    @default(1)
   pick_order   Json
 
   season    Season          @relation(fields: [season_id], references: [id])
@@ -415,24 +419,24 @@ model Draft {
 }
 
 model DraftProspect {
-  id                   Int    @id @default(autoincrement())
-  draft_id             Int
-  name                 String @db.VarChar(100)
-  position             String @db.VarChar(10)
-  age                  Int
-  current_skill        Int
+  id                    Int    @id @default(autoincrement())
+  draft_id              Int
+  name                  String @db.VarChar(100)
+  position              String @db.VarChar(10)
+  age                   Int
+  current_skill         Int
   potential_coefficient Int
-  growth_age           Int
-  picked_by_team_id    Int?
-  pick_number          Int?
-  source_player_id     Int?
+  growth_age            Int
+  picked_by_team_id     Int?
+  pick_number           Int?
+  source_player_id      Int?
 
   draft         Draft   @relation(fields: [draft_id], references: [id])
   source_player Player? @relation(fields: [source_player_id], references: [id])
 
-  @@map("draft_prospects")
   @@index([draft_id])
   @@index([source_player_id])
+  @@map("draft_prospects")
 }
 
 model Trade {
@@ -453,14 +457,14 @@ model Trade {
   recipient_team Team        @relation("TradeRecipient", fields: [recipient_team_id], references: [id])
   items          TradeItem[]
 
-  @@map("trades")
   @@index([status])
   @@index([recipient_team_id])
   @@index([proposer_team_id])
+  @@map("trades")
 }
 
 model TradeItem {
-  id           Int    @id @default(autoincrement())
+  id           Int @id @default(autoincrement())
   trade_id     Int
   player_id    Int
   from_team_id Int // equipo dueño del jugador al momento de proponer
@@ -468,9 +472,9 @@ model TradeItem {
   trade  Trade  @relation(fields: [trade_id], references: [id])
   player Player @relation(fields: [player_id], references: [id])
 
-  @@map("trade_items")
   @@index([trade_id])
   @@index([player_id])
+  @@map("trade_items")
 }
 
 model NewsItem {
@@ -481,9 +485,9 @@ model NewsItem {
   season_id  Int?
   created_at DateTime @default(now())
 
-  @@map("news_items")
   @@index([season_day])
   @@index([season_id])
+  @@map("news_items")
 }
 
 model HomeRunDerbyEvent {
@@ -498,8 +502,8 @@ model HomeRunDerbyEvent {
   entries DerbyEntry[]
   swings  DerbySwing[]
 
-  @@map("home_run_derby_events")
   @@index([season_id])
+  @@map("home_run_derby_events")
 }
 
 model DerbyEntry {
@@ -515,8 +519,8 @@ model DerbyEntry {
   player Player            @relation(fields: [player_id], references: [id])
   swings DerbySwing[]
 
-  @@map("derby_entries")
   @@index([event_id])
+  @@map("derby_entries")
 }
 
 model DerbySwing {
@@ -529,15 +533,15 @@ model DerbySwing {
   event HomeRunDerbyEvent @relation(fields: [event_id], references: [id])
   entry DerbyEntry        @relation(fields: [entry_id], references: [id])
 
-  @@map("derby_swings")
   @@index([entry_id])
+  @@map("derby_swings")
 }
 
 model SeasonAward {
   id         Int      @id @default(autoincrement())
   season_id  Int
   category   String   @db.VarChar(30) // MVP | CY_YOUNG | ROOKIE_OF_YEAR | SEASON_HR_RECORD | SEASON_ERA_RECORD | SEASON_WIN_STREAK_RECORD
-  player_id  Int?     // null para logros de equipo (p.ej. SEASON_WIN_STREAK_RECORD)
+  player_id  Int? // null para logros de equipo (p.ej. SEASON_WIN_STREAK_RECORD)
   team_id    Int?
   value      Float
   created_at DateTime @default(now())
@@ -546,6 +550,48 @@ model SeasonAward {
   player Player? @relation(fields: [player_id], references: [id])
   team   Team?   @relation(fields: [team_id], references: [id])
 
-  @@map("season_awards")
   @@index([season_id])
+  @@map("season_awards")
+}
+
+// Resumen congelado de bateo/pitcheo de un jugador para una temporada+equipo ya
+// finalizada. Se crea una vez al terminar la temporada (ver seasonArchiveService.js),
+// junto con el borrado de los game_events/game_lineups de esa temporada: mantiene
+// el historico de carrera consultable sin acumular indefinidamente filas de juego a
+// juego. Una temporada con traspaso de por medio genera una fila por (season, team).
+model PlayerSeasonRecord {
+  id        Int  @id @default(autoincrement())
+  season_id Int
+  year      Int
+  team_id   Int?
+  player_id Int
+  first_day Int // dia minimo del stint, para desempatar orden dentro de la misma temporada (traspasos)
+
+  // bateo
+  games      Int @default(0)
+  at_bats    Int @default(0)
+  hits       Int @default(0)
+  home_runs  Int @default(0)
+  walks      Int @default(0)
+  strikeouts Int @default(0)
+  rbi        Int @default(0)
+
+  // pitcheo (pitching_games = 0 significa que no lanzo en este stint)
+  pitching_games      Int @default(0)
+  pitching_outs       Int @default(0)
+  earned_runs         Int @default(0)
+  pitching_strikeouts Int @default(0)
+  pitching_walks      Int @default(0)
+  hits_allowed        Int @default(0)
+  wins                Int @default(0)
+  losses              Int @default(0)
+
+  season Season @relation(fields: [season_id], references: [id])
+  team   Team?  @relation(fields: [team_id], references: [id])
+  player Player @relation(fields: [player_id], references: [id])
+
+  @@unique([season_id, team_id, player_id])
+  @@index([player_id])
+  @@index([season_id])
+  @@map("player_season_records")
 }
