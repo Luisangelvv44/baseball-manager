@@ -42,6 +42,20 @@ export default function Navbar() {
           <span className="font-semibold text-green-400">{budget}</span>
           <span>{fans}</span>
           <span>{rep}</span>
+          <Link
+            to="/jerseys"
+            title="Camisetas"
+            aria-label="Camisetas"
+            className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-colors ${
+              location.pathname === '/jerseys'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white'
+            }`}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M8.5 3 4 5.2 2 9.4l3 1.6.6-1.3V21h12.8V9.7l.6 1.3 3-1.6-2-4.2L15.5 3a3.5 3.5 0 0 1-7 0Z" />
+            </svg>
+          </Link>
         </div>
       </div>
 
