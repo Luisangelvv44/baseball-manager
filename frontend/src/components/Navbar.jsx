@@ -42,9 +42,6 @@ export default function Navbar() {
           <span className="font-semibold text-green-400">{budget}</span>
           <span>{fans}</span>
           <span>{rep}</span>
-          <Link to="/newgame" className="px-3 py-1.5 rounded text-red-300 hover:bg-gray-700 font-medium">
-            Nueva Partida
-          </Link>
         </div>
       </div>
 

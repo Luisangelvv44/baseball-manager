@@ -4,7 +4,7 @@ import { api } from '../api.js';
 import TeamBadge from '../components/TeamBadge.jsx';
 
 const DAY_HEADERS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-const PAGE_SIZE = 35; // dias por pagina del calendario
+const PAGE_SIZE = 30; // dias por pagina del calendario (un "mes")
 
 export default function Schedule() {
   const [games, setGames] = useState([]);
@@ -91,7 +91,11 @@ export default function Schedule() {
   const isPast = (dd) => dd < currentDisplayDay;
   const isToday = (dd) => dd === currentDisplayDay;
 
-  const monthLabel = `Días ${pageStart}–${pageEnd} · Página ${page + 1} de ${numPages}`;
+  // Nº de juego de temporada regular (1..90); null en pre-temporada y playoffs
+  const seasonGameNumber = (dd) =>
+    dd > preSeasonDays && dd <= totalRegularDays ? dd - preSeasonDays : null;
+
+  const monthLabel = `Mes ${page + 1} de ${numPages} · Días ${pageStart}–${pageEnd}`;
 
   // Selected day data
   const selectedGames = selectedDay ? (gamesByDay[selectedDay] || []) : [];
@@ -152,6 +156,7 @@ export default function Schedule() {
             const past = isPast(dd);
             const today = isToday(dd);
             const gameCount = dayGames.length;
+            const gameNum = seasonGameNumber(dd);
 
             let cellBg = 'bg-gray-50 hover:bg-gray-100';
             if (today) cellBg = 'bg-blue-600 text-white hover:bg-blue-700';
@@ -168,6 +173,11 @@ export default function Schedule() {
                 <span className={`text-xs font-bold ${today ? 'text-white' : past ? 'text-gray-500' : preSeason ? 'text-gray-600' : 'text-gray-300'}`}>
                   {dd}
                 </span>
+                {gameNum !== null && (
+                  <span className={`text-[9px] font-medium leading-none ${today ? 'text-white/80' : past ? 'text-gray-400' : 'text-gray-400'}`}>
+                    JUEGO {gameNum}
+                  </span>
+                )}
 
                 {/* Badges */}
                 <div className="mt-auto w-full space-y-0.5">
@@ -227,7 +237,10 @@ export default function Schedule() {
                 : 'bg-gray-800 text-white'
             }`}>
               <div>
-                <h3 className="font-bold text-lg">Día {selectedDay}</h3>
+                <h3 className="font-bold text-lg">
+                  Día {selectedDay}
+                  {seasonGameNumber(selectedDay) !== null && ` (JUEGO ${seasonGameNumber(selectedDay)})`}
+                </h3>
                 <div className="flex gap-2 mt-0.5">
                   {selectedIsPreSeason && (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-200 text-yellow-800 font-medium">Pre-temporada</span>
