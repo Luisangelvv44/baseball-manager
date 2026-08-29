@@ -1,8 +1,13 @@
 // Double round-robin: cada par de equipos se enfrenta dos veces (local y visitante).
-// Con 16 equipos: 30 dias, 240 partidos, cada equipo juega 30 (15 en casa, 15 fuera).
+// Con 16 equipos el calendario base son 30 dias / 240 partidos, y luego cada dia
+// se repite GAMES_PER_MATCHUP veces en dias consecutivos: con el valor por defecto (3)
+// la temporada regular queda en 90 dias / 720 partidos, cada equipo juega 90
+// (45 en casa, 45 fuera), mismo rival y mismo local/visitante los 3 dias seguidos.
 //
 // La primera vuelta usa el metodo del circulo (15 rondas).
 // La segunda vuelta invierte local/visitante y corre en los dias 16-30.
+
+const { GAMES_PER_MATCHUP } = require('../config');
 
 function generateRoundRobin(teams) {
   const n = teams.length;
@@ -34,6 +39,18 @@ function generateRoundRobin(teams) {
   return games;
 }
 
+// Repite cada dia del calendario base `repeats` veces en dias consecutivos:
+// dia 1 -> dias 1,2,3 ; dia 2 -> dias 4,5,6 ; ... (mismos enfrentamientos y local/visitante).
+function expandSchedule(games, repeats) {
+  const out = [];
+  for (const g of games) {
+    for (let r = 0; r < repeats; r++) {
+      out.push({ ...g, day_number: (g.day_number - 1) * repeats + r + 1 });
+    }
+  }
+  return out;
+}
+
 function generateSchedule(teams) {
   const firstLeg = generateRoundRobin(teams);
   const offset = firstLeg[firstLeg.length - 1].day_number;
@@ -44,7 +61,7 @@ function generateSchedule(teams) {
     away_team_id: g.home_team_id,
   }));
 
-  return [...firstLeg, ...secondLeg];
+  return expandSchedule([...firstLeg, ...secondLeg], GAMES_PER_MATCHUP);
 }
 
 module.exports = { generateSchedule };

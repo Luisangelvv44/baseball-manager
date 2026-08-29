@@ -4,7 +4,7 @@ import { api } from '../api.js';
 import TeamBadge from '../components/TeamBadge.jsx';
 
 const DAY_HEADERS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-const MONTH_SPLIT = 30;
+const PAGE_SIZE = 35; // dias por pagina del calendario
 
 export default function Schedule() {
   const [games, setGames] = useState([]);
@@ -23,7 +23,8 @@ export default function Schedule() {
         ]);
         setGames(scheduleData);
         setSeason(seasonData);
-        if (seasonData?.status === 'playoffs') setCurrentMonth(1);
+        // En playoffs, saltar a la ultima pagina (se recorta al rango valido al renderizar).
+        if (seasonData?.status === 'playoffs') setCurrentMonth(Number.MAX_SAFE_INTEGER);
       } finally {
         setLoading(false);
       }
@@ -42,7 +43,7 @@ export default function Schedule() {
   }
 
   const preSeasonDays = season.preSeasonDays ?? 15;
-  const totalRegularDays = season.total_days ?? 45;
+  const totalRegularDays = season.total_days ?? 105;
   const currentDay = season.current_day;
 
   // Map playoff day_numbers (>=1000) to display days starting at totalRegularDays+1
@@ -76,12 +77,12 @@ export default function Schedule() {
       : totalDisplayDays + 1;
   }
 
-  const getMonthDays = (month) =>
-    month === 0
-      ? Array.from({ length: MONTH_SPLIT }, (_, i) => i + 1)
-      : Array.from({ length: totalDisplayDays - MONTH_SPLIT }, (_, i) => MONTH_SPLIT + 1 + i);
+  const numPages = Math.max(1, Math.ceil(totalDisplayDays / PAGE_SIZE));
+  const page = Math.min(Math.max(currentMonth, 0), numPages - 1);
+  const pageStart = page * PAGE_SIZE + 1;
+  const pageEnd = Math.min((page + 1) * PAGE_SIZE, totalDisplayDays);
 
-  const days = getMonthDays(currentMonth);
+  const days = Array.from({ length: pageEnd - pageStart + 1 }, (_, i) => pageStart + i);
   const numRows = Math.ceil(days.length / 7);
   const cells = [...days, ...Array(numRows * 7 - days.length).fill(null)];
 
@@ -90,9 +91,7 @@ export default function Schedule() {
   const isPast = (dd) => dd < currentDisplayDay;
   const isToday = (dd) => dd === currentDisplayDay;
 
-  const monthLabel = currentMonth === 0
-    ? 'Pre-temporada / Temporada Regular (1–30)'
-    : 'Temporada Regular / Playoffs (31+)';
+  const monthLabel = `Días ${pageStart}–${pageEnd} · Página ${page + 1} de ${numPages}`;
 
   // Selected day data
   const selectedGames = selectedDay ? (gamesByDay[selectedDay] || []) : [];
@@ -111,19 +110,19 @@ export default function Schedule() {
         )}
       </div>
 
-      {/* Month navigator */}
+      {/* Page navigator */}
       <div className="bg-white rounded-lg shadow p-3 flex items-center justify-between">
         <button
-          onClick={() => setCurrentMonth(0)}
-          disabled={currentMonth === 0}
+          onClick={() => setCurrentMonth(page - 1)}
+          disabled={page === 0}
           className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed font-bold text-lg"
         >
           ‹
         </button>
         <span className="font-semibold text-gray-700 text-sm">{monthLabel}</span>
         <button
-          onClick={() => setCurrentMonth(1)}
-          disabled={currentMonth === 1}
+          onClick={() => setCurrentMonth(page + 1)}
+          disabled={page === numPages - 1}
           className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed font-bold text-lg"
         >
           ›

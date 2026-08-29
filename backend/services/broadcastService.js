@@ -1,8 +1,8 @@
 const prisma = require('../db/prisma');
+const { GAMES_PER_SEASON } = require('../config');
 
 const OFFER_WINDOW_END_DAY = 3;
 const MAX_CONTRACTS_PER_COMPANY = 2;
-const GAMES_PER_SEASON = 30;
 
 // Umbral mínimo de reputación para recibir oferta de una empresa.
 // Proporcional al precio de la empresa dentro de su tipo.

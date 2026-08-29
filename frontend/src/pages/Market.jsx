@@ -18,7 +18,7 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
   const p = auction.player;
   const topBid = auction.top_bid;
   const currentDay = season?.current_day ?? 0;
-  const deadlineDay = season?.auctionDeadlineDay ?? 30;
+  const deadlineDay = season?.auctionDeadlineDay ?? 60;
   const effectiveCloseDay = auction.closes_on_day != null
     ? Math.min(auction.closes_on_day, deadlineDay)
     : deadlineDay;

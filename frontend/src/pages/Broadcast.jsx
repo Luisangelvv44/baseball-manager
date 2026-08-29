@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import { useTeam } from '../context/TeamContext.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
 
-const GAMES_PER_SEASON = 30;
+const GAMES_PER_SEASON = 90;
 
 function estimatedPay(fanBase, pricePerFan, seasons = 1) {
   return Math.round(fanBase * Number(pricePerFan) * GAMES_PER_SEASON * seasons);
