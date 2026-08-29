@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import TeamBadge from '../components/TeamBadge.jsx';
+import GameIntro from '../components/GameIntro.jsx';
 
 function BasesDiamond({ bases }) {
   const [first, second, third] = bases;
@@ -148,6 +149,7 @@ export default function GameView() {
   const [economy, setEconomy] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showIntro, setShowIntro] = useState(false);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -166,6 +168,10 @@ export default function GameView() {
       setAwayTeam(info.awayTeam);
       setHomeLineup(info.homeLineup);
       setAwayLineup(info.awayLineup);
+
+      if (info.game.status !== 'finished') {
+        setShowIntro(true);
+      }
 
       if (info.game.status === 'finished') {
         setEvents(info.events);
@@ -252,6 +258,14 @@ export default function GameView() {
 
   return (
     <div className="space-y-4">
+      {showIntro && homeTeam && awayTeam && (
+        <GameIntro
+          homeTeam={homeTeam}
+          awayTeam={awayTeam}
+          onFinish={() => setShowIntro(false)}
+        />
+      )}
+
       <button onClick={() => navigate('/')} className="text-sm text-blue-600 hover:underline">
         ← Volver al Dashboard
       </button>

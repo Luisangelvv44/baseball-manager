@@ -1,3 +1,22 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* --- Animación de intro de partido (GameIntro) --- */
+@keyframes gi-in-left   { from { transform: translateX(-101%); } to { transform: translateX(0); } }
+@keyframes gi-in-right  { from { transform: translateX(101%);  } to { transform: translateX(0); } }
+@keyframes gi-out-left  { from { transform: translateX(0); } to { transform: translateX(-101%); } }
+@keyframes gi-out-right { from { transform: translateX(0); } to { transform: translateX(101%);  } }
+@keyframes gi-pop       { from { opacity: 0; transform: translateY(14px) scale(.82); } to { opacity: 1; transform: none; } }
+
+/* cada panel: entra desde su lado, mantiene, y sale de vuelta (2ª animación con delay) */
+.gi-panel-left  { animation: gi-in-left  .55s cubic-bezier(.22,1,.36,1) both,
+                             gi-out-left  .6s  cubic-bezier(.55,0,.9,.55) 6.85s both; }
+.gi-panel-right { animation: gi-in-right .55s cubic-bezier(.22,1,.36,1) both,
+                             gi-out-right .6s  cubic-bezier(.55,0,.9,.55) 6.85s both; }
+.gi-content     { animation: gi-pop .5s ease-out .35s both; }
+.gi-content-2   { animation: gi-pop .5s ease-out .5s  both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gi-panel-left, .gi-panel-right, .gi-content, .gi-content-2 { animation-duration: .01ms; }
+}
