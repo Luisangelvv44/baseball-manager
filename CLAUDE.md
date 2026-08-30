@@ -82,7 +82,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `economy.js` | Home game revenue: attendance (4–14% of fan_base regular season, 14–25% playoffs, capped at capacity) × capacity-weighted ticket price + merch (1–5% of fan_base × $20–50/fan) − operating cost (capacity × 0.5); away games earn merch only |
 | `lineup.js` | Converts DB roster to ordered lineup array |
 | `gamePlay.js` | Orchestrates a single game: builds lineups, runs `gameSimulator`, applies injuries, updates standings/fan base, persists results |
-| `cpuTeamManagement.js` | End-of-season CPU revenue distribution (flat $100–300/fan payout) and CPU roster upkeep (detects/fills missing positions via cut-and-replace) |
+| `cpuTeamManagement.js` | End-of-season CPU revenue distribution (flat $100–300/fan payout) and CPU roster upkeep: on `ROSTER_CHECK_DAY` every empty MAJOR position is filled — a fresh player is generated if the roster is under `MAX_ROSTER_SIZE`, otherwise the weakest player from a surplus position is released to make room (first-year rookie only as a last resort), with a *forced* release that charges at most the team's available budget and never lets budget go negative. `previewFillMissingPositions()` is the read-only planner behind `scripts/runRosterCheck.js` |
 | `playerService.js` | End-of-season skill fluctuation (growth/decline vs. `growth_age`) and annual contract-years decrement |
 | `playerInvestmentService.js` | CPU teams spend a budget-derived pool to buy up `current_skill` points on their weakest players, at skill-tiered marginal cost |
 | `retiredPlayer.js` | Retires active/free-agent players aged 40+ each season, clearing them from lineups and rosters |

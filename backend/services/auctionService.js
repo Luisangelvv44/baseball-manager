@@ -86,13 +86,22 @@ function isClearRosterUpgrade(weakestAtPosition, incomingPlayer, incomingYears) 
 // Recalculo EN VIVO (sin snapshot) del jugador activo mas debil de un equipo en una
 // posicion, excluyendo rookies de primer anio (ver CPU_RELEASABLE_FILTER). Se usa al cerrar
 // la subasta y al rellenar posiciones vacias del roster CPU.
-async function findWeakestRosterPlayer(client, teamId, position) {
+// Opciones: `level` restringe por nivel de roster (p. ej. 'MAJOR'); `includeRookies: true`
+// deja pasar tambien a los rookies de 1er anio (usado como ultimo recurso en el roster check).
+async function findWeakestRosterPlayer(client, teamId, position, { includeRookies = false, level } = {}) {
   return client.player.findFirst({
-    where: { team_id: teamId, status: 'active', position, ...CPU_RELEASABLE_FILTER },
+    where: {
+      team_id: teamId,
+      status: 'active',
+      position,
+      ...(level ? { level } : {}),
+      ...(includeRookies ? {} : CPU_RELEASABLE_FILTER),
+    },
     orderBy: { current_skill: 'asc' },
     select: {
       id: true, current_skill: true, age: true, growth_age: true,
       potential_coefficient: true, contract_years_remaining: true, salary: true,
+      rookie_contract: true, rookie_seasons: true,
     },
   });
 }
@@ -341,19 +350,24 @@ async function closeExpiredAuctions(tx, season) {
 // Libera a `player` del equipo `teamId`, cobrando la multa estandar (30% del salario anual
 // por cada anio de contrato restante) descontada del budget. Devuelve false sin tocar nada
 // si el budget no alcanza para la multa.
-async function releasePlayerWithPenalty(client, teamId, player) {
+// Con `forced: true` (cortes obligados por integridad de roster) nunca aborta: cobra solo lo
+// que el budget permite (`min(multa, budget)`, nunca deja el budget negativo) y libera igual.
+async function releasePlayerWithPenalty(client, teamId, player, { forced = false } = {}) {
   const releasePenalty = Math.round(
     Number(player.salary) * RELEASE_PENALTY_RATE * Math.max(0, player.contract_years_remaining)
   );
 
   const team = await client.team.findUnique({ where: { id: teamId }, select: { budget: true } });
-  if (Number(team.budget) < releasePenalty) return false;
+  const budget = Number(team.budget);
+  if (!forced && budget < releasePenalty) return false;
+
+  const chargedPenalty = forced ? Math.min(releasePenalty, Math.max(0, budget)) : releasePenalty;
 
   await client.teamLineup.deleteMany({ where: { player_id: player.id } });
   await client.player.update({ where: { id: player.id }, data: { team_id: null, status: 'free_agent' } });
 
-  if (releasePenalty > 0) {
-    await client.team.update({ where: { id: teamId }, data: { budget: { decrement: releasePenalty } } });
+  if (chargedPenalty > 0) {
+    await client.team.update({ where: { id: teamId }, data: { budget: { decrement: chargedPenalty } } });
   }
 
   return true;
@@ -452,4 +466,5 @@ module.exports = {
   cancelAllActiveAuctions,
   releasePlayerWithPenalty,
   findWeakestRosterPlayer,
+  RELEASE_PENALTY_RATE,
 };
