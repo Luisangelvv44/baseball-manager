@@ -11,6 +11,7 @@
     "seed:stars": "node seeders/seedStarPlayers.js",
     "backfill:season-records": "node scripts/backfillPlayerSeasonRecords.js",
     "roster:check": "node scripts/runRosterCheck.js",
+    "injury:backfill": "node scripts/runInjuryBackfill.js",
     "postinstall": "prisma generate --schema=prisma/schema.prisma",
     "test": "jest"
   },

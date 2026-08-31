@@ -1,5 +1,5 @@
 const prisma = require('../db/prisma');
-const { generatePlayer, POSITIONS, randomInt } = require('../seeders/generators/playerGenerator');
+const { generatePlayer, POSITIONS, randomInt, calculateSalary } = require('../seeders/generators/playerGenerator');
 const { releasePlayerWithPenalty, findWeakestRosterPlayer, RELEASE_PENALTY_RATE } = require('./auctionService');
 const { CPU_REVENUE_PER_FAN_MIN, CPU_REVENUE_PER_FAN_MAX, MAX_ROSTER_SIZE } = require('../config');
 
@@ -195,10 +195,145 @@ async function previewFillMissingPositions() {
   return plan;
 }
 
+// Genera y guarda un ROOKIE MAJOR para `position` (contrato de novato, barato, sin pulir). A
+// diferencia de createReplacement, este queda marcado como rookie_contract y se gradua a las 3
+// temporadas via endOfSeasonCleanup. Es la red de seguridad cuando una lesion deja una posicion
+// sin ningun jugador sano: no toca budget, no corta a nadie, no respeta MAX_ROSTER_SIZE.
+async function createInjuryRookie(teamId, position) {
+  const currentSkill = randomInt(20, 38);
+  const potential = randomInt(Math.min(99, currentSkill + 20), 99);
+  const marketSalary = calculateSalary(potential, currentSkill, 20);
+  const rookieSalary = Math.max(5000, Math.round(marketSalary / 10 / 100) * 100);
+  const rookie = generatePlayer({
+    position,
+    age: randomInt(18, 21),
+    current_skill: currentSkill,
+    potential_coefficient: potential,
+    salary: rookieSalary,
+    contract_years_remaining: randomInt(1, 3),
+    rookie_contract: true,
+    team_id: teamId,
+    status: 'active',
+  });
+  return prisma.player.create({ data: { ...rookie, level: 'MAJOR' } });
+}
+
+// Red de seguridad post-lesion (solo equipos CPU, nunca el del usuario). Recibe el array
+// [{ id, days }] que devuelve checkAndApplyGameInjuries. Por cada jugador CPU recien lesionado
+// cuya posicion quede sin NINGUN jugador sano (activo, MAJOR, injury_days_remaining 0) genera un
+// rookie para esa posicion. No corta a nadie ni respeta MAX_ROSTER_SIZE. Devuelve la lista de
+// altas para que la capa superior cree noticias.
+async function backfillInjuredCpuPositions(injuredIds) {
+  if (!injuredIds || injuredIds.length === 0) return [];
+
+  const injuredPlayers = await prisma.player.findMany({
+    where: { id: { in: injuredIds.map((i) => i.id) } },
+    select: {
+      id: true,
+      first_name: true,
+      last_name: true,
+      position: true,
+      team_id: true,
+      team: { select: { name: true, is_user_team: true } },
+    },
+  });
+
+  const seen = new Set();
+  const created = [];
+
+  for (const p of injuredPlayers) {
+    if (!p.team_id || !p.team || p.team.is_user_team) continue;
+    const key = `${p.team_id}:${p.position}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const healthy = await prisma.player.count({
+      where: {
+        team_id: p.team_id,
+        position: p.position,
+        status: 'active',
+        level: 'MAJOR',
+        injury_days_remaining: 0,
+      },
+    });
+    if (healthy > 0) continue;
+
+    const rookie = await createInjuryRookie(p.team_id, p.position);
+    created.push({
+      teamId: p.team_id,
+      teamName: p.team.name,
+      position: p.position,
+      injuredPlayerId: p.id,
+      injuredPlayerName: `${p.first_name} ${p.last_name}`,
+      createdPlayerId: rookie.id,
+      createdPlayerName: `${rookie.first_name} ${rookie.last_name}`,
+    });
+  }
+
+  return created;
+}
+
+// Version read-only para scripts/runInjuryBackfill.js. No escribe nada. Por cada equipo CPU
+// reporta: wouldGenerate (posiciones sin jugador sano pero con >=1 lesionado -> lo que el sistema
+// generaria si esas lesiones acabaran de ocurrir) y vulnerable (posiciones con exactamente 1
+// jugador sano). extraInjuredPlayerIds simula "y si este jugador sano se lesiona ahora".
+async function previewInjuryBackfill({ extraInjuredPlayerIds = [] } = {}) {
+  const extra = new Set(extraInjuredPlayerIds.map(Number));
+  const cpuTeams = await prisma.team.findMany({
+    where: { is_user_team: false },
+    select: { id: true, name: true },
+    orderBy: { id: 'asc' },
+  });
+
+  const plan = [];
+
+  for (const team of cpuTeams) {
+    const players = await prisma.player.findMany({
+      where: { team_id: team.id, status: 'active', level: 'MAJOR' },
+      select: { id: true, first_name: true, last_name: true, position: true, injury_days_remaining: true },
+    });
+
+    const byPos = new Map();
+    for (const p of players) {
+      if (!byPos.has(p.position)) byPos.set(p.position, { healthyIds: [], injured: [] });
+      const slot = byPos.get(p.position);
+      if (p.injury_days_remaining > 0 || extra.has(p.id)) slot.injured.push(p);
+      else slot.healthyIds.push(p.id);
+    }
+
+    const wouldGenerate = [];
+    const vulnerable = [];
+    for (const [position, slot] of byPos) {
+      if (slot.healthyIds.length === 0 && slot.injured.length > 0) {
+        wouldGenerate.push({
+          position,
+          injured: slot.injured.map((p) => ({
+            id: p.id,
+            name: `${p.first_name} ${p.last_name}`,
+            days: p.injury_days_remaining,
+            hypothetical: p.injury_days_remaining === 0,
+          })),
+        });
+      } else if (slot.healthyIds.length === 1) {
+        vulnerable.push({ position, healthyId: slot.healthyIds[0] });
+      }
+    }
+
+    if (wouldGenerate.length > 0 || vulnerable.length > 0) {
+      plan.push({ teamId: team.id, teamName: team.name, wouldGenerate, vulnerable });
+    }
+  }
+
+  return plan;
+}
+
 module.exports = {
   giveCpuTeamsRevenue,
   fillMissingPositions,
   getMissingPositions,
   pickReleaseTargetForFullRoster,
   previewFillMissingPositions,
+  createInjuryRookie,
+  backfillInjuredCpuPositions,
+  previewInjuryBackfill,
 };

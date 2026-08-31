@@ -2,6 +2,7 @@ const prisma = require('../db/prisma');
 const { getLineup } = require('./lineup');
 const { simulateGame } = require('./gameSimulator');
 const { checkAndApplyGameInjuries } = require('./injuryService');
+const { backfillInjuredCpuPositions } = require('./cpuTeamManagement');
 const { createNews } = require('./newsService');
 const {
   detectPitcherGems,
@@ -28,6 +29,10 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
   const result = simulateGame(homeLineup, awayLineup, homeLineup.pitcher, awayLineup.pitcher);
 
   const injuredIds = await checkAndApplyGameInjuries(homeLineup, awayLineup);
+
+  // Si una lesion deja a un equipo CPU sin ningun jugador sano en esa posicion, se le genera un
+  // rookie para cubrirla (nunca al equipo del usuario; no corta a nadie ni respeta el tope de roster).
+  const backfilledRookies = await backfillInjuredCpuPositions(injuredIds);
 
   await prisma.gameSchedule.update({
     where: { id: gameRow.id },
@@ -173,6 +178,14 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
         gameRow.season_id
       );
     }
+  }
+
+  for (const r of backfilledRookies) {
+    await createNews('injury',
+      `${r.teamName} firmó al novato ${r.createdPlayerName} (${r.position}) tras la lesión de ${r.injuredPlayerName}`,
+      gameRow.day_number,
+      gameRow.season_id
+    );
   }
 
   return {
