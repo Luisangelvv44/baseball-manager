@@ -3,7 +3,7 @@ const router = express.Router();
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, AUCTION_DEADLINE_DAY, ROSTER_CHECK_DAY, LUXURY_TAX_PROJECTION_DAY, PLAYER_INVESTMENT_DAY } = require('../config');
 const { generateSchedule } = require('../services/scheduleGenerator');
-const { playGame } = require('../services/gamePlay');
+const { simulateScheduledGamesForDay, simulateOtherActivePlayoffSeries } = require('../services/dayGamesSimulator');
 const {
   createAuctionsForFreeAgents,
   runCpuBidding,
@@ -18,7 +18,7 @@ const {
   decrementContractSeasons,
   OFFER_WINDOW_END_DAY,
 } = require('../services/broadcastService');
-const { generatePlayoffBracket, updateSeriesAfterGame, advancePlayoffRound } = require('../services/playoffService');
+const { generatePlayoffBracket, advancePlayoffRound } = require('../services/playoffService');
 const { retireOldPlayers } = require('../services/retiredPlayer');
 const { fluctuatePlayerSkills, updatePlayersContracts } = require('../services/playerService');
 const { giveCpuTeamsRevenue, fillMissingPositions } = require('../services/cpuTeamManagement');
@@ -283,31 +283,18 @@ router.post('/advance-day', async (req, res) => {
 
       const activeSeries = await prisma.playoffSeries.findMany({
         where: { season_id: season.id, status: 'active' },
-        include: { games: { where: { status: 'scheduled' }, orderBy: { id: 'asc' }, take: 1 } },
+        select: { home_team_id: true, away_team_id: true },
       });
+      const userInActiveSeries = activeSeries.some(
+        (s) => s.home_team_id === USER_TEAM_ID || s.away_team_id === USER_TEAM_ID
+      );
 
+      // Si el usuario sigue en una serie activa, los partidos de las demas series CPU
+      // ya se simularon al terminar su partido (ver routes/games.js). Solo cuando el
+      // usuario ya no participa avanzamos las series CPU aqui, en cada pulsacion.
       let simulated = 0;
-      for (const s of activeSeries) {
-        if (s.home_team_id === USER_TEAM_ID || s.away_team_id === USER_TEAM_ID) continue;
-        const nextGameRef = s.games[0];
-        if (!nextGameRef) continue;
-        const nextGame = await prisma.gameSchedule.findUnique({ where: { id: nextGameRef.id } });
-        try {
-          const result = await playGame(nextGame, true, true);
-          await updateSeriesAfterGame(nextGame, result);
-          simulated++;
-        } catch (err) {
-          if (err.code === 'ROSTER_INCOMPLETO') {
-            await prisma.gameSchedule.update({
-              where: { id: nextGame.id },
-              data: { home_score: 9, away_score: 0, status: 'finished' },
-            });
-            await updateSeriesAfterGame(nextGame, { homeScore: 9, awayScore: 0 });
-            simulated++;
-          } else {
-            throw err;
-          }
-        }
+      if (!userInActiveSeries) {
+        ({ simulated } = await simulateOtherActivePlayoffSeries(season.id));
       }
 
       const playoffAdvance = await advancePlayoffRound(season.id);
@@ -355,23 +342,7 @@ router.post('/advance-day', async (req, res) => {
       });
     }
 
-    let simulated = 0;
-    for (const g of games) {
-      if (g.status !== 'scheduled') continue;
-      try {
-        await playGame(g, true);
-        simulated++;
-      } catch (err) {
-        if (err.code === 'ROSTER_INCOMPLETO') {
-          await prisma.gameSchedule.update({
-            where: { id: g.id },
-            data: { home_score: 0, away_score: 0, status: 'finished' },
-          });
-        } else {
-          throw err;
-        }
-      }
-    }
+    const { simulated } = await simulateScheduledGamesForDay(season.id, day);
 
     await runCpuBidding(null, season);
     const auctionsClosed = await closeExpiredAuctions(null, season);

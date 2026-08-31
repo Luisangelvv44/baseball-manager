@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import TeamBadge from '../components/TeamBadge.jsx';
 import GameIntro from '../components/GameIntro.jsx';
+import { useTeam } from '../context/TeamContext.jsx';
+import { advanceDayAndRoute } from '../utils/advanceDayFlow.js';
 
 function BasesDiamond({ bases }) {
   const [first, second, third] = bases;
@@ -138,6 +140,7 @@ function InningScoreboard({ innings, inningScores, homeTeam, awayTeam, homeTotal
 export default function GameView() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { refreshTeam } = useTeam();
   const [game, setGame] = useState(null);
   const [homeTeam, setHomeTeam] = useState(null);
   const [awayTeam, setAwayTeam] = useState(null);
@@ -204,6 +207,17 @@ export default function GameView() {
       setScore({ home: 0, away: 0 });
       setLoading(false);
       playEvents(result.events, result.homeScore, result.awayScore);
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
+  }
+
+  async function handleAdvanceDay() {
+    setError('');
+    setLoading(true);
+    try {
+      await advanceDayAndRoute({ navigate, refreshTeam });
     } catch (err) {
       setError(err.message);
       setLoading(false);
@@ -352,12 +366,19 @@ export default function GameView() {
       </div>
 
       {finished && game.status !== 'finished' && (
-        <div className="text-center">
+        <div className="flex justify-center gap-3">
           <button
             onClick={() => navigate('/')}
-            className="bg-blue-600 text-white px-6 py-2 rounded font-semibold hover:bg-blue-700"
+            className="bg-gray-200 text-gray-800 px-6 py-2 rounded font-semibold hover:bg-gray-300"
           >
-            Continuar
+            ← Volver al Dashboard
+          </button>
+          <button
+            onClick={handleAdvanceDay}
+            disabled={loading}
+            className="bg-blue-600 text-white px-6 py-2 rounded font-semibold hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loading ? 'Avanzando...' : 'Avanzar Día'}
           </button>
         </div>
       )}

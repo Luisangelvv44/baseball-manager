@@ -6,6 +6,7 @@ const { playGame } = require('../services/gamePlay');
 const { getLineup } = require('../services/lineup');
 const { computeHomeGameRevenue, computeAwayGameRevenue } = require('../services/economy');
 const { updateSeriesAfterGame } = require('../services/playoffService');
+const { simulateScheduledGamesForDay, simulateOtherActivePlayoffSeries } = require('../services/dayGamesSimulator');
 
 function formatSavedLineup(rows, teamId) {
   const teamRows = rows.filter((r) => r.team_id === teamId);
@@ -113,6 +114,8 @@ router.post('/:id/simulate', async (req, res) => {
     // ---------- Economia ----------
     const isUserHome = game.home_team_id === USER_TEAM_ID;
     const userTeam = await prisma.team.findUnique({ where: { id: USER_TEAM_ID } });
+    const season = await prisma.season.findFirst({ where: { status: { in: ['active', 'playoffs'] } } });
+    const day = season?.current_day ?? 0;
 
     let economy;
     if (isUserHome) {
@@ -125,9 +128,6 @@ router.post('/:id/simulate', async (req, res) => {
         where: { id: USER_TEAM_ID },
         data: { budget: { increment: economy.total } },
       });
-
-      const season = await prisma.season.findFirst({ where: { status: { in: ['active', 'playoffs'] } } });
-      const day = season?.current_day ?? 0;
 
       if (economy.ticketRevenue > 0) {
         await prisma.finance.create({
@@ -170,9 +170,6 @@ router.post('/:id/simulate', async (req, res) => {
         data: { budget: { increment: economy.total } },
       });
 
-      const season = await prisma.season.findFirst({ where: { status: { in: ['active', 'playoffs'] } } });
-      const day = season?.current_day ?? 0;
-
       await prisma.finance.create({
         data: {
           team_id: USER_TEAM_ID,
@@ -188,7 +185,18 @@ router.post('/:id/simulate', async (req, res) => {
       await updateSeriesAfterGame(game, result);
     }
 
+    // Simular el resto de la jornada para que los marcadores de los demas equipos
+    // esten listos al volver al Dashboard, sin tener que avanzar el dia primero.
+    let othersSimulated = 0;
+    if (season) {
+      const rest = isPlayoff
+        ? await simulateOtherActivePlayoffSeries(season.id)
+        : await simulateScheduledGamesForDay(season.id, game.day_number);
+      othersSimulated = rest.simulated;
+    }
+
     res.json({
+      othersSimulated,
       homeScore: result.homeScore,
       awayScore: result.awayScore,
       events: result.events,

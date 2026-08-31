@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import Leaderboard from '../components/Leaderboard.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
 import { useTeam } from '../context/TeamContext.jsx';
+import { advanceDayAndRoute } from '../utils/advanceDayFlow.js';
 
 export default function Dashboard() {
   const { refreshTeam } = useTeam();
@@ -62,29 +63,12 @@ export default function Dashboard() {
     setLoading(true);
     setMessage('');
     try {
-      const result = await api.advanceDay();
-      refreshTeam();
-      if (!result.advanced && result.userGameId) {
-        navigate(`/game/${result.userGameId}`);
-        return;
-      }
-      if (result.seasonFinished) {
-        setMessage('¡La temporada ha terminado! Toca hacer el Draft anual.');
-        navigate('/draft');
-        return;
-      }
-      if (result.playoffs) {
-        setMessage('¡La temporada regular terminó! Los playoffs han comenzado.');
-        navigate('/playoffs');
-        return;
-      }
-      if (result.userGameId) {
-        setMessage(`Dia ${result.day}. Tienes un partido${result.inPlayoffs ? ' de playoffs' : ''} hoy.`);
-        navigate(`/game/${result.userGameId}`);
-        return;
-      }
-      setMessage(`Dia ${result.day}. Sin partido hoy. Se simularon ${result.simulated} partidos.`);
-      await loadAll();
+      await advanceDayAndRoute({
+        navigate,
+        refreshTeam,
+        setMessage,
+        onStay: () => loadAll(),
+      });
     } catch (err) {
       setMessage(err.message);
     } finally {
