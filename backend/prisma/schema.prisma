@@ -55,6 +55,7 @@ model Team {
   luxury_tax_records    LuxuryTaxRecord[]
   season_awards         SeasonAward[]
   player_season_records PlayerSeasonRecord[]
+  toddler_contributions ToddlerContribution[]
 }
 
 model Player {
@@ -74,6 +75,7 @@ model Player {
   status                   String    @default("active") @db.VarChar(20)
   injury_days_remaining    Int       @default(0)
   level                    String    @default("MAJOR") @db.VarChar(10)
+  toddler_program_id       Int?
   career_home_runs         Int       @default(0)
   career_hits              Int       @default(0)
   career_rbi               Int       @default(0)
@@ -98,6 +100,7 @@ model Player {
   @@index([team_id])
   @@index([status])
   @@index([team_id, level])
+  @@index([toddler_program_id])
 }
 
 model Season {
@@ -594,4 +597,39 @@ model PlayerSeasonRecord {
   @@index([player_id])
   @@index([season_id])
   @@map("player_season_records")
+}
+
+// Programa de Toddlers: cada fila es un ciclo de 10 temporadas. Se crea un pool de
+// 32 futuros jugadores (Player.status = 'toddler_program', edad 8, skill -15) que
+// los equipos mejoran aportando dinero. Al cumplir 10 temporadas el ciclo pasa a
+// 'selecting': cada equipo elige 2 toddlers en orden del total aportado, y arranca
+// automaticamente el siguiente ciclo. Ver services/toddlerProgramService.js.
+model ToddlerProgram {
+  id              Int      @id @default(autoincrement())
+  cycle_number    Int      @default(1)
+  seasons_elapsed Int      @default(0) // 0..10, +1 en cada fin de temporada
+  budget          Decimal  @default(0) @db.Decimal(14, 2)
+  status          String   @default("active") @db.VarChar(20) // active | selecting | completed
+  pick_order      Json? // [teamId, teamId, ...] largo 32 (cada equipo dos veces, consecutivo), congelado al madurar
+  current_pick    Int      @default(1) // 1..32 durante 'selecting'
+  created_at      DateTime @default(now())
+
+  contributions ToddlerContribution[]
+
+  @@map("toddler_programs")
+}
+
+// Aporte acumulado de un equipo a un ciclo del programa. Define el orden de eleccion.
+model ToddlerContribution {
+  id         Int     @id @default(autoincrement())
+  program_id Int
+  team_id    Int
+  amount     Decimal @default(0) @db.Decimal(14, 2)
+
+  program ToddlerProgram @relation(fields: [program_id], references: [id])
+  team    Team           @relation(fields: [team_id], references: [id])
+
+  @@unique([program_id, team_id])
+  @@index([program_id])
+  @@map("toddler_contributions")
 }

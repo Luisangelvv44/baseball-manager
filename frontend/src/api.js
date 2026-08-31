@@ -154,4 +154,12 @@ export const api = {
   createDerbyEvent: (playerId, rewardAmount) =>
     request('/derby', { method: 'POST', body: JSON.stringify({ playerId, rewardAmount }) }),
   simulateDerbyEvent: (id) => request(`/derby/${id}/simulate`, { method: 'POST' }),
+
+  // Programa de Toddlers
+  getToddlers: () => request('/toddlers'),
+  contributeToddlers: (amount) =>
+    request('/toddlers/contribute', { method: 'POST', body: JSON.stringify({ amount }) }),
+  advanceToddlerPick: () => request('/toddlers/advance-pick', { method: 'POST' }),
+  toddlerPick: (playerId) =>
+    request('/toddlers/pick', { method: 'POST', body: JSON.stringify({ playerId }) }),
 };

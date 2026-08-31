@@ -34,4 +34,16 @@ module.exports = {
   NEWS_STREAK_LOOKBACK_GAMES: 50,
   SEASON_AWARD_MIN_AB: 135, // ~1.5x GAMES_PER_SEASON: jugador debe haber bateado la mayor parte de la temporada
   SEASON_AWARD_MIN_IP: 60, // suficientes aperturas dado que un pitcher lanza el juego completo cuando le toca
+
+  // ----- Programa de Toddlers (ver services/toddlerProgramService.js) -----
+  TODDLER_PROGRAM_SEASONS: 10, // temporadas que dura un ciclo antes de la eleccion
+  TODDLER_PROGRAM_SIZE: 32, // DEBE ser 16 equipos x TODDLER_PROGRAM_PICKS_PER_TEAM (todos los toddler se reparten)
+  TODDLER_PROGRAM_PICKS_PER_TEAM: 2,
+  TODDLER_PROGRAM_START_AGE: 8,
+  TODDLER_PROGRAM_START_SKILL: -15,
+  TODDLER_PROGRAM_CPU_CONTRIBUTION_RATE: 0.05, // solo equipos CPU; el usuario aporta manualmente lo que quiera
+  TODDLER_PROGRAM_SKILL_COST: 1000000, // costo por punto de skill en una ronda de mejora
+  TODDLER_PROGRAM_IMPROVE_PROB_START: 0.8, // prob. de mejora en la temporada 1
+  TODDLER_PROGRAM_IMPROVE_PROB_STEP: 0.05, // temporada k (0-indexado): prob = START - STEP*k  -> 0.35 en k=9
+  TODDLER_PROGRAM_IMPROVE_PROB_MIN: 0.05, // piso de seguridad
 };

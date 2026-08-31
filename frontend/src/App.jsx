@@ -24,6 +24,7 @@ import Trades from './pages/Trades.jsx';
 import Derby from './pages/Derby.jsx';
 import DerbyView from './pages/DerbyView.jsx';
 import Jerseys from './pages/Jerseys.jsx';
+import Toddlers from './pages/Toddlers.jsx';
 
 export default function App() {
   return (
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/history" element={<History />} />
           <Route path="/game/:id" element={<GameView />} />
           <Route path="/jerseys" element={<Jerseys />} />
+          <Route path="/toddlers" element={<Toddlers />} />
           <Route path="/derby" element={<Derby />} />
           <Route path="/derby/:id" element={<DerbyView />} />
         </Routes>

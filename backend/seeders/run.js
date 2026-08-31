@@ -2,6 +2,7 @@ const prisma = require('../db/prisma');
 const { generateRoster, generatePlayer, POSITIONS } = require('./generators/playerGenerator');
 const { generateTeamNames } = require('./generators/teamGenerator');
 const { generateStadiumSections } = require('./generators/stadiumGenerator');
+const { generateToddlerCycle } = require('../services/toddlerProgramService');
 
 const TEAMS_PER_DIVISION = 8;
 const USER_STARTING_BUDGET = 10000000;
@@ -79,6 +80,10 @@ async function seed() {
         }
       }
       await tx.player.createMany({ data: freeAgents });
+
+      // ---------- Programa de Toddlers (ciclo 1) ----------
+      console.log('Iniciando Programa de Toddlers...');
+      await generateToddlerCycle(tx, 1);
 
       // ---------- Empresas de transmisión ----------
       console.log('Creando empresas de transmisión...');

@@ -30,6 +30,7 @@ const { generateCpuTradeOffers, expireStaleTrades } = require('../services/trade
 const { investInPlayers } = require('../services/playerInvestmentService');
 const { computeSeasonAwards } = require('../services/seasonAwardsService');
 const { archiveAndCleanupSeason } = require('../services/seasonArchiveService');
+const { runToddlerProgramSeasonEnd } = require('../services/toddlerProgramService');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
@@ -238,6 +239,11 @@ async function endOfSeasonCleanup(season) {
   }
 
   await decrementContractSeasons();
+
+  // Programa de Toddlers: aporte del 5% de cada equipo CPU, rondas de mejora, y al
+  // cumplir 10 temporadas congela el orden de eleccion y arranca el siguiente ciclo.
+  // Corre despues del recorte de roster CPU (que lee budget) y de aging (age += 1).
+  await runToddlerProgramSeasonEnd();
 
   // Create annual draft BEFORE regenerating season auctions: players pulled into the
   // draft pool are marked 'draft_reserved', so they're excluded from the fresh auction batch.

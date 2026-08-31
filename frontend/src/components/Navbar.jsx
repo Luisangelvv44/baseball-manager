@@ -56,6 +56,20 @@ export default function Navbar() {
               <path d="M8.5 3 4 5.2 2 9.4l3 1.6.6-1.3V21h12.8V9.7l.6 1.3 3-1.6-2-4.2L15.5 3a3.5 3.5 0 0 1-7 0Z" />
             </svg>
           </Link>
+          <Link
+            to="/toddlers"
+            title="Programa de Toddlers"
+            aria-label="Programa de Toddlers"
+            className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-colors ${
+              location.pathname === '/toddlers'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white'
+            }`}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm-1.5 7h3c2.5 0 4.5 2 4.5 4.5V16a1 1 0 0 1-1 1h-1v3a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-3H8a1 1 0 0 1-1-1v-2.5C7 11 9 9 10.5 9Z" />
+            </svg>
+          </Link>
         </div>
       </div>
 
