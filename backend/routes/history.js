@@ -191,10 +191,11 @@ router.get('/records', async (req, res) => {
         orderBy: { career_strikeouts: 'desc' },
         take: 10,
       }),
+      // sin take: la ERA es un cociente que no se puede ordenar en la BD, asi que
+      // se traen todos los que califican y se ordenan por ERA en JS mas abajo
       prisma.player.findMany({
         where: { career_innings_pitched: { gte: SEASON_AWARD_MIN_IP } },
         select: { id: true, first_name: true, last_name: true, status: true, career_innings_pitched: true, career_earned_runs: true },
-        take: 10,
       }),
     ]);
 

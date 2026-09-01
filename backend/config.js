@@ -34,6 +34,9 @@ module.exports = {
   NEWS_STREAK_LOOKBACK_GAMES: 50,
   SEASON_AWARD_MIN_AB: 135, // ~1.5x GAMES_PER_SEASON: jugador debe haber bateado la mayor parte de la temporada
   SEASON_AWARD_MIN_IP: 60, // suficientes aperturas dado que un pitcher lanza el juego completo cuando le toca
+  HISTORICAL_CPU_STAT_DIVISOR: 3, // en el ranking historico de carrera, los conteos (HR/H/RBI/W/K) de stints
+                                  // que no son del equipo del usuario se ponderan por 1/este valor
+                                  // (compensa que la CPU no rota pitchers: 90+ jgs vs ~25 del usuario)
 
   // ----- Programa de Toddlers (ver services/toddlerProgramService.js) -----
   TODDLER_PROGRAM_SEASONS: 10, // temporadas que dura un ciclo antes de la eleccion
