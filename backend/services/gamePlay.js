@@ -11,7 +11,7 @@ const {
   isExtraInningsGame,
   computeTrailingStreak,
 } = require('./newsDetection');
-const { NEWS_STREAK_MILESTONE, NEWS_STREAK_LOOKBACK_GAMES } = require('../config');
+const { NEWS_STREAK_MILESTONE, NEWS_STREAK_LOOKBACK_GAMES, USER_TEAM_ID } = require('../config');
 
 // Simula un partido (schedule row), actualiza marcador/standings,
 // y opcionalmente guarda el play-by-play en game_events.
@@ -143,7 +143,8 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
         'no_hitter',
         `${nameOf(g.pitcherId)} (${teamName(g.teamId)}) lanzó un ${label} ante ${teamName(g.opponentTeamId)}`,
         gameRow.day_number,
-        gameRow.season_id
+        gameRow.season_id,
+        { teamId: g.teamId, alert: true }
       );
     }
     for (const c of cycles) {
@@ -151,7 +152,8 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
         'cycle',
         `${nameOf(c.playerId)} (${teamName(c.teamId)}) completó el ciclo (sencillo, doble, triple y jonrón)`,
         gameRow.day_number,
-        gameRow.season_id
+        gameRow.season_id,
+        { teamId: c.teamId, alert: true }
       );
     }
     for (const m of multiHomers) {
@@ -159,7 +161,8 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
         'multi_hr',
         `${nameOf(m.playerId)} (${teamName(m.teamId)}) conectó ${m.count} jonrones en el partido`,
         gameRow.day_number,
-        gameRow.season_id
+        gameRow.season_id,
+        { teamId: m.teamId, alert: true }
       );
     }
   }
@@ -167,7 +170,7 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
   if (injuredIds.length > 0) {
     const injuredPlayers = await prisma.player.findMany({
       where: { id: { in: injuredIds.map((i) => i.id) } },
-      select: { id: true, first_name: true, last_name: true, position: true },
+      select: { id: true, first_name: true, last_name: true, position: true, team_id: true },
     });
     const nameMap = Object.fromEntries(injuredPlayers.map((p) => [p.id, p]));
     for (const { id, days } of injuredIds) {
@@ -175,7 +178,8 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
       if (p) await createNews('injury',
         `${p.first_name} ${p.last_name} (${p.position}) se lesionó por ${days} días`,
         gameRow.day_number,
-        gameRow.season_id
+        gameRow.season_id,
+        { teamId: p.team_id, alert: p.team_id === USER_TEAM_ID }
       );
     }
   }

@@ -269,7 +269,7 @@ router.post('/advance-day', async (req, res) => {
     if (!season) return res.status(400).json({ error: 'No hay temporada activa' });
     const day = season.current_day;
 
-    await processInjuryRecovery();
+    await processInjuryRecovery(season.current_day, season.id);
 
     // ---- RAMA PLAYOFFS ----
     if (season.status === 'playoffs') {

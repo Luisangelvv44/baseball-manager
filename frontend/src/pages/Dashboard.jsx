@@ -7,7 +7,7 @@ import { useTeam } from '../context/TeamContext.jsx';
 import { advanceDayAndRoute } from '../utils/advanceDayFlow.js';
 
 export default function Dashboard() {
-  const { refreshTeam } = useTeam();
+  const { refreshTeam, refreshAlerts } = useTeam();
   const [myTeam, setMyTeam] = useState(null);
   const [teams, setTeams] = useState([]);
   const [season, setSeason] = useState(null);
@@ -66,6 +66,7 @@ export default function Dashboard() {
       await advanceDayAndRoute({
         navigate,
         refreshTeam,
+        refreshAlerts,
         setMessage,
         onStay: () => loadAll(),
       });

@@ -75,7 +75,7 @@ function RoundColumn({ round, series, onPlay, disabled }) {
 }
 
 export default function Playoffs() {
-  const { refreshTeam } = useTeam();
+  const { refreshTeam, refreshAlerts } = useTeam();
   const [series, setSeries] = useState([]);
   const [seasonStatus, setSeasonStatus] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -108,6 +108,7 @@ export default function Playoffs() {
     try {
       const result = await api.advanceDay();
       refreshTeam();
+      refreshAlerts();
       if (!result.advanced && result.userGameId) {
         navigate(`/game/${result.userGameId}`);
         return;

@@ -372,7 +372,7 @@ function PlayByPlayFeed({ events, nameMap, homeTeam, awayTeam }) {
 export default function GameView() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { refreshTeam } = useTeam();
+  const { refreshTeam, refreshAlerts } = useTeam();
   const [game, setGame] = useState(null);
   const [homeTeam, setHomeTeam] = useState(null);
   const [awayTeam, setAwayTeam] = useState(null);
@@ -452,7 +452,7 @@ export default function GameView() {
     setError('');
     setLoading(true);
     try {
-      await advanceDayAndRoute({ navigate, refreshTeam });
+      await advanceDayAndRoute({ navigate, refreshTeam, refreshAlerts });
     } catch (err) {
       setError(err.message);
       setLoading(false);

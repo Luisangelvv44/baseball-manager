@@ -78,6 +78,7 @@ describe('POST /api/games/:id/simulate', () => {
     });
     prisma.team.findUnique.mockResolvedValue(mockTeam);
     prisma.stadiumSection.findMany.mockResolvedValue([]);
+    prisma.gameSchedule.findMany.mockResolvedValue([]);
     computeHomeGameRevenue.mockReturnValue({
       ticketRevenue: 50000,
       merchRevenue: 7500,

@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useTeam } from '../context/TeamContext.jsx';
 import TeamBadge from './TeamBadge.jsx';
+import AlertsBell from './AlertsBell.jsx';
 
 const LINKS = [
   { to: '/', label: 'Dashboard' },
@@ -42,6 +43,7 @@ export default function Navbar() {
           <span className="font-semibold text-green-400">{budget}</span>
           <span>{fans}</span>
           <span>{rep}</span>
+          <AlertsBell />
           <Link
             to="/jerseys"
             title="Camisetas"

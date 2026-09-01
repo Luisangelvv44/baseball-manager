@@ -135,10 +135,12 @@ async function executeTrade(client, trade, season) {
     data: { status: 'accepted', resolved_day: season.current_day },
   });
 
+  const userInTrade = trade.proposer_team_id === USER_TEAM_ID || trade.recipient_team_id === USER_TEAM_ID;
   await createNews('trade',
     `${proposerTeam.name} y ${recipientTeam.name} completaron un traspaso`,
     season.current_day,
-    season.id
+    season.id,
+    userInTrade ? { teamId: USER_TEAM_ID, alert: true } : {}
   );
 }
 
@@ -246,7 +248,8 @@ async function generateCpuTradeOffers(tx, season) {
     await createNews('trade',
       `${cpuTeam.name} propuso un traspaso buscando reforzar su plantel`,
       season.current_day,
-      season.id
+      season.id,
+      { teamId: USER_TEAM_ID, alert: true }
     );
   }
 }

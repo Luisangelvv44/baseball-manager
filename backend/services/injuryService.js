@@ -1,4 +1,6 @@
 const prisma = require('../db/prisma');
+const { USER_TEAM_ID } = require('../config');
+const { createNews } = require('./newsService');
 
 function getInjuryProbability(age) {
   if (age <= 22) return 0;
@@ -41,7 +43,7 @@ async function checkAndApplyGameInjuries(homeLineup, awayLineup) {
   return injuredIds;
 }
 
-async function processInjuryRecovery() {
+async function processInjuryRecovery(seasonDay, seasonId) {
   const injured = await prisma.player.findMany({
     where: { injury_days_remaining: { gt: 0 } },
     select: { id: true, injury_days_remaining: true },
@@ -51,6 +53,21 @@ async function processInjuryRecovery() {
   const toDecrement = injured.filter((p) => p.injury_days_remaining > 1).map((p) => p.id);
 
   if (toRecover.length > 0) {
+    if (seasonId != null) {
+      const recoveredUserPlayers = await prisma.player.findMany({
+        where: { id: { in: toRecover }, team_id: USER_TEAM_ID },
+        select: { first_name: true, last_name: true, position: true },
+      });
+      for (const p of recoveredUserPlayers) {
+        await createNews('injury',
+          `${p.first_name} ${p.last_name} (${p.position}) volvió de su lesión`,
+          seasonDay ?? 0,
+          seasonId,
+          { teamId: USER_TEAM_ID, alert: true }
+        );
+      }
+    }
+
     await prisma.player.updateMany({
       where: { id: { in: toRecover } },
       data: { injury_days_remaining: 0 },

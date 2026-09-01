@@ -112,6 +112,8 @@ export const api = {
     const qs = params.toString();
     return request(qs ? `/news?${qs}` : '/news');
   },
+  getAlerts: () => request('/news/alerts'),
+  markAlertsSeen: () => request('/news/alerts/seen', { method: 'POST' }),
 
   // Históricos
   getChampionsHistory: () => request('/history/champions'),

@@ -30,6 +30,7 @@ model Team {
   min_growth_threshold   Float   @default(1.5)
   fan_base               Int     @default(0)
   stadium_floors         Int     @default(1)
+  alerts_seen_at         DateTime?
 
   division              Division?            @relation(fields: [division_id], references: [id])
   players               Player[]
@@ -486,10 +487,13 @@ model NewsItem {
   headline   String   @db.VarChar(500)
   season_day Int      @default(0)
   season_id  Int?
+  team_id    Int?
+  alert      Boolean  @default(false)
   created_at DateTime @default(now())
 
   @@index([season_day])
   @@index([season_id])
+  @@index([team_id])
   @@map("news_items")
 }
 

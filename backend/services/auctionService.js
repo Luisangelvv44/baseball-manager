@@ -442,7 +442,8 @@ async function _signPlayerToTeam(client, auction, teamId, amount, years, season)
   await createNews('auction',
     `${signingTeam.name} ganó la subasta de ${auction.player.first_name} ${auction.player.last_name}: ${years} año(s), $${amtM}M/año`,
     season.current_day,
-    season.id
+    season.id,
+    { teamId, alert: teamId === USER_TEAM_ID }
   );
 
   return true;
