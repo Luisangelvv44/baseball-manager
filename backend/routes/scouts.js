@@ -166,6 +166,7 @@ router.post('/:id/collect', async (req, res) => {
           growth_age: p.growth_age,
           current_skill: p.current_skill,
           salary: p.salary,
+          demand_factor: p.demand_factor,
           contract_years_remaining: p.contract_years_remaining,
           rookie_contract: p.rookie_contract,
           team_id: USER_TEAM_ID,

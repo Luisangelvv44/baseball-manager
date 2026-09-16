@@ -1,7 +1,7 @@
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID, DRAFT_POOL_SIZE, MARKET_PLAYER_CAP } = require('../config');
 const { FIRST_NAMES, LAST_NAMES } = require('../seeders/data/names');
-const { calculateSalary, calculateGrowthAge, randomInt, randomChoice, POSITIONS } = require('../seeders/generators/playerGenerator');
+const { calculateSalary, calculateGrowthAge, randomDemandFactor, randomInt, randomChoice, POSITIONS } = require('../seeders/generators/playerGenerator');
 
 function generateProspect(draftId, index) {
   // Earlier picks (lower index) get higher quality prospects
@@ -111,6 +111,7 @@ async function draftPickPlayer(prospect, teamId) {
       growth_age: prospect.growth_age,
       current_skill: prospect.current_skill,
       salary: rookieSalary,
+      demand_factor: randomDemandFactor(),
       contract_years_remaining: randomInt(2, 4),
       rookie_contract: true,
       team_id: teamId,
@@ -148,6 +149,7 @@ async function finalizeDraft(draftId) {
       growth_age: p.growth_age,
       current_skill: p.current_skill,
       salary: calculateSalary(p.potential_coefficient, p.current_skill, p.age),
+      demand_factor: randomDemandFactor(),
       contract_years_remaining: randomInt(1, 4),
       rookie_contract: false,
       team_id: null,

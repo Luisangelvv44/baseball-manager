@@ -57,6 +57,10 @@ function calculateSalary(potential, currentSkill, age) {
   return Math.round((base + potentialBonus) * ageFactor * variance / 50_000) * 50_000;
 }
 
+function randomDemandFactor() {
+  return Math.round(Math.random() * 300) / 100; // 0.00-3.00
+}
+
 function generatePlayer(overrides = {}) {
   const potential = overrides.potential_coefficient ?? generatePotentialCoefficient();
   const age = overrides.age ?? randomInt(18, 40);
@@ -72,6 +76,7 @@ function generatePlayer(overrides = {}) {
     growth_age: growthAge,
     current_skill: currentSkill,
     salary: overrides.salary ?? calculateSalary(potential, currentSkill, age),
+    demand_factor: overrides.demand_factor ?? randomDemandFactor(),
     contract_years_remaining: overrides.contract_years_remaining ?? randomInt(1, 4),
     rookie_contract: overrides.rookie_contract ?? false,
     team_id: overrides.team_id ?? null,
@@ -131,6 +136,7 @@ module.exports = {
   calculateGrowthAge,
   generateInitialSkill,
   calculateSalary,
+  randomDemandFactor,
   randomInt,
   randomChoice,
   POSITIONS,

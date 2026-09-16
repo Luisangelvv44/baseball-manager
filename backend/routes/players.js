@@ -141,8 +141,22 @@ router.post('/:id/renew', async (req, res) => {
       return res.status(400).json({ error: `Máximo ${maxYears} año(s) de contrato para este jugador` });
     }
 
+    // Un jugador es exigente segun su destreza: si su salario actual esta por debajo
+    // de valor_de_mercado * demand_factor, ese monto se vuelve el minimo para renovar.
+    const currentSalary = Number(player.salary);
+    const marketValue = calculateSalary(player.potential_coefficient, player.current_skill, player.age);
+    const demandThreshold = Math.round(marketValue * Number(player.demand_factor));
+    const demandMinSalary = currentSalary < demandThreshold ? demandThreshold : null;
+
     if (player.level === 'MINOR') {
-      if (newSalary < Number(player.salary)) {
+      const minRequired = Math.max(currentSalary, demandMinSalary ?? 0);
+      if (newSalary < minRequired) {
+        if (demandMinSalary && minRequired === demandMinSalary) {
+          return res.status(400).json({
+            error: `Este jugador es exigente y pide al menos $${demandMinSalary.toLocaleString()} para renovar`,
+            minSalary: demandMinSalary,
+          });
+        }
         return res.status(400).json({ error: 'El nuevo salario debe ser igual o mayor al salario actual' });
       }
       const updated = await prisma.player.update({
@@ -154,19 +168,34 @@ router.post('/:id/renew', async (req, res) => {
 
     // Renovar un rookie convierte el contrato a precio de mercado real
     const isRookie = player.rookie_contract;
-    const marketSalary = isRookie
-      ? calculateSalary(player.potential_coefficient, player.current_skill, player.age)
-      : null;
 
-    if (isRookie && newSalary < marketSalary) {
-      return res.status(400).json({
-        error: `Al renovar un rookie el salario mínimo es su valor de mercado: $${marketSalary.toLocaleString()}`,
-        marketSalary,
-      });
+    if (isRookie) {
+      const minRequired = Math.max(marketValue, demandMinSalary ?? 0);
+      if (newSalary < minRequired) {
+        if (demandMinSalary && minRequired === demandMinSalary) {
+          return res.status(400).json({
+            error: `Este jugador es exigente y pide al menos $${demandMinSalary.toLocaleString()} para renovar`,
+            minSalary: demandMinSalary,
+          });
+        }
+        return res.status(400).json({
+          error: `Al renovar un rookie el salario mínimo es su valor de mercado: $${marketValue.toLocaleString()}`,
+          marketSalary: marketValue,
+        });
+      }
     }
 
-    if (!isRookie && newSalary <= Number(player.salary)) {
-      return res.status(400).json({ error: 'El nuevo salario debe ser mayor al salario actual' });
+    if (!isRookie) {
+      const minRequired = Math.max(currentSalary + 1, demandMinSalary ?? 0);
+      if (newSalary < minRequired) {
+        if (demandMinSalary && minRequired === demandMinSalary) {
+          return res.status(400).json({
+            error: `Este jugador es exigente y pide al menos $${demandMinSalary.toLocaleString()} para renovar`,
+            minSalary: demandMinSalary,
+          });
+        }
+        return res.status(400).json({ error: 'El nuevo salario debe ser mayor al salario actual' });
+      }
     }
 
     const updated = await prisma.player.update({

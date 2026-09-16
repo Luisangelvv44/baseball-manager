@@ -69,6 +69,7 @@ model Player {
   growth_age               Int
   current_skill            Int
   salary                   Decimal   @db.Decimal(12, 2)
+  demand_factor            Decimal   @default(1.5) @db.Decimal(3, 2)
   contract_years_remaining Int       @default(1)
   rookie_contract          Boolean   @default(false)
   rookie_seasons           Int       @default(0)
