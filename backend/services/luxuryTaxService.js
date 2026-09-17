@@ -1,4 +1,5 @@
 const prisma = require('../db/prisma');
+const { getOrCreateBank } = require('./bankService');
 
 // Percentiles usados para el umbral dinamico y la mediana de costo/skill de la liga.
 // Ambos comparten el mismo metodo de interpolacion (ver `percentile`) para consistencia.
@@ -181,6 +182,12 @@ async function applyLuxuryTax(season, seasonDay) {
           amount: -taxOwed,
           description: `Impuesto al lujo (exceso $${Math.round(r.excess).toLocaleString('es')} sobre umbral $${Math.round(r.threshold).toLocaleString('es')})`,
         },
+      });
+      // El impuesto de lujo es la fuente principal de capital del Banco (ver bankService.js).
+      await getOrCreateBank();
+      await prisma.bank.update({
+        where: { id: 1 },
+        data: { balance: { increment: taxOwed }, total_tax_funded: { increment: taxOwed } },
       });
     }
   }

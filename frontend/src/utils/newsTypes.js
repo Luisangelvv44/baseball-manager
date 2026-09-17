@@ -14,6 +14,7 @@ export const TYPE_CONFIG = {
   streak:        { label: 'Racha',          bg: 'bg-amber-600',  border: 'border-amber-500',  text: 'text-amber-400'  },
   awards:        { label: 'Premio',         bg: 'bg-fuchsia-600',border: 'border-fuchsia-500',text: 'text-fuchsia-400'},
   derby:         { label: 'Derby',          bg: 'bg-lime-600',   border: 'border-lime-500',   text: 'text-lime-400'   },
+  loan:          { label: 'Préstamo',       bg: 'bg-emerald-600',border: 'border-emerald-500',text: 'text-emerald-400'},
 };
 
 export const DEFAULT_CONFIG = { label: 'Noticia', bg: 'bg-gray-600', border: 'border-gray-500', text: 'text-gray-400' };
@@ -26,4 +27,5 @@ export const ALERT_ROUTE = {
   no_hitter: '/news',
   cycle:     '/news',
   multi_hr:  '/news',
+  loan:      '/bank',
 };

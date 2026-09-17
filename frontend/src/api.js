@@ -157,6 +157,19 @@ export const api = {
     request('/derby', { method: 'POST', body: JSON.stringify({ playerId, rewardAmount }) }),
   simulateDerbyEvent: (id) => request(`/derby/${id}/simulate`, { method: 'POST' }),
 
+  // Banco
+  getBankStatus: () => request('/bank/status'),
+  getBankLoans: (params = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, v);
+    });
+    const s = qs.toString();
+    return request(s ? `/bank/loans?${s}` : '/bank/loans');
+  },
+  getBankEligibility: () => request('/bank/eligibility'),
+  requestBankLoan: (amount) => request('/bank/request', { method: 'POST', body: JSON.stringify({ amount }) }),
+
   // Programa de Toddlers
   getToddlers: () => request('/toddlers'),
   contributeToddlers: (amount) =>

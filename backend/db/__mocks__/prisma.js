@@ -36,6 +36,8 @@ const prismaMock = {
   derbyEntry: createModel(),
   derbySwing: createModel(),
   luxuryTaxRecord: createModel(),
+  bank: createModel(),
+  loan: createModel(),
   $queryRaw: jest.fn(),
   $transaction: jest.fn(),
 };

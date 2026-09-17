@@ -49,4 +49,26 @@ module.exports = {
   TODDLER_PROGRAM_IMPROVE_PROB_START: 0.8, // prob. de mejora en la temporada 1
   TODDLER_PROGRAM_IMPROVE_PROB_STEP: 0.05, // temporada k (0-indexado): prob = START - STEP*k  -> 0.35 en k=9
   TODDLER_PROGRAM_IMPROVE_PROB_MIN: 0.05, // piso de seguridad
+
+  // ----- Banco y prestamos (ver services/bankService.js) -----
+  LOAN_WINDOW_END_DAY: 10, // solo se puede pedir/originar prestamo en los primeros N dias de temporada
+  LOAN_ELIGIBILITY_MIN_BUDGET: 10_000_000,
+  LOAN_ELIGIBILITY_BUDGET_PCT_OF_SEC: 0.10, // budget < 10% de la capacidad de ganancia de temporada -> elegible
+  LOAN_PCT_MIN: 0.30, // rango de monto solicitado, como % de la capacidad de ganancia de temporada (SEC)
+  LOAN_PCT_MAX: 1.50,
+  LOAN_MAX_TO_CAPACITY_RATIO: 1.0, // tope de solvencia del banco: prestamo aprobado <= este % de SEC (ajustado por liquidez)
+  LOAN_MIN_CAUTION_FACTOR: 0.25, // piso del factor de cautela del banco aun con liquidez muy baja
+  LOAN_MIN_VIABLE_AMOUNT: 100_000, // por debajo de esto, el banco rechaza en vez de prestar una miseria
+  LOAN_RISK_PREMIUM_MAX: 0.15, // prima de tasa maxima por riesgo (monto aprobado / SEC)
+  LOAN_LIQUIDITY_PREMIUM_MAX: 0.10, // prima de tasa maxima por baja liquidez del banco
+  LOAN_MIN_RATE: 0.05,
+  LOAN_MAX_RATE: 0.35,
+  LOAN_SEASON_END_REPAYMENT_RATE: 0.30, // % de la ganancia de temporada destinado a pagar deuda cada fin de temporada
+  LOAN_MAX_MISSED_PAYMENTS: 3, // temporadas consecutivas sin cubrir la cuota completa -> default
+  LOAN_DEFAULT_REPUTATION_PENALTY: 15,
+  LOAN_DEFAULT_MIN_REPUTATION: 10,
+  LOAN_DEFAULT_COOLDOWN_SEASONS: 3, // temporadas que un equipo en default debe esperar antes de pedir otro prestamo
+  LOAN_NEWS_LARGE_THRESHOLD_RATIO: 0.75, // prestamo aprobado >= este % de SEC -> genera noticia
+  BANK_INITIAL_CAPITAL: 300_000_000,
+  BANK_BASE_INTEREST_RATE: 0.08,
 };

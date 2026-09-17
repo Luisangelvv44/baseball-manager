@@ -3,6 +3,7 @@ const { generateRoster, generatePlayer, POSITIONS } = require('./generators/play
 const { generateTeamNames } = require('./generators/teamGenerator');
 const { generateStadiumSections } = require('./generators/stadiumGenerator');
 const { generateToddlerCycle } = require('../services/toddlerProgramService');
+const { BANK_INITIAL_CAPITAL, BANK_BASE_INTEREST_RATE } = require('../config');
 
 const TEAMS_PER_DIVISION = 8;
 const USER_STARTING_BUDGET = 10000000;
@@ -117,6 +118,16 @@ async function seed() {
       for (const c of RADIO_COMPANIES) {
         await tx.broadcastCompany.create({ data: { ...c, type: 'RADIO' } });
       }
+
+      // ---------- Banco ----------
+      console.log('Creando Banco...');
+      await tx.bank.create({
+        data: {
+          balance: BANK_INITIAL_CAPITAL,
+          initial_capital: BANK_INITIAL_CAPITAL,
+          base_interest_rate: BANK_BASE_INTEREST_RATE,
+        },
+      });
 
       console.log('Seed completado.');
       console.log(`Tu equipo ID: ${userTeamId} | Presupuesto: $${USER_STARTING_BUDGET.toLocaleString()}`);

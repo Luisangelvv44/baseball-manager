@@ -139,6 +139,8 @@ describe('POST /api/season/advance-day', () => {
     playGame.mockResolvedValue({ homeScore: 3, awayScore: 1 });
     prisma.season.update.mockResolvedValue({ ...mockSeason, current_day: 6 });
     prisma.gameSchedule.findFirst.mockResolvedValue(null);
+    // current_day (5) is within the loan request window: runCpuLoanPass queries CPU teams.
+    prisma.team.findMany.mockResolvedValue([]);
 
     const res = await request(app).post('/api/season/advance-day');
     expect(res.status).toBe(200);

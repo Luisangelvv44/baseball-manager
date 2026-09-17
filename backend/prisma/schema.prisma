@@ -57,6 +57,7 @@ model Team {
   season_awards         SeasonAward[]
   player_season_records PlayerSeasonRecord[]
   toddler_contributions ToddlerContribution[]
+  loans                 Loan[]
 }
 
 model Player {
@@ -124,6 +125,7 @@ model Season {
   luxury_tax_records    LuxuryTaxRecord[]
   season_awards         SeasonAward[]
   player_season_records PlayerSeasonRecord[]
+  loans                 Loan[]
 }
 
 model SeasonRecord {
@@ -637,4 +639,49 @@ model ToddlerContribution {
   @@unique([program_id, team_id])
   @@index([program_id])
   @@map("toddler_contributions")
+}
+
+// Banco central del juego: fila unica (id=1). "Personalidad" del banco = base_interest_rate
+// (tasa antes de primas de riesgo/liquidez) + su propio balance finito, que sube con el
+// impuesto de lujo (luxuryTaxService.js) y los intereses cobrados, y baja al emitir prestamos.
+// Ver services/bankService.js.
+model Bank {
+  id                       Int      @id @default(autoincrement())
+  balance                  Decimal  @default(0) @db.Decimal(14, 2)
+  initial_capital          Decimal  @db.Decimal(14, 2) // capital de referencia para el ratio de liquidez
+  base_interest_rate       Float    @default(0.08)
+  total_loaned             Decimal  @default(0) @db.Decimal(14, 2) // suma historica de principal desembolsado
+  total_interest_collected Decimal  @default(0) @db.Decimal(14, 2) // reconocido al saldar cada prestamo
+  total_tax_funded         Decimal  @default(0) @db.Decimal(14, 2) // suma historica recibida de luxury_tax
+  total_defaulted          Decimal  @default(0) @db.Decimal(14, 2) // saldo condonado por mora, historico
+  created_at               DateTime @default(now())
+
+  @@map("bank")
+}
+
+// Prestamo de un equipo (CPU o usuario) al Banco. balance_remaining incluye interes
+// (interes simple no compuesto, fijado al emitir: balance_remaining inicial =
+// principal * (1 + interest_rate)). Un equipo solo puede tener un prestamo 'active' a
+// la vez (ver bankService.checkLoanEligibility).
+model Loan {
+  id                Int       @id @default(autoincrement())
+  team_id           Int
+  season_id         Int
+  day_issued        Int
+  principal         Decimal   @db.Decimal(14, 2)
+  interest_rate     Float
+  balance_remaining Decimal   @db.Decimal(14, 2)
+  total_paid        Decimal   @default(0) @db.Decimal(14, 2)
+  status            String    @default("active") @db.VarChar(20) // active | paid | defaulted
+  missed_payments   Int       @default(0) // racha de temporadas consecutivas sin cubrir la cuota completa
+  paid_at           DateTime?
+  defaulted_at      DateTime?
+  created_at        DateTime  @default(now())
+
+  team   Team   @relation(fields: [team_id], references: [id])
+  season Season @relation(fields: [season_id], references: [id])
+
+  @@index([team_id])
+  @@index([status])
+  @@map("loans")
 }

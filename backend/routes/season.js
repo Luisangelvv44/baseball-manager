@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, AUCTION_DEADLINE_DAY, ROSTER_CHECK_DAY, LUXURY_TAX_PROJECTION_DAY, PLAYER_INVESTMENT_DAY } = require('../config');
+const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, AUCTION_DEADLINE_DAY, ROSTER_CHECK_DAY, LUXURY_TAX_PROJECTION_DAY, PLAYER_INVESTMENT_DAY, LOAN_WINDOW_END_DAY } = require('../config');
 const { generateSchedule } = require('../services/scheduleGenerator');
 const { simulateScheduledGamesForDay, simulateOtherActivePlayoffSeries } = require('../services/dayGamesSimulator');
 const {
@@ -28,6 +28,7 @@ const { createDraft } = require('../services/draftService');
 const { processInjuryRecovery, clearAllInjuries } = require('../services/injuryService');
 const { generateCpuTradeOffers, expireStaleTrades } = require('../services/tradeService');
 const { investInPlayers } = require('../services/playerInvestmentService');
+const { runCpuLoanPass, processSeasonEndRepayments } = require('../services/bankService');
 const { computeSeasonAwards } = require('../services/seasonAwardsService');
 const { archiveAndCleanupSeason } = require('../services/seasonArchiveService');
 const { runToddlerProgramSeasonEnd } = require('../services/toddlerProgramService');
@@ -216,6 +217,7 @@ async function endOfSeasonCleanup(season) {
   await applyCoachBonuses();
   await giveCpuTeamsRevenue();
   await applyLuxuryTax(season, 999); // Impuesto al lujo: cobro real con roster final, antes del recorte de roster CPU
+  await processSeasonEndRepayments(season); // Pagos de prestamos del Banco: debe ir antes del recorte, que lee budget
 
   const CPU_TARGET_ROSTER = MAX_ROSTER_SIZE;
   const ROOKIE_SLOT_BUFFER = 50000;
@@ -352,6 +354,10 @@ router.post('/advance-day', async (req, res) => {
 
     await runCpuBidding(null, season);
     const auctionsClosed = await closeExpiredAuctions(null, season);
+
+    if (day <= LOAN_WINDOW_END_DAY) {
+      await runCpuLoanPass(season);
+    }
 
     await expireStaleTrades(null, season);
     if (day < TRADE_DEADLINE_DAY) {

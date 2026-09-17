@@ -45,6 +45,20 @@ export default function Navbar() {
           <span>{rep}</span>
           <AlertsBell />
           <Link
+            to="/bank"
+            title="Banco"
+            aria-label="Banco"
+            className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-colors ${
+              location.pathname === '/bank'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white'
+            }`}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2 2 8h20L12 2Zm-8 8v9H3v2h18v-2h-1v-9h-2v9h-3v-9h-2v9h-3v-9H8v9H5v-9H4Z" />
+            </svg>
+          </Link>
+          <Link
             to="/jerseys"
             title="Camisetas"
             aria-label="Camisetas"
