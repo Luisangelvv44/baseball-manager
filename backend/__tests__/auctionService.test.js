@@ -158,7 +158,7 @@ describe('_makeRoomIfNeeded (via closeExpiredAuctions release path)', () => {
     expect(prisma.teamLineup.deleteMany).toHaveBeenCalledWith({ where: { player_id: 55 } });
     expect(prisma.player.update).toHaveBeenCalledWith({
       where: { id: 55 },
-      data: { team_id: null, status: 'free_agent' },
+      data: { team_id: null, last_team_id: cpuTeamId, status: 'free_agent' },
     });
     expect(prisma.team.update).toHaveBeenCalledWith({
       where: { id: cpuTeamId },

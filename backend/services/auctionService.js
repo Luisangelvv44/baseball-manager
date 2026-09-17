@@ -364,7 +364,10 @@ async function releasePlayerWithPenalty(client, teamId, player, { forced = false
   const chargedPenalty = forced ? Math.min(releasePenalty, Math.max(0, budget)) : releasePenalty;
 
   await client.teamLineup.deleteMany({ where: { player_id: player.id } });
-  await client.player.update({ where: { id: player.id }, data: { team_id: null, status: 'free_agent' } });
+  await client.player.update({
+    where: { id: player.id },
+    data: { team_id: null, last_team_id: teamId, status: 'free_agent' },
+  });
 
   if (chargedPenalty > 0) {
     await client.team.update({ where: { id: teamId }, data: { budget: { decrement: chargedPenalty } } });

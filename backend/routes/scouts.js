@@ -4,6 +4,7 @@ const prisma = require('../db/prisma');
 const { USER_TEAM_ID, MAX_MINOR_ROSTER_SIZE } = require('../config');
 const { FIRST_NAMES, LAST_NAMES } = require('../seeders/data/names');
 const { generateScoutedPlayer, randomInt, randomChoice, POSITIONS } = require('../seeders/generators/playerGenerator');
+const { assignAppearance } = require('../services/playerAppearanceService');
 
 const HIRE_COST = 50000;
 const MISSION_DURATION_DAYS = 5;
@@ -174,6 +175,7 @@ router.post('/:id/collect', async (req, res) => {
           level: 'MINOR',
         },
       });
+      await assignAppearance(prisma, created.id);
       prospects.push(created);
       minorRosterCount++;
       budget -= signingBonus;

@@ -2,6 +2,7 @@ const prisma = require('../db/prisma');
 const { USER_TEAM_ID, DRAFT_POOL_SIZE, MARKET_PLAYER_CAP } = require('../config');
 const { FIRST_NAMES, LAST_NAMES } = require('../seeders/data/names');
 const { calculateSalary, calculateGrowthAge, randomDemandFactor, randomInt, randomChoice, POSITIONS } = require('../seeders/generators/playerGenerator');
+const { assignAppearance, syncMissingAppearances } = require('./playerAppearanceService');
 
 function generateProspect(draftId, index) {
   // Earlier picks (lower index) get higher quality prospects
@@ -101,7 +102,7 @@ async function draftPickPlayer(prospect, teamId) {
     });
   }
 
-  return prisma.player.create({
+  const created = await prisma.player.create({
     data: {
       first_name: prospect.name.split(' ')[0],
       last_name: prospect.name.split(' ').slice(1).join(' '),
@@ -118,6 +119,8 @@ async function draftPickPlayer(prospect, teamId) {
       status: 'active',
     },
   });
+  await assignAppearance(prisma, created.id);
+  return created;
 }
 
 // Al cerrar el draft: los prospectos no elegidos regulan el mercado.
@@ -156,6 +159,7 @@ async function finalizeDraft(draftId) {
       status: 'free_agent',
     }));
     await prisma.player.createMany({ data: playersData });
+    await syncMissingAppearances(prisma);
   }
 }
 

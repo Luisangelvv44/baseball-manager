@@ -31,6 +31,8 @@ export const api = {
   getPlayerCareerHistory: (id) => request(`/players/${id}/career-history`),
   promotePlayer: (id) => request(`/players/${id}/promote`, { method: 'POST' }),
   demotePlayer: (id) => request(`/players/${id}/demote`, { method: 'POST' }),
+  searchPlayers: (q) => request(`/players/search?q=${encodeURIComponent(q)}`),
+  getPlayerSprite: (id) => request(`/players/${id}/sprite`),
 
   // Estadio
   getStadium: () => request('/stadium'),

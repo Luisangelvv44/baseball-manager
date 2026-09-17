@@ -15,6 +15,7 @@ const {
   POSITIONS,
   FIELD_POSITIONS,
 } = require('../seeders/generators/playerGenerator');
+const { syncMissingAppearances } = require('../services/playerAppearanceService');
 
 const TARGET_ROSTER = 16;
 
@@ -109,6 +110,7 @@ async function main() {
     totalAdded += rookies.length;
   }
 
+  await syncMissingAppearances(prisma);
   console.log(`\nDone. Total rookies added: ${totalAdded} (user team id=${USER_TEAM_ID} skipped)`);
 }
 

@@ -7,6 +7,7 @@ const {
   randomChoice,
 } = require('./generators/playerGenerator');
 const { createAuctionsForFreeAgents } = require('../services/auctionService');
+const { syncMissingAppearances } = require('../services/playerAppearanceService');
 
 const STAR_PLAYERS = [
   // Bueno (80-89)
@@ -60,6 +61,7 @@ async function seedStarPlayers() {
   });
 
   await prisma.player.createMany({ data: players });
+  await syncMissingAppearances(prisma);
   console.log(`${players.length} jugadores creados.`);
 
   const season = await prisma.season.findFirst({ where: { status: 'active' } });

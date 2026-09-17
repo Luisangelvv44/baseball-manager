@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTeam } from '../context/TeamContext.jsx';
 import TeamBadge from './TeamBadge.jsx';
 import AlertsBell from './AlertsBell.jsx';
+import PlayerSearch from './PlayerSearch.jsx';
 
 const LINKS = [
   { to: '/', label: 'Dashboard' },
@@ -44,6 +45,7 @@ export default function Navbar() {
           <span>{fans}</span>
           <span>{rep}</span>
           <AlertsBell />
+          <PlayerSearch />
           <Link
             to="/bank"
             title="Banco"

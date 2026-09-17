@@ -13,6 +13,7 @@ const {
   TODDLER_PROGRAM_IMPROVE_PROB_MIN,
 } = require('../config');
 const { generatePlayer, calculateSalary, randomInt, POSITIONS } = require('../seeders/generators/playerGenerator');
+const { syncMissingAppearances } = require('./playerAppearanceService');
 
 // Probabilidad de que un intento de mejora (que cuesta TODDLER_PROGRAM_SKILL_COST se
 // acierte o no) suba +1 de skill, para una temporada dada (0-indexada): 0.80 -> 0.35.
@@ -46,6 +47,7 @@ async function generateToddlerCycle(client, cycleNumber) {
     toddlers.push({ ...base, level: 'MINOR', toddler_program_id: program.id });
   }
   await client.player.createMany({ data: toddlers });
+  await syncMissingAppearances(client);
 
   return program;
 }

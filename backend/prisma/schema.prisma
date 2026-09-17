@@ -34,6 +34,7 @@ model Team {
 
   division              Division?            @relation(fields: [division_id], references: [id])
   players               Player[]
+  former_players        Player[]             @relation("PlayerLastTeam")
   finances              Finance[]
   scouts                Scout[]
   coaches               Coach[]
@@ -75,6 +76,7 @@ model Player {
   rookie_contract          Boolean   @default(false)
   rookie_seasons           Int       @default(0)
   team_id                  Int?
+  last_team_id             Int?
   status                   String    @default("active") @db.VarChar(20)
   injury_days_remaining    Int       @default(0)
   level                    String    @default("MAJOR") @db.VarChar(10)
@@ -89,7 +91,9 @@ model Player {
   career_stats_updated_at  DateTime?
 
   team                   Team?                @relation(fields: [team_id], references: [id])
+  last_team              Team?                @relation("PlayerLastTeam", fields: [last_team_id], references: [id])
   coach                  Coach?
+  appearance             PlayerAppearance?
   auctions               FreeAgentAuction[]
   game_lineups           GameLineup[]
   team_lineups           TeamLineup[]
@@ -101,9 +105,25 @@ model Player {
   player_season_records  PlayerSeasonRecord[]
 
   @@index([team_id])
+  @@index([last_team_id])
   @@index([status])
   @@index([team_id, level])
   @@index([toddler_program_id])
+}
+
+// Apariencia visual (PlayerSprite): IDs de los componentes elegidos al crear el
+// jugador (cabeza/ojos/rostro/tono de piel), 1:1 con Player. El uniforme no vive
+// aca: se resuelve en el momento a partir de team_id / last_team_id / status.
+model PlayerAppearance {
+  player_id   Int @id
+  head_number Int
+  eye_type    Int
+  face_type   Int
+  skin_tone   Int
+
+  player Player @relation(fields: [player_id], references: [id], onDelete: Cascade)
+
+  @@map("player_appearances")
 }
 
 model Season {

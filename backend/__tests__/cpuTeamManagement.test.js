@@ -85,7 +85,7 @@ describe('fillMissingPositions', () => {
     // Release: penalty = 100000 * 0.30 * 2 = 60000
     expect(prisma.player.update).toHaveBeenCalledWith({
       where: { id: 99 },
-      data: { team_id: null, status: 'free_agent' },
+      data: { team_id: null, last_team_id: cpuTeamId, status: 'free_agent' },
     });
     expect(prisma.team.update).toHaveBeenCalledWith({
       where: { id: cpuTeamId },
@@ -146,7 +146,7 @@ describe('fillMissingPositions', () => {
     // Player is still released...
     expect(prisma.player.update).toHaveBeenCalledWith({
       where: { id: 99 },
-      data: { team_id: null, status: 'free_agent' },
+      data: { team_id: null, last_team_id: cpuTeamId, status: 'free_agent' },
     });
     // ...but only the affordable slice of the penalty is charged (budget floors at 0, never negative)
     expect(prisma.team.update).toHaveBeenCalledWith({
@@ -183,7 +183,7 @@ describe('fillMissingPositions', () => {
     expect(prisma.player.findFirst).toHaveBeenCalledTimes(2);
     expect(prisma.player.update).toHaveBeenCalledWith({
       where: { id: 77 },
-      data: { team_id: null, status: 'free_agent' },
+      data: { team_id: null, last_team_id: cpuTeamId, status: 'free_agent' },
     });
     // penalty = 20000 * 0.30 * 3 = 18000, fully covered by budget
     expect(prisma.team.update).toHaveBeenCalledWith({

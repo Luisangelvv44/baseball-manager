@@ -200,15 +200,18 @@ async function endOfSeasonCleanup(season) {
 
   const expiringPlayers = await prisma.player.findMany({
     where: { status: 'active', contract_years_remaining: { lte: 0 } },
-    select: { id: true },
+    select: { id: true, team_id: true },
   });
   if (expiringPlayers.length > 0) {
     await prisma.teamLineup.deleteMany({ where: { player_id: { in: expiringPlayers.map((p) => p.id) } } });
+    for (const p of expiringPlayers) {
+      await prisma.player.update({
+        where: { id: p.id },
+        data: { status: 'free_agent', team_id: null, last_team_id: p.team_id },
+      });
+    }
   }
-  const expired = await prisma.player.updateMany({
-    where: { status: 'active', contract_years_remaining: { lte: 0 } },
-    data: { status: 'free_agent', team_id: null },
-  });
+  const expired = { count: expiringPlayers.length };
 
   await prisma.team.updateMany({ data: { wins: 0, losses: 0, runs_scored: 0, runs_allowed: 0 } });
   await prisma.player.updateMany({ data: { age: { increment: 1 } } });
@@ -234,7 +237,10 @@ async function endOfSeasonCleanup(season) {
     for (const player of cpuRoster) {
       const buffer = Math.max(0, CPU_TARGET_ROSTER - rosterSize) * ROOKIE_SLOT_BUFFER;
       if (budget >= totalSalary + buffer) break;
-      await prisma.player.update({ where: { id: player.id }, data: { status: 'free_agent', team_id: null } });
+      await prisma.player.update({
+        where: { id: player.id },
+        data: { status: 'free_agent', team_id: null, last_team_id: cpuTeam.id },
+      });
       totalSalary -= Number(player.salary);
       rosterSize--;
     }

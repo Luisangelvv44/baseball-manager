@@ -16,6 +16,7 @@ const prismaMock = {
   season: createModel(),
   team: createModel(),
   player: createModel(),
+  playerAppearance: createModel(),
   gameSchedule: createModel(),
   finance: createModel(),
   freeAgentAuction: createModel(),

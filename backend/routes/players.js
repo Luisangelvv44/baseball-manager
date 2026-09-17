@@ -5,6 +5,109 @@ const { USER_TEAM_ID, MAX_ROSTER_SIZE, MAX_MINOR_ROSTER_SIZE } = require('../con
 const { calculateSalary } = require('../seeders/generators/playerGenerator');
 const { createNews } = require('../services/newsService');
 const { computeSeasonStats, getPlayerCareerHistory } = require('../services/statsService');
+const { assignAppearance } = require('../services/playerAppearanceService');
+
+const SEARCH_RESULT_LIMIT = 20;
+
+// Nombre del equipo a usar para el uniforme del sprite: el equipo actual si tiene uno, si
+// no el ultimo equipo conocido solo cuando esta retirado (los free agents siempre van en
+// blanco/MLB, tengan o no last_team_id). null => el frontend usa el uniforme blanco MLB.
+function resolveSpriteTeamName(player) {
+  if (player.team) return player.team.name;
+  if (player.status === 'retired' && player.last_team) return player.last_team.name;
+  return null;
+}
+
+// GET /api/players/search?q=texto -> busca jugadores por nombre (activos, agentes libres o
+// retirados) para el buscador del header. Devuelve datos livianos, sin apariencia/SVG.
+router.get('/search', async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (q.length < 2) return res.json({ players: [] });
+
+  try {
+    const terms = q.split(/\s+/).filter(Boolean);
+    const players = await prisma.player.findMany({
+      where: {
+        AND: terms.map((term) => ({
+          OR: [
+            { first_name: { contains: term, mode: 'insensitive' } },
+            { last_name: { contains: term, mode: 'insensitive' } },
+          ],
+        })),
+      },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        age: true,
+        position: true,
+        status: true,
+        team: { select: { name: true } },
+        last_team: { select: { name: true } },
+      },
+      orderBy: [{ last_name: 'asc' }, { first_name: 'asc' }],
+      take: SEARCH_RESULT_LIMIT,
+    });
+
+    res.json({
+      players: players.map((p) => ({
+        id: p.id,
+        first_name: p.first_name,
+        last_name: p.last_name,
+        age: p.age,
+        position: p.position,
+        status: p.status,
+        team_name: p.team?.name ?? null,
+        last_team_name: p.status === 'retired' ? (p.last_team?.name ?? null) : null,
+      })),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al buscar jugadores' });
+  }
+});
+
+// GET /api/players/:id/sprite -> datos para renderizar el PlayerSprite (apariencia +
+// nombre del equipo cuyo uniforme corresponde), cargado solo al abrir el SVG.
+router.get('/:id/sprite', async (req, res) => {
+  const playerId = Number(req.params.id);
+  try {
+    const player = await prisma.player.findUnique({
+      where: { id: playerId },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        position: true,
+        status: true,
+        team: { select: { name: true } },
+        last_team: { select: { name: true } },
+        appearance: true,
+      },
+    });
+    if (!player) return res.status(404).json({ error: 'Jugador no encontrado' });
+
+    const appearance = player.appearance ?? (await assignAppearance(prisma, player.id));
+
+    res.json({
+      id: player.id,
+      first_name: player.first_name,
+      last_name: player.last_name,
+      position: player.position,
+      status: player.status,
+      sprite_team_name: resolveSpriteTeamName(player),
+      appearance: {
+        head_number: appearance.head_number,
+        eye_type: appearance.eye_type,
+        face_type: appearance.face_type,
+        skin_tone: appearance.skin_tone,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener la apariencia del jugador' });
+  }
+});
 
 // GET /api/players/team-stats -> estadísticas de la temporada actual para todos los jugadores del usuario
 router.get('/team-stats', async (req, res) => {

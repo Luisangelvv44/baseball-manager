@@ -1,6 +1,7 @@
 const prisma = require('../db/prisma');
 const { generatePlayer, POSITIONS, randomInt, calculateSalary } = require('../seeders/generators/playerGenerator');
 const { releasePlayerWithPenalty, findWeakestRosterPlayer, RELEASE_PENALTY_RATE } = require('./auctionService');
+const { assignAppearance } = require('./playerAppearanceService');
 const { CPU_REVENUE_PER_FAN_MIN, CPU_REVENUE_PER_FAN_MAX, MAX_ROSTER_SIZE } = require('../config');
 
 async function giveCpuTeamsRevenue() {
@@ -46,7 +47,8 @@ async function createReplacement(teamId, position) {
     team_id: teamId,
     status: 'active',
   });
-  await prisma.player.create({ data: { ...replacement, level: 'MAJOR' } });
+  const created = await prisma.player.create({ data: { ...replacement, level: 'MAJOR' } });
+  await assignAppearance(prisma, created.id);
 }
 
 // De las posiciones con excedente MAJOR (>1), de mayor a menor excedente, elige a quien cortar:
@@ -215,7 +217,9 @@ async function createInjuryRookie(teamId, position) {
     team_id: teamId,
     status: 'active',
   });
-  return prisma.player.create({ data: { ...rookie, level: 'MAJOR' } });
+  const created = await prisma.player.create({ data: { ...rookie, level: 'MAJOR' } });
+  await assignAppearance(prisma, created.id);
+  return created;
 }
 
 // Red de seguridad post-lesion (solo equipos CPU, nunca el del usuario). Recibe el array

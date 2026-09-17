@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import TeamBadge from './TeamBadge.jsx';
+import PlayerSpriteLoader from './PlayerSpriteLoader.jsx';
 
 export default function PlayerCareerModal({ playerId, onClose }) {
   const [data, setData] = useState(null);
@@ -32,8 +33,13 @@ export default function PlayerCareerModal({ playerId, onClose }) {
 
         {data && (
           <>
-            <h3 className="font-bold text-lg mb-1">{data.player.first_name} {data.player.last_name}</h3>
-            <p className="text-sm text-gray-500 mb-4">{data.player.position}</p>
+            <div className="flex items-start gap-4 mb-4">
+              <PlayerSpriteLoader playerId={data.player.id} width={110} />
+              <div>
+                <h3 className="font-bold text-lg mb-1">{data.player.first_name} {data.player.last_name}</h3>
+                <p className="text-sm text-gray-500">{data.player.position}</p>
+              </div>
+            </div>
 
             {seasons.length === 0 ? (
               <p className="text-center text-gray-500 text-sm py-6">
