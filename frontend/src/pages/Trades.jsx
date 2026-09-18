@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useTeam } from '../context/TeamContext.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
+import Pagination from '../components/Pagination.jsx';
+
+const HISTORY_PAGE_SIZE = 3;
 
 const STATUS_LABELS = {
   pending: 'Pendiente',
@@ -312,21 +315,29 @@ export default function Trades() {
   const [received, setReceived] = useState([]);
   const [sent, setSent] = useState([]);
   const [history, setHistory] = useState([]);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
   const [message, setMessage] = useState('');
 
+  async function loadHistory(page = 1) {
+    const data = await api.getTradeHistory({ page, pageSize: HISTORY_PAGE_SIZE });
+    setHistory(data.trades);
+    setHistoryPage(data.page);
+    setHistoryTotalPages(data.totalPages);
+  }
+
   async function load() {
-    const [myTeamData, teams, receivedTrades, sentTrades, historyTrades] = await Promise.all([
+    const [myTeamData, teams, receivedTrades, sentTrades] = await Promise.all([
       api.getMyTeam(),
       api.getTeams(),
       api.getReceivedTrades(),
       api.getSentTrades(),
-      api.getTradeHistory(),
+      loadHistory(1),
     ]);
     setMyPlayers(myTeamData.players.filter((p) => p.level !== 'MINOR'));
     setCpuTeams(teams.filter((t) => !t.is_user_team));
     setReceived(receivedTrades);
     setSent(sentTrades.filter((t) => t.status === 'pending'));
-    setHistory(historyTrades);
   }
 
   useEffect(() => {
@@ -411,6 +422,7 @@ export default function Trades() {
             {history.map((t) => (
               <TradeCard key={t.id} trade={t} myTeamId={myTeamId} onAccept={handleAccept} onReject={handleReject} onCancel={handleCancel} />
             ))}
+            <Pagination page={historyPage} totalPages={historyTotalPages} onPageChange={loadHistory} />
           </div>
         )}
       </div>

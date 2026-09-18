@@ -135,7 +135,14 @@ export const api = {
   // Traspasos
   getSentTrades: () => request('/trades/sent'),
   getReceivedTrades: () => request('/trades/received'),
-  getTradeHistory: () => request('/trades/history'),
+  getTradeHistory: (params = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, v);
+    });
+    const s = qs.toString();
+    return request(s ? `/trades/history?${s}` : '/trades/history');
+  },
   proposeTrade: (recipientTeamId, offeredPlayerIds, requestedPlayerIds, cashOffered, cashRequested) =>
     request('/trades', {
       method: 'POST',

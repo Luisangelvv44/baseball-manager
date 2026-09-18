@@ -42,18 +42,33 @@ router.get('/received', async (req, res) => {
   }
 });
 
-// GET /api/trades/history -> traspasos resueltos (no pendientes) que involucran al usuario
+// GET /api/trades/history -> traspasos resueltos (no pendientes) que involucran al usuario, paginado
 router.get('/history', async (req, res) => {
   try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 3));
+
+    const where = {
+      status: { not: 'pending' },
+      OR: [{ proposer_team_id: USER_TEAM_ID }, { recipient_team_id: USER_TEAM_ID }],
+    };
+
+    const total = await prisma.trade.count({ where });
     const trades = await prisma.trade.findMany({
-      where: {
-        status: { not: 'pending' },
-        OR: [{ proposer_team_id: USER_TEAM_ID }, { recipient_team_id: USER_TEAM_ID }],
-      },
+      where,
       include: tradeInclude(),
       orderBy: { created_at: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     });
-    res.json(trades);
+
+    res.json({
+      trades,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener historial de traspasos' });
