@@ -3,6 +3,7 @@ export const SKILL_TIERS = {
   REGULAR: 'Regular',
   BUENO: 'Bueno',
   ESTRELLA_EN_POTENCIA: 'Estrella en potencia',
+  ESTRELLA_EN_DESCENSO: 'Estrella en descenso',
   SUPERESTRELLA: 'Superestrella',
   LEYENDA: 'Leyenda',
 };
@@ -23,14 +24,18 @@ export const SKILL_TIER_COLORS = {
   [SKILL_TIERS.REGULAR]: 'bg-slate-300 text-slate-800',
   [SKILL_TIERS.BUENO]: 'bg-green-600 text-white',
   [SKILL_TIERS.ESTRELLA_EN_POTENCIA]: 'bg-blue-600 text-white',
+  [SKILL_TIERS.ESTRELLA_EN_DESCENSO]: 'bg-orange-600 text-white',
   [SKILL_TIERS.SUPERESTRELLA]: 'bg-purple-600 text-white',
   [SKILL_TIERS.LEYENDA]: 'bg-yellow-400 text-yellow-900',
 };
 
-export function getSkillTier(skill) {
+export function getSkillTier(skill, age, growthAge) {
   if (skill >= SKILL_TIER_THRESHOLDS.LEYENDA) return SKILL_TIERS.LEYENDA;
   if (skill >= SKILL_TIER_THRESHOLDS.SUPERESTRELLA) return SKILL_TIERS.SUPERESTRELLA;
-  if (skill >= SKILL_TIER_THRESHOLDS.ESTRELLA_EN_POTENCIA) return SKILL_TIERS.ESTRELLA_EN_POTENCIA;
+  if (skill >= SKILL_TIER_THRESHOLDS.ESTRELLA_EN_POTENCIA) {
+    if (age != null && growthAge != null && age >= growthAge) return SKILL_TIERS.ESTRELLA_EN_DESCENSO;
+    return SKILL_TIERS.ESTRELLA_EN_POTENCIA;
+  }
   if (skill >= SKILL_TIER_THRESHOLDS.BUENO) return SKILL_TIERS.BUENO;
   if (skill >= SKILL_TIER_THRESHOLDS.REGULAR) return SKILL_TIERS.REGULAR;
   return SKILL_TIERS.PROMEDIO;

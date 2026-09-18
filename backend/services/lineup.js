@@ -4,7 +4,7 @@ const { FIELD_POSITIONS } = require('../seeders/generators/playerGenerator');
 async function getSavedLineup(teamId, gameRow) {
   const rows = await prisma.teamLineup.findMany({
     where: { team_id: teamId },
-    include: { player: { select: { id: true, first_name: true, last_name: true, current_skill: true, position: true, team_id: true, injury_days_remaining: true, level: true } } },
+    include: { player: { select: { id: true, first_name: true, last_name: true, current_skill: true, position: true, team_id: true, injury_days_remaining: true, level: true, age: true, growth_age: true } } },
   });
 
   if (rows.length === 0) return null;
@@ -44,6 +44,8 @@ async function getSavedLineup(teamId, gameRow) {
       current_skill: selectedPitcher.current_skill,
       first_name: selectedPitcher.first_name,
       last_name: selectedPitcher.last_name,
+      age: selectedPitcher.age,
+      growth_age: selectedPitcher.growth_age,
     },
     players: batterRows.slice(0, 9).map((r) => ({
       id: r.player.id,
@@ -51,6 +53,8 @@ async function getSavedLineup(teamId, gameRow) {
       position: r.player.position,
       first_name: r.player.first_name,
       last_name: r.player.last_name,
+      age: r.player.age,
+      growth_age: r.player.growth_age,
     })),
   };
 }
@@ -58,7 +62,7 @@ async function getSavedLineup(teamId, gameRow) {
 async function autoGenerateLineup(teamId) {
   const players = await prisma.player.findMany({
     where: { team_id: teamId, injury_days_remaining: 0, level: 'MAJOR' },
-    select: { id: true, first_name: true, last_name: true, position: true, current_skill: true },
+    select: { id: true, first_name: true, last_name: true, position: true, current_skill: true, age: true, growth_age: true },
   });
 
   const pitchers = players
@@ -101,6 +105,8 @@ async function autoGenerateLineup(teamId) {
       current_skill: pitcher.current_skill,
       first_name: pitcher.first_name,
       last_name: pitcher.last_name,
+      age: pitcher.age,
+      growth_age: pitcher.growth_age,
     },
     players: battingOrder.slice(0, 9).map((p) => ({
       id: p.id,
@@ -108,6 +114,8 @@ async function autoGenerateLineup(teamId) {
       position: p.assigned_position,
       first_name: p.first_name,
       last_name: p.last_name,
+      age: p.age,
+      growth_age: p.growth_age,
     })),
   };
 }

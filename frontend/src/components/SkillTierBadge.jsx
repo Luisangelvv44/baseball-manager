@@ -1,8 +1,8 @@
 import { getSkillTier, SKILL_TIER_COLORS } from '../utils/skillTier.js';
 
-export default function SkillTierBadge({ skill, className = '' }) {
+export default function SkillTierBadge({ skill, age, growthAge, className = '' }) {
   if (skill == null) return null;
-  const tier = getSkillTier(skill);
+  const tier = getSkillTier(skill, age, growthAge);
   return (
     <span className={`text-xs rounded-full px-2 py-0.5 font-semibold ${SKILL_TIER_COLORS[tier]} ${className}`}>
       {tier}

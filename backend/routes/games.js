@@ -21,6 +21,8 @@ function formatSavedLineup(rows, teamId) {
           id: pitcherRow.player.id,
           name: `${pitcherRow.player.first_name} ${pitcherRow.player.last_name}`,
           current_skill: pitcherRow.player.current_skill,
+          age: pitcherRow.player.age,
+          growth_age: pitcherRow.player.growth_age,
         }
       : null,
     batters: batterRows.map((r) => ({
@@ -28,6 +30,8 @@ function formatSavedLineup(rows, teamId) {
       name: `${r.player.first_name} ${r.player.last_name}`,
       position: r.player.position,
       current_skill: r.player.current_skill,
+      age: r.player.age,
+      growth_age: r.player.growth_age,
     })),
   };
 }
@@ -39,12 +43,16 @@ function formatPreviewLineup(lineup) {
       id: lineup.pitcher.id,
       name: `${lineup.pitcher.first_name} ${lineup.pitcher.last_name}`,
       current_skill: lineup.pitcher.current_skill,
+      age: lineup.pitcher.age,
+      growth_age: lineup.pitcher.growth_age,
     },
     batters: lineup.players.map((p) => ({
       id: p.id,
       name: `${p.first_name} ${p.last_name}`,
       position: p.position,
       current_skill: p.current_skill,
+      age: p.age,
+      growth_age: p.growth_age,
     })),
   };
 }
@@ -67,7 +75,7 @@ router.get('/:id', async (req, res) => {
     if (game.status === 'finished') {
       const lineupRows = await prisma.gameLineup.findMany({
         where: { game_id: game.id },
-        include: { player: { select: { id: true, first_name: true, last_name: true, position: true, current_skill: true } } },
+        include: { player: { select: { id: true, first_name: true, last_name: true, position: true, current_skill: true, age: true, growth_age: true } } },
       });
       homeLineup = formatSavedLineup(lineupRows, game.home_team_id);
       awayLineup = formatSavedLineup(lineupRows, game.away_team_id);

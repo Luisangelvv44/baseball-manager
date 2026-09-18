@@ -64,7 +64,7 @@ function AuctionCard({ auction, season, onBidPlaced, rosterFull }) {
         <div className="flex flex-col items-end gap-1 shrink-0">
           <div className="flex items-center gap-1">
             <FavoriteButton playerId={p.id} />
-            <SkillTierBadge skill={p.current_skill} />
+            <SkillTierBadge skill={p.current_skill} age={p.age} growthAge={p.growth_age} />
           </div>
           <span className="text-xs bg-amber-100 text-amber-800 rounded-full px-2 py-0.5 font-semibold whitespace-nowrap">
             Coef. {auction.growth_coefficient.toFixed(2)}

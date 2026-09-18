@@ -241,7 +241,7 @@ function LineupCard({ team, lineup }) {
                 <td className="px-4 py-2 text-right">
                   <span className="inline-flex items-center gap-1.5 justify-end">
                     <span className="font-display font-bold">{p.current_skill}</span>
-                    <SkillTierBadge skill={p.current_skill} className="hidden sm:inline-block" />
+                    <SkillTierBadge skill={p.current_skill} age={p.age} growthAge={p.growth_age} className="hidden sm:inline-block" />
                   </span>
                 </td>
               </tr>

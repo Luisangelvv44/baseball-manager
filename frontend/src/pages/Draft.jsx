@@ -175,7 +175,7 @@ export default function Draft() {
                       <td className="p-2">
                         <div className="flex items-center gap-1.5">
                           <span className="font-semibold">{p.current_skill}</span>
-                          <SkillTierBadge skill={p.current_skill} />
+                          <SkillTierBadge skill={p.current_skill} age={p.age} growthAge={p.growth_age} />
                         </div>
                       </td>
                       <td className="p-2">
