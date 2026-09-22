@@ -6,6 +6,8 @@ export default function Scouts() {
   const { refreshTeam } = useTeam();
   const [scouts, setScouts] = useState([]);
   const [season, setSeason] = useState(null);
+  const [tiers, setTiers] = useState([]);
+  const [selectedTier, setSelectedTier] = useState('basico');
   const [budgets, setBudgets] = useState({});
   const [positions, setPositions] = useState({});
   const [message, setMessage] = useState('');
@@ -13,9 +15,10 @@ export default function Scouts() {
   const POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
 
   async function load() {
-    const [sc, se] = await Promise.all([api.getScouts(), api.getSeason()]);
+    const [sc, se, ti] = await Promise.all([api.getScouts(), api.getSeason(), api.getScoutTiers()]);
     setScouts(sc);
     setSeason(se);
+    setTiers(ti);
   }
 
   useEffect(() => {
@@ -25,7 +28,7 @@ export default function Scouts() {
   async function handleHire() {
     setMessage('');
     try {
-      const res = await api.hireScout();
+      const res = await api.hireScout(selectedTier);
       setMessage(`Scout contratado: ${res.scout.name} (skill ${res.scout.skill_level}).`);
       await Promise.all([load(), refreshTeam()]);
     } catch (err) {
@@ -46,6 +49,17 @@ export default function Scouts() {
       const posLabel = targetPosition ? ` buscando ${targetPosition}` : '';
       setMessage(`Mision asignada${posLabel}. Termina en el dia ${res.missionEndDay}.`);
       await Promise.all([load(), refreshTeam()]);
+    } catch (err) {
+      setMessage(err.message);
+    }
+  }
+
+  async function handleFire(id, name) {
+    setMessage('');
+    try {
+      await api.fireScout(id);
+      setMessage(`${name} ha sido despedido.`);
+      await load();
     } catch (err) {
       setMessage(err.message);
     }
@@ -74,9 +88,29 @@ export default function Scouts() {
     <div className="space-y-4">
       <h2 className="text-xl font-bold">Scouts</h2>
 
-      <button onClick={handleHire} className="bg-green-600 text-white px-4 py-2 rounded font-semibold hover:bg-green-700">
-        Contratar Scout ($50,000)
-      </button>
+      {tiers.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4 space-y-3">
+          <h3 className="font-semibold text-sm text-gray-700">Nivel del scout a contratar</h3>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            {tiers.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setSelectedTier(t.id)}
+                className={`text-left border rounded p-3 hover:border-blue-400 ${
+                  selectedTier === t.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                }`}
+              >
+                <div className="font-semibold">{t.label}</div>
+                <div className="text-xs text-gray-500">Skill {t.skillMin}-{t.skillMax}</div>
+                <div className="text-sm font-medium mt-1">${t.cost.toLocaleString()}</div>
+              </button>
+            ))}
+          </div>
+          <button onClick={handleHire} className="bg-green-600 text-white px-4 py-2 rounded font-semibold hover:bg-green-700">
+            Contratar Scout
+          </button>
+        </div>
+      )}
 
       {message && <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded p-3 text-sm">{message}</div>}
 
@@ -86,7 +120,17 @@ export default function Scouts() {
         <div className="grid md:grid-cols-2 gap-4">
           {scouts.map((s) => (
             <div key={s.id} className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-bold">{s.name}</h3>
+              <div className="flex items-start justify-between">
+                <h3 className="font-bold">{s.name}</h3>
+                {!s.active_mission && (
+                  <button
+                    onClick={() => handleFire(s.id, s.name)}
+                    className="text-xs text-red-500 hover:text-red-700"
+                  >
+                    Despedir
+                  </button>
+                )}
+              </div>
               <p className="text-sm text-gray-600 mb-2">Nivel de scout: {s.skill_level}</p>
 
               {!s.active_mission ? (

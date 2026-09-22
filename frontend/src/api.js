@@ -64,10 +64,12 @@ export const api = {
 
   // Scouts
   getScouts: () => request('/scouts'),
-  hireScout: () => request('/scouts', { method: 'POST' }),
+  getScoutTiers: () => request('/scouts/tiers'),
+  hireScout: (tier = 'basico') => request('/scouts', { method: 'POST', body: JSON.stringify({ tier }) }),
   assignScout: (id, budget, targetPosition = null) =>
     request(`/scouts/${id}/assign`, { method: 'POST', body: JSON.stringify({ budget, ...(targetPosition ? { target_position: targetPosition } : {}) }) }),
   collectScout: (id) => request(`/scouts/${id}/collect`, { method: 'POST' }),
+  fireScout: (id) => request(`/scouts/${id}/fire`, { method: 'DELETE' }),
 
   // Lineup
   getLineup: () => request('/lineup'),

@@ -6,8 +6,17 @@ const { FIRST_NAMES, LAST_NAMES } = require('../seeders/data/names');
 const { generateScoutedPlayer, randomInt, randomChoice, POSITIONS } = require('../seeders/generators/playerGenerator');
 const { assignAppearance } = require('../services/playerAppearanceService');
 
-const HIRE_COST = 50000;
 const MISSION_DURATION_DAYS = 5;
+
+// Niveles de contratacion: a mayor rango de skill_level, mayor costo de contratacion.
+// El id es lo que el frontend envia en POST /api/scouts { tier }.
+const SCOUT_HIRE_TIERS = [
+  { id: 'basico', label: 'Basico', skillMin: 40, skillMax: 55, cost: 50_000 },
+  { id: 'intermedio', label: 'Intermedio', skillMin: 56, skillMax: 70, cost: 200_000 },
+  { id: 'avanzado', label: 'Avanzado', skillMin: 71, skillMax: 85, cost: 600_000 },
+  { id: 'elite', label: 'Elite', skillMin: 86, skillMax: 99, cost: 1_500_000 },
+];
+const DEFAULT_TIER_ID = 'basico';
 
 // GET /api/scouts -> scouts del equipo
 router.get('/', async (req, res) => {
@@ -23,17 +32,26 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/scouts -> contrata un nuevo scout (costo fijo)
+// GET /api/scouts/tiers -> niveles de contratacion disponibles (costo + rango de skill)
+router.get('/tiers', (req, res) => {
+  res.json(SCOUT_HIRE_TIERS);
+});
+
+// POST /api/scouts { tier? } -> contrata un nuevo scout del nivel indicado (basico por defecto)
 router.post('/', async (req, res) => {
   try {
+    const tierId = req.body.tier || DEFAULT_TIER_ID;
+    const tier = SCOUT_HIRE_TIERS.find((t) => t.id === tierId);
+    if (!tier) return res.status(400).json({ error: 'Nivel de scout invalido' });
+
     const team = await prisma.team.findUnique({ where: { id: USER_TEAM_ID } });
 
-    if (Number(team.budget) < HIRE_COST) {
-      return res.status(400).json({ error: 'Presupuesto insuficiente', cost: HIRE_COST });
+    if (Number(team.budget) < tier.cost) {
+      return res.status(400).json({ error: 'Presupuesto insuficiente', cost: tier.cost });
     }
 
     const name = `${randomChoice(FIRST_NAMES)} ${randomChoice(LAST_NAMES)}`;
-    const skillLevel = randomInt(40, 80);
+    const skillLevel = randomInt(tier.skillMin, tier.skillMax);
 
     const scout = await prisma.scout.create({
       data: { team_id: USER_TEAM_ID, name, skill_level: skillLevel, budget_assigned: 0, active_mission: false },
@@ -41,7 +59,7 @@ router.post('/', async (req, res) => {
 
     await prisma.team.update({
       where: { id: USER_TEAM_ID },
-      data: { budget: { decrement: HIRE_COST } },
+      data: { budget: { decrement: tier.cost } },
     });
 
     const season = await prisma.season.findFirst({ where: { status: 'active' } });
@@ -52,8 +70,8 @@ router.post('/', async (req, res) => {
         team_id: USER_TEAM_ID,
         season_day: day,
         type: 'scouting',
-        amount: -HIRE_COST,
-        description: `Contratacion de scout: ${name}`,
+        amount: -tier.cost,
+        description: `Contratacion de scout (${tier.label}): ${name}`,
       },
     });
 
@@ -149,7 +167,7 @@ router.post('/:id/collect', async (req, res) => {
     const prospects = [];
     let skipped = 0;
     for (let i = 0; i < numProspects; i++) {
-      const p = generateScoutedPlayer(scout.skill_level, scout.target_position || null);
+      const p = generateScoutedPlayer(scout.skill_level, Number(scout.budget_assigned), scout.target_position || null);
       const signingBonus = Math.round(p.salary * 0.1);
 
       if (minorRosterCount >= MAX_MINOR_ROSTER_SIZE || budget < signingBonus) {
@@ -206,6 +224,25 @@ router.post('/:id/collect', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al recolectar prospectos' });
+  }
+});
+
+// DELETE /api/scouts/:id/fire -> despide un scout
+router.delete('/:id/fire', async (req, res) => {
+  const scoutId = Number(req.params.id);
+  try {
+    const scout = await prisma.scout.findFirst({ where: { id: scoutId, team_id: USER_TEAM_ID } });
+    if (!scout) return res.status(404).json({ error: 'Scout no encontrado' });
+
+    if (scout.active_mission) {
+      return res.status(400).json({ error: 'No puedes despedir un scout con una mision activa. Espera a que termine y recolecta los prospectos primero.' });
+    }
+
+    await prisma.scout.delete({ where: { id: scoutId } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al despedir scout' });
   }
 });
 

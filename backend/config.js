@@ -71,4 +71,15 @@ module.exports = {
   LOAN_NEWS_LARGE_THRESHOLD_RATIO: 0.75, // prestamo aprobado >= este % de SEC -> genera noticia
   BANK_INITIAL_CAPITAL: 300_000_000,
   BANK_BASE_INTEREST_RATE: 0.08,
+
+  // ----- Scouting: efecto del presupuesto de mision en calidad de prospectos (ver seeders/generators/playerGenerator.js) -----
+  SCOUT_BUDGET_FACTOR_CAP_AMOUNT: 6_000_000, // presupuesto en el que el factor llega a su maximo; mas alla de esto, sin beneficio extra
+  SCOUT_BUDGET_FACTOR_MAX: 3, // valor maximo del factor de presupuesto
+  SCOUT_BUDGET_FACTOR_EXPONENT: 2.5, // >1 = crecimiento acelerado (lento al principio, rapido cerca del tope)
+  SCOUT_BUDGET_POTENTIAL_FLOOR_BONUS_MAX: 30, // puntos que suma al piso de potencial con presupuesto tope (factor=3)
+  SCOUT_BUDGET_POTENTIAL_FLOOR_CAP: 95, // piso de potencial nunca supera este valor, sin importar skill+presupuesto
+  SCOUT_BUDGET_POTENTIAL_CEILING_BONUS_MAX: 24, // puntos que suma al techo de potencial con presupuesto tope (ya limitado a 99)
+  SCOUT_BUDGET_AGE_REROLL_MAX_PROB: 0.85, // probabilidad de re-tirar edad a 17-18 con presupuesto tope
+  SCOUT_BUDGET_SKILL_MIN_BONUS_MAX: 55, // puntos que suma al piso de current_skill inicial con presupuesto tope (15 -> 70)
+  SCOUT_BUDGET_SKILL_MAX_BONUS_MAX: 50, // puntos que suma al techo de current_skill inicial con presupuesto tope (35 -> 85)
 };
