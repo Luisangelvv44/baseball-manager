@@ -24,11 +24,26 @@ npx prisma migrate dev    # Apply migrations (from backend/)
 npx prisma studio         # GUI for DB inspection
 ```
 
-No test suite is configured.
+### Tests (run from `backend/`)
+```
+npx jest    # Backend Jest suite (backend/__tests__/), Prisma mocked via db/__mocks__/prisma.js
+```
+Always run this after backend changes and make sure it passes before considering the work done.
+If you add a new Prisma model, add it to `createModel()` entries in `backend/db/__mocks__/prisma.js`
+too. If a new service is called from code under test, mock it in the relevant `__tests__/*.test.js`
+file following the existing pattern (`jest.mock('../services/xyz', () => ({ fn: jest.fn()... }))`).
+No frontend test suite is configured.
 
 ## UI Verification
 
 Do not run Playwright, take screenshots, or launch browsers to verify frontend changes. The user handles all visual UI verification themselves.
+
+## Database Caution
+
+Never touch the database directly — mutating calls (simulating a game, advancing a season day,
+anything that persists state) or even ad-hoc read-only inspection scripts (`node -e` Prisma
+queries) — without asking the user first. There is no throwaway test DB; the dev database is the
+user's real, persistent save. Verify changes through the Jest suite or code review instead.
 
 ## Architecture
 

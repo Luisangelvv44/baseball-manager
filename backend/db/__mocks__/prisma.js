@@ -39,6 +39,7 @@ const prismaMock = {
   luxuryTaxRecord: createModel(),
   bank: createModel(),
   loan: createModel(),
+  rivalry: createModel(),
   $queryRaw: jest.fn(),
   $transaction: jest.fn(),
 };

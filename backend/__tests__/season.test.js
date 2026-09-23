@@ -161,6 +161,7 @@ describe('GET /api/season/schedule', () => {
   it('returns schedule games with team names when season exists', async () => {
     prisma.season.findFirst.mockResolvedValue(mockSeason);
     prisma.gameSchedule.findMany.mockResolvedValue([mockGame]);
+    prisma.rivalry.findMany.mockResolvedValue([]);
     const res = await request(app).get('/api/season/schedule');
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);

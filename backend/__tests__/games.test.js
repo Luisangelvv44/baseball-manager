@@ -10,11 +10,15 @@ jest.mock('../services/economy', () => ({
 jest.mock('../services/playoffService', () => ({
   updateSeriesAfterGame: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock('../services/rivalryService', () => ({
+  getRivalryIntensity: jest.fn().mockResolvedValue(0),
+}));
 
 const prisma = require('../db/prisma');
 const { playGame } = require('../services/gamePlay');
 const { getLineup } = require('../services/lineup');
 const { computeHomeGameRevenue, computeAwayGameRevenue } = require('../services/economy');
+const { getRivalryIntensity } = require('../services/rivalryService');
 const { mockGame, mockFinishedGame, mockTeam, mockCpuTeam, mockGameEvent, mockSeason } = require('./mockData');
 
 const app = require('../index');
