@@ -42,6 +42,7 @@ const TABS = [
   { key: 'alltime', label: 'All-Time Players' },
   { key: 'awards', label: 'Premios' },
   { key: 'records', label: 'Récords' },
+  { key: 'rivalries', label: 'Rivalidades' },
 ];
 
 const AWARD_LABELS = {
@@ -90,6 +91,8 @@ export default function History() {
         <AwardsTab seasons={seasons} />
       ) : tab === 'records' ? (
         <RecordsTab />
+      ) : tab === 'rivalries' ? (
+        <RivalriesTab />
       ) : loading ? (
         <div className="text-center py-10 text-gray-400">Cargando históricos...</div>
       ) : (
@@ -278,6 +281,53 @@ function RecordsTab() {
           />
         </div>
       </div>
+    </div>
+  );
+}
+
+function RivalryBar({ intensity }) {
+  return (
+    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+      <div
+        className="h-full bg-orange-500"
+        style={{ width: `${Math.min(100, Math.max(0, intensity))}%` }}
+      />
+    </div>
+  );
+}
+
+function RivalriesTab() {
+  const [rivalries, setRivalries] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api
+      .getRivalries()
+      .then((data) => setRivalries(data.rivalries))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="text-center py-10 text-gray-400">Cargando rivalidades...</div>;
+  if (!rivalries || rivalries.length === 0) {
+    return <div className="text-center py-10 text-gray-500">Todavía no hay rivalidades registradas.</div>;
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <h2 className="text-xl font-bold text-gray-800 mb-1">Rivalidades históricas</h2>
+      {rivalries.map((r) => (
+        <div key={r.id} className="bg-white rounded-lg shadow p-4 flex flex-col gap-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-1 font-semibold text-gray-800">
+              <TeamBadge name={r.team_a.name} /> vs <TeamBadge name={r.team_b.name} />
+            </span>
+            <span className="font-mono text-gray-500">{r.wins_a}-{r.wins_b}</span>
+          </div>
+          <RivalryBar intensity={r.intensity} />
+          <div className="text-xs text-gray-400">Intensidad: {Math.round(r.intensity)}/100</div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, AUCTION_DEADLINE_DAY, ROSTER_CHECK_DAY, LUXURY_TAX_PROJECTION_DAY, PLAYER_INVESTMENT_DAY, LOAN_WINDOW_END_DAY } = require('../config');
+const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, AUCTION_DEADLINE_DAY, ROSTER_CHECK_DAY, LUXURY_TAX_PROJECTION_DAY, PLAYER_INVESTMENT_DAY, LOAN_WINDOW_END_DAY, RIVALRY_BADGE_THRESHOLD } = require('../config');
 const { generateSchedule } = require('../services/scheduleGenerator');
 const { simulateScheduledGamesForDay, simulateOtherActivePlayoffSeries } = require('../services/dayGamesSimulator');
 const {
@@ -32,6 +32,7 @@ const { runCpuLoanPass, processSeasonEndRepayments } = require('../services/bank
 const { computeSeasonAwards } = require('../services/seasonAwardsService');
 const { archiveAndCleanupSeason } = require('../services/seasonArchiveService');
 const { runToddlerProgramSeasonEnd } = require('../services/toddlerProgramService');
+const { applySeasonDecay } = require('../services/rivalryService');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
@@ -253,6 +254,9 @@ async function endOfSeasonCleanup(season) {
   // Corre despues del recorte de roster CPU (que lee budget) y de aging (age += 1).
   await runToddlerProgramSeasonEnd();
 
+  // Rivalidades sin enfrentamientos nuevos en la temporada se enfrian un poco.
+  await applySeasonDecay();
+
   // Create annual draft BEFORE regenerating season auctions: players pulled into the
   // draft pool are marked 'draft_reserved', so they're excluded from the fresh auction batch.
   await createDraft(season.id);
@@ -438,7 +442,25 @@ router.get('/schedule', async (req, res) => {
         away_team: { select: { id: true, name: true } },
       },
     });
-    res.json(games);
+
+    // Una sola consulta para todas las rivalidades (maximo ~120 filas con 16 equipos),
+    // evita N+1 sobre los ~240 partidos de la temporada.
+    const rivalries = await prisma.rivalry.findMany({
+      select: { team_a_id: true, team_b_id: true, intensity: true },
+    });
+    const rivalryMap = new Map(rivalries.map((r) => [`${r.team_a_id}-${r.team_b_id}`, r.intensity]));
+    const gamesWithRivalry = games.map((g) => {
+      let intensity = 0;
+      if (g.home_team_id != null && g.away_team_id != null) {
+        const [aId, bId] = g.home_team_id < g.away_team_id
+          ? [g.home_team_id, g.away_team_id]
+          : [g.away_team_id, g.home_team_id];
+        intensity = rivalryMap.get(`${aId}-${bId}`) ?? 0;
+      }
+      return { ...g, rivalry_intensity: intensity, is_rivalry: intensity >= RIVALRY_BADGE_THRESHOLD };
+    });
+
+    res.json(gamesWithRivalry);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener el calendario' });

@@ -59,6 +59,28 @@ model Team {
   player_season_records PlayerSeasonRecord[]
   toddler_contributions ToddlerContribution[]
   loans                 Loan[]
+  rivalries_as_a         Rivalry[]            @relation("RivalryTeamA")
+  rivalries_as_b         Rivalry[]            @relation("RivalryTeamB")
+}
+
+model Rivalry {
+  id                     Int      @id @default(autoincrement())
+  team_a_id              Int
+  team_b_id              Int
+  wins_a                 Int      @default(0)
+  wins_b                 Int      @default(0)
+  intensity              Float    @default(0)
+  last_winner_id         Int?
+  streak_len             Int      @default(0)
+  last_meeting_day       Int?
+  last_meeting_season_id Int?
+  updated_at             DateTime @updatedAt
+
+  team_a Team @relation("RivalryTeamA", fields: [team_a_id], references: [id])
+  team_b Team @relation("RivalryTeamB", fields: [team_b_id], references: [id])
+
+  @@unique([team_a_id, team_b_id])
+  @@map("rivalries")
 }
 
 model Player {

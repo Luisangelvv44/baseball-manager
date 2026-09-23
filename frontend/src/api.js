@@ -127,6 +127,10 @@ export const api = {
   getSeasonAwards: (seasonId) => request(seasonId != null ? `/history/awards?season_id=${seasonId}` : '/history/awards'),
   getRecords: () => request('/history/records'),
 
+  // Rivalidades
+  getRivalries: () => request('/rivalries'),
+  getTeamRivalries: (teamId) => request(`/rivalries/team/${teamId}`),
+
   // Transmisión
   getBroadcastOffers: () => request('/broadcast/offers'),
   acceptOffer: (id) => request(`/broadcast/offers/${id}/accept`, { method: 'POST' }),

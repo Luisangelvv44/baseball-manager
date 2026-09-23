@@ -5,7 +5,9 @@ const { USER_TEAM_ID } = require('../config');
 const { playGame } = require('../services/gamePlay');
 const { getLineup } = require('../services/lineup');
 const { computeHomeGameRevenue, computeAwayGameRevenue } = require('../services/economy');
+const { getRivalryIntensity } = require('../services/rivalryService');
 const { updateSeriesAfterGame } = require('../services/playoffService');
+const { RIVALRY_BADGE_THRESHOLD } = require('../config');
 const { simulateScheduledGamesForDay, simulateOtherActivePlayoffSeries } = require('../services/dayGamesSimulator');
 
 function formatSavedLineup(rows, teamId) {
@@ -88,7 +90,10 @@ router.get('/:id', async (req, res) => {
       awayLineup = formatPreviewLineup(away);
     }
 
-    res.json({ game, homeTeam, awayTeam, events, homeLineup, awayLineup });
+    const rivalryIntensity = await getRivalryIntensity(game.home_team_id, game.away_team_id);
+    const rivalry = { intensity: rivalryIntensity, is_rivalry: rivalryIntensity >= RIVALRY_BADGE_THRESHOLD };
+
+    res.json({ game, homeTeam, awayTeam, events, homeLineup, awayLineup, rivalry });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener el partido' });
@@ -130,7 +135,8 @@ router.post('/:id/simulate', async (req, res) => {
       const sections = await prisma.stadiumSection.findMany({
         where: { team_id: USER_TEAM_ID, section_type: 'grandstand' },
       });
-      economy = computeHomeGameRevenue(sections, userTeam.reputation, userTeam.fan_base, isPlayoff);
+      const rivalryIntensity = await getRivalryIntensity(game.home_team_id, game.away_team_id);
+      economy = computeHomeGameRevenue(sections, userTeam.reputation, userTeam.fan_base, isPlayoff, rivalryIntensity);
 
       await prisma.team.update({
         where: { id: USER_TEAM_ID },

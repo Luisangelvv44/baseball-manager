@@ -122,7 +122,7 @@ const STATUS_PILL = {
   FINAL: 'text-gray-800 border-gray-400',
 };
 
-function MatchupHeader({ homeTeam, awayTeam, score, status, canPlay, loading, onPlay }) {
+function MatchupHeader({ homeTeam, awayTeam, score, status, canPlay, loading, onPlay, rivalry }) {
   const away = teamColor(awayTeam?.name);
   const home = teamColor(homeTeam?.name);
 
@@ -146,6 +146,14 @@ function MatchupHeader({ homeTeam, awayTeam, score, status, canPlay, loading, on
           <span className={`text-[11px] font-bold tracking-[0.15em] border rounded-full px-3 py-1 ${STATUS_PILL[status] || STATUS_PILL.PROGRAMADO}`}>
             {status}
           </span>
+          {rivalry?.is_rivalry && (
+            <span
+              className="text-[11px] font-bold tracking-wide text-orange-600 border border-orange-300 rounded-full px-3 py-1"
+              title={`Intensidad de rivalidad: ${Math.round(rivalry.intensity)}`}
+            >
+              🔥 RIVALIDAD
+            </span>
+          )}
           <span className="font-display font-semibold text-xl text-gray-400">VS</span>
           {canPlay && (
             <button
@@ -376,6 +384,7 @@ export default function GameView() {
   const [game, setGame] = useState(null);
   const [homeTeam, setHomeTeam] = useState(null);
   const [awayTeam, setAwayTeam] = useState(null);
+  const [rivalry, setRivalry] = useState(null);
   const [events, setEvents] = useState([]);
   const [visibleEvents, setVisibleEvents] = useState([]);
   const [homeLineup, setHomeLineup] = useState(null);
@@ -402,6 +411,7 @@ export default function GameView() {
       setGame(info.game);
       setHomeTeam(info.homeTeam);
       setAwayTeam(info.awayTeam);
+      setRivalry(info.rivalry ?? null);
       setHomeLineup(info.homeLineup);
       setAwayLineup(info.awayLineup);
       setEconomy(null);
@@ -538,6 +548,7 @@ export default function GameView() {
         canPlay={canPlay}
         loading={loading}
         onPlay={handleSimulate}
+        rivalry={rivalry}
       />
 
       {tab === 'previa' && (

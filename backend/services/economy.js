@@ -1,16 +1,21 @@
+const { RIVALRY_MAX, RIVALRY_ATTENDANCE_BONUS_MAX } = require('../config');
+
 // Calcula ingresos por entradas + merch para un partido EN CASA,
 // segun las gradas (capacidad/precio), la reputacion y la base de fans del equipo.
-function computeHomeGameRevenue(grandstandSections, reputation, fanBase, isPlayoff = false) {
+// rivalryIntensity (0-RIVALRY_MAX) sube la tasa de asistencia cuando el rival visitante es intenso.
+function computeHomeGameRevenue(grandstandSections, reputation, fanBase, isPlayoff = false, rivalryIntensity = 0) {
   const totalCapacity = grandstandSections.reduce((sum, s) => sum + s.capacity, 0);
 
   if (totalCapacity === 0) {
     return { attendance: 0, ticketRevenue: 0, merchRevenue: 0, operatingCost: 0, total: 0 };
   }
 
+  const rivalryBoost = (rivalryIntensity / RIVALRY_MAX) * RIVALRY_ATTENDANCE_BONUS_MAX;
+
   // Asistencia: porcentaje aleatorio de la fan_base, tope = capacidad del estadio
   const fanAttendanceRate = isPlayoff
-    ? 0.14 + Math.random() * 0.11 // playoffs: 14-25% de la base de fans
-    : 0.04 + Math.random() * 0.10; // temporada regular: 4-14% de la base de fans
+    ? 0.14 + Math.random() * 0.11 + rivalryBoost // playoffs: 14-25% de la base de fans
+    : 0.04 + Math.random() * 0.10 + rivalryBoost; // temporada regular: 4-14% de la base de fans
   const attendance = Math.min(totalCapacity, Math.floor((fanBase || 0) * fanAttendanceRate));
 
   // precio promedio ponderado por capacidad

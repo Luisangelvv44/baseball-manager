@@ -288,6 +288,9 @@ export default function Schedule() {
                       <div className="flex flex-col">
                         <span className={`flex items-center gap-1 ${isUserGame ? 'font-semibold text-blue-900' : 'text-gray-700'}`}>
                           <TeamBadge name={g.away_team?.name ?? '—'} /> @ <TeamBadge name={g.home_team?.name ?? '—'} />
+                          {g.is_rivalry && (
+                            <span title={`Rivalidad (intensidad ${Math.round(g.rivalry_intensity)})`}>🔥</span>
+                          )}
                         </span>
                         {isUserGame && (
                           <span className="text-xs text-blue-500 font-medium">Tu partido{finished ? ' · Ver resumen →' : ''}</span>

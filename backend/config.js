@@ -72,6 +72,21 @@ module.exports = {
   BANK_INITIAL_CAPITAL: 300_000_000,
   BANK_BASE_INTEREST_RATE: 0.08,
 
+  // ----- Rivalidades (ver services/rivalryService.js) -----
+  RIVALRY_DIVISION_SEED: 15, // intensidad inicial si comparten division, al crear el primer registro
+  RIVALRY_BASE_GAME_BONUS: 1, // cualquier enfrentamiento suma esto, reñido o no
+  RIVALRY_CLOSE_MARGIN: 2, // diferencia de carreras considerada "partido cerrado"
+  RIVALRY_CLOSE_GAME_BONUS: 3,
+  RIVALRY_PLAYOFF_BONUS: 10, // un enfrentamiento en playoffs vale mucho mas
+  RIVALRY_STREAK_THRESHOLD: 3, // rachas dentro del propio historial de la rivalidad
+  RIVALRY_STREAK_BONUS: 3,
+  RIVALRY_MIN: 0,
+  RIVALRY_MAX: 100,
+  RIVALRY_SEASON_DECAY: 4, // decaimiento aplicado en endOfSeasonCleanup
+  RIVALRY_BADGE_THRESHOLD: 25, // a partir de aqui se muestra el badge en Schedule/GameView
+  RIVALRY_NEWS_ALERT_THRESHOLD: 50, // a partir de aqui, el resultado genera una noticia 'rivalry' con alert:true
+  RIVALRY_ATTENDANCE_BONUS_MAX: 0.06, // fraccion extra maxima de fanAttendanceRate cuando intensity=100
+
   // ----- Scouting: efecto del presupuesto de mision en calidad de prospectos (ver seeders/generators/playerGenerator.js) -----
   SCOUT_BUDGET_FACTOR_CAP_AMOUNT: 6_000_000, // presupuesto en el que el factor llega a su maximo; mas alla de esto, sin beneficio extra
   SCOUT_BUDGET_FACTOR_MAX: 3, // valor maximo del factor de presupuesto

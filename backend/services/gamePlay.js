@@ -4,6 +4,7 @@ const { simulateGame } = require('./gameSimulator');
 const { checkAndApplyGameInjuries } = require('./injuryService');
 const { backfillInjuredCpuPositions } = require('./cpuTeamManagement');
 const { createNews } = require('./newsService');
+const { updateRivalryAfterGame } = require('./rivalryService');
 const {
   detectPitcherGems,
   detectCycles,
@@ -11,7 +12,12 @@ const {
   isExtraInningsGame,
   computeTrailingStreak,
 } = require('./newsDetection');
-const { NEWS_STREAK_MILESTONE, NEWS_STREAK_LOOKBACK_GAMES, USER_TEAM_ID } = require('../config');
+const {
+  NEWS_STREAK_MILESTONE,
+  NEWS_STREAK_LOOKBACK_GAMES,
+  USER_TEAM_ID,
+  RIVALRY_NEWS_ALERT_THRESHOLD,
+} = require('../config');
 
 // Simula un partido (schedule row), actualiza marcador/standings,
 // y opcionalmente guarda el play-by-play en game_events.
@@ -41,6 +47,16 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
 
   const homeTeam = await prisma.team.findUnique({ where: { id: gameRow.home_team_id } });
   const awayTeam = await prisma.team.findUnique({ where: { id: gameRow.away_team_id } });
+
+  const rivalryResult = await updateRivalryAfterGame({
+    homeTeamId: gameRow.home_team_id,
+    awayTeamId: gameRow.away_team_id,
+    homeScore: result.homeScore,
+    awayScore: result.awayScore,
+    isPlayoff: !!gameRow.playoff_series_id,
+    dayNumber: gameRow.day_number,
+    seasonId: gameRow.season_id,
+  });
 
   if (!skipStandings) {
     const homeWon = result.homeScore > result.awayScore;
@@ -92,6 +108,17 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
   const hi = Math.max(result.homeScore, result.awayScore);
   const lo = Math.min(result.homeScore, result.awayScore);
   await createNews('game', `${winner} derrotó a ${loser} ${hi}-${lo}`, gameRow.day_number, gameRow.season_id);
+
+  if (rivalryResult.intensity >= RIVALRY_NEWS_ALERT_THRESHOLD) {
+    const winnerTeamId = result.homeScore > result.awayScore ? gameRow.home_team_id : gameRow.away_team_id;
+    await createNews(
+      'rivalry',
+      `🔥 Rivalidad: ${winner} venció a ${loser} ${hi}-${lo} (serie histórica ${rivalryResult.wins_a}-${rivalryResult.wins_b})`,
+      gameRow.day_number,
+      gameRow.season_id,
+      { teamId: winnerTeamId, alert: true }
+    );
+  }
 
   if (result.walkOff) {
     await createNews(
