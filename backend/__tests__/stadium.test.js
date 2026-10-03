@@ -10,7 +10,7 @@ const {
   getFacilityBonuses,
   describeFacilities,
 } = require('../services/stadiumFacilityService');
-const { computeHomeGameRevenue } = require('../services/economy');
+const { computeHomeGameRevenue, computeMaintenanceCost } = require('../services/economy');
 
 const app = require('../index');
 
@@ -65,7 +65,7 @@ describe('economy with facility bonuses', () => {
     const r = computeHomeGameRevenue(sections, 50, 100000);
     expect(r.attendance).toBe(4000);
     expect(r.merchRevenue).toBe(20000);
-    expect(r.operatingCost).toBe(50000);
+    expect(r.operatingCost).toBe(2001); // 4000 asistentes, casi el minimo de $0.5/persona
   });
 
   it('applies attendance, merch and upkeep bonuses', () => {
@@ -75,7 +75,28 @@ describe('economy with facility bonuses', () => {
     });
     expect(r.attendance).toBe(6000);
     expect(r.merchRevenue).toBe(30000);
-    expect(r.operatingCost).toBe(53000);
+    expect(r.operatingCost).toBe(6002); // 6000 asistentes (~$0.5/persona) + 3000 de upkeep
+  });
+});
+
+describe('computeMaintenanceCost', () => {
+  it('costs nothing with no attendance', () => {
+    expect(computeMaintenanceCost(0)).toBe(0);
+  });
+
+  it('reaches $10 per fan at 1M attendance and stays capped above it', () => {
+    expect(computeMaintenanceCost(1_000_000)).toBe(10_000_000);
+    expect(computeMaintenanceCost(2_000_000)).toBe(20_000_000);
+  });
+
+  it('grows with an accelerated curve', () => {
+    expect(computeMaintenanceCost(500_000)).toBe(1_437_500); // $2.875/persona
+  });
+
+  it('charges more per fan as attendance grows', () => {
+    const perFan = [50_000, 200_000, 500_000, 900_000].map((a) => computeMaintenanceCost(a) / a);
+    for (let i = 1; i < perFan.length; i++) expect(perFan[i]).toBeGreaterThan(perFan[i - 1]);
+    expect(perFan[0]).toBeGreaterThanOrEqual(0.5);
   });
 });
 

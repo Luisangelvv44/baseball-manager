@@ -1,10 +1,28 @@
-const { RIVALRY_MAX, RIVALRY_ATTENDANCE_BONUS_MAX } = require('../config');
+const {
+  RIVALRY_MAX,
+  RIVALRY_ATTENDANCE_BONUS_MAX,
+  STADIUM_MAINTENANCE_COST_PER_FAN_MIN,
+  STADIUM_MAINTENANCE_COST_PER_FAN_MAX,
+  STADIUM_MAINTENANCE_MAX_ATTENDANCE,
+  STADIUM_MAINTENANCE_EXPONENT,
+} = require('../config');
+
+// Mantenimiento/logistica de un partido en casa: costo por asistente que sube de MIN a MAX
+// (curva acelerada) a medida que la asistencia se acerca a STADIUM_MAINTENANCE_MAX_ATTENDANCE.
+function computeMaintenanceCost(attendance) {
+  if (!attendance || attendance <= 0) return 0;
+  const ratio = Math.min(1, attendance / STADIUM_MAINTENANCE_MAX_ATTENDANCE);
+  const costPerFan = STADIUM_MAINTENANCE_COST_PER_FAN_MIN
+    + (STADIUM_MAINTENANCE_COST_PER_FAN_MAX - STADIUM_MAINTENANCE_COST_PER_FAN_MIN) * ratio ** STADIUM_MAINTENANCE_EXPONENT;
+  return Math.round(attendance * costPerFan);
+}
 
 // Calcula ingresos por entradas + merch para un partido EN CASA,
 // segun las gradas (capacidad/precio), la reputacion y la base de fans del equipo.
 // rivalryIntensity (0-RIVALRY_MAX) sube la tasa de asistencia cuando el rival visitante es intenso.
 // facilityBonuses (ver stadiumFacilityService.getFacilityBonuses): asistencia extra, multiplicador de
 // merch y mantenimiento de instalaciones. Vacio = sin instalaciones mejoradas.
+// El costo operativo depende de la asistencia (computeMaintenanceCost), no de la capacidad.
 function computeHomeGameRevenue(grandstandSections, reputation, fanBase, isPlayoff = false, rivalryIntensity = 0, facilityBonuses = {}) {
   const { attendanceRateBonus = 0, merchMultiplier = 1, upkeep = 0 } = facilityBonuses;
   const totalCapacity = grandstandSections.reduce((sum, s) => sum + s.capacity, 0);
@@ -28,7 +46,7 @@ function computeHomeGameRevenue(grandstandSections, reputation, fanBase, isPlayo
 
   const ticketRevenue = Math.round(attendance * weightedPrice);
   const merchRevenue = Math.round(computeMerchRevenue(fanBase) * merchMultiplier);
-  const operatingCost = Math.round(totalCapacity * 0.5) + upkeep; // mantenimiento por partido
+  const operatingCost = computeMaintenanceCost(attendance) + upkeep; // mantenimiento segun asistencia + instalaciones
 
   return {
     attendance,
@@ -53,4 +71,4 @@ function computeAwayGameRevenue(fanBase) {
   return { merchRevenue, total: merchRevenue };
 }
 
-module.exports = { computeHomeGameRevenue, computeAwayGameRevenue };
+module.exports = { computeHomeGameRevenue, computeAwayGameRevenue, computeMaintenanceCost };

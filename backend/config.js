@@ -101,6 +101,12 @@ module.exports = {
   // ----- Estadio: gradas e instalaciones (ver services/stadiumFacilityService.js) -----
   GRANDSTAND_MAX_LEVEL: 15, // tope de nivel por seccion de grada
   FACILITY_UPKEEP_PER_LEVEL: 500, // costo extra por partido en casa, por cada nivel de instalacion sobre 1
+  // Mantenimiento por partido en casa segun asistencia (ver services/economy.js computeMaintenanceCost):
+  // costo/persona = MIN + (MAX - MIN) * min(1, asistencia / MAX_ATTENDANCE) ^ EXPONENT
+  STADIUM_MAINTENANCE_COST_PER_FAN_MIN: 0.5, // costo por asistente con asistencia minima
+  STADIUM_MAINTENANCE_COST_PER_FAN_MAX: 10, // costo por asistente al llegar a MAX_ATTENDANCE (tope)
+  STADIUM_MAINTENANCE_MAX_ATTENDANCE: 1_000_000, // asistencia en la que el costo por persona llega a su maximo
+  STADIUM_MAINTENANCE_EXPONENT: 2, // >1 = crecimiento acelerado (barato al principio, rapido cerca del tope)
   // Instalaciones del equipo (columnas `<key>_level` en Team, todas arrancan en nivel 1).
   // Costo de mejora L -> L+1 = base_cost * cost_factor^(L-1). `levels[i]` = nombre del nivel i+1.
   // Efectos (solo equipo del usuario), por cada nivel sobre 1:
