@@ -70,7 +70,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `newgame.js` | Creates a new save/franchise |
 | `teams.js` | List/detail teams, user's team, league overview |
 | `players.js` | Team roster stats, free agents, promote/demote/renew, player stats |
-| `stadium.js` | Grandstand sections: pricing, upgrades, new builds, floor expansion |
+| `stadium.js` | Grandstand sections: pricing, upgrades (max level `GRANDSTAND_MAX_LEVEL` = 15), new builds, floor expansion; team facility upgrades (`POST /facilities/:key/upgrade`) |
 | `season.js` | Season status, start season, advance day, schedule |
 | `games.js` | Single game detail + simulate |
 | `finances.js` | Team finance ledger |
@@ -94,14 +94,15 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `atBatSimulator.js` | At-bat outcomes weighted by batter vs. pitcher skill |
 | `scheduleGenerator.js` | Double round-robin for 16 teams (30 days, 240 games) using circle rotation |
 | `auctionService.js` | Free agent auctions; CPU teams bid with randomized aggressiveness (0.05–0.25) |
-| `economy.js` | Home game revenue: attendance (4–14% of fan_base regular season, 14–25% playoffs, capped at capacity) × capacity-weighted ticket price + merch (1–5% of fan_base × $20–50/fan) − operating cost (capacity × 0.5); away games earn merch only |
+| `economy.js` | Home game revenue: attendance (4–14% of fan_base regular season, 14–25% playoffs, capped at capacity) × capacity-weighted ticket price + merch (1–5% of fan_base × $20–50/fan) − operating cost (capacity × 0.5); away games earn merch only. Optional `facilityBonuses` arg (user team) adds attendance rate, scales merch and adds facility upkeep |
 | `lineup.js` | Converts DB roster to ordered lineup array |
 | `gamePlay.js` | Orchestrates a single game: builds lineups, runs `gameSimulator`, applies injuries, updates standings/fan base, persists results |
 | `cpuTeamManagement.js` | End-of-season CPU revenue distribution (flat $100–300/fan payout) and CPU roster upkeep: on `ROSTER_CHECK_DAY` every empty MAJOR position is filled — a fresh player is generated if the roster is under `MAX_ROSTER_SIZE`, otherwise the weakest player from a surplus position is released to make room (first-year rookie only as a last resort), with a *forced* release that charges at most the team's available budget and never lets budget go negative. `previewFillMissingPositions()` is the read-only planner behind `scripts/runRosterCheck.js` |
 | `playerService.js` | End-of-season skill fluctuation (growth/decline vs. `growth_age`) and annual contract-years decrement |
 | `playerInvestmentService.js` | CPU teams spend a budget-derived pool to buy up `current_skill` points on their weakest players, at skill-tiered marginal cost |
 | `retiredPlayer.js` | Retires active/free-agent players aged 40+ each season, clearing them from lineups and rosters |
-| `injuryService.js` | Post-game injury rolls (age-scaled probability, 3–15 day duration), plus daily recovery countdown |
+| `injuryService.js` | Post-game injury rolls (age-scaled probability, 3–15 day duration; user team reduced by medical facility level), plus daily recovery countdown |
+| `stadiumFacilityService.js` | Team-level stadium facilities (`field` max 10, `lights`/`board`/`medical` max 5; `Team.<key>_level`, all start at 1), defined in `STADIUM_FACILITIES` in `config.js`: upgrade cost, `getFacilityBonuses()` (attendance rate, merch multiplier, injury reduction, per-game upkeep), user-team only |
 | `skillCurve.js` | Precomputed `skill^1.5` lookup table exposing `effectiveSkill()`, a convex skill-weighting used across auctions/derby/etc. |
 | `coachService.js` | Applies per-specialty coach bonuses (batting/pitching skill bumps, conditioning recovery) to the user's roster and deducts coach salaries |
 | `draftService.js` | Draft pool generation (prospects + market rookies/young free agents), CPU auto-picks, and user pick handling |
@@ -118,6 +119,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 - **`App.jsx`** — React Router v6 route definitions; 22 top-level routes plus `/game/:id` and `/derby/:id`
 - **`api.js`** — Thin fetch wrapper used by all pages (no axios/react-query); one flat `api` object grouped by feature (teams, players, stadium, season, games, finances, scouts, lineup, auctions, playoffs, coaches, draft, news, history, broadcast, trades, derby)
 - **`pages/`** — 23 files: `NewGame`, `Dashboard`, `Roster`, `Rookie`, `Market`, `Stars`, `Trades`, `Stadium`, `Scouts`, `Finances`, `TeamsOverview`, `Schedule`, `Lineup`, `Broadcast`, `Playoffs`, `Coaches`, `Draft`, `News`, `History`, `GameView`, `Derby`, `DerbyView`, and `AllTimePlayers` (rendered as a tab inside `History`, not its own route)
+- **`stadium/`** — PixiJS 7 top-down stadium view (`geometry.js`, `builders.js`, `StadiumScene.js`, `StadiumView.jsx`), lazy-loaded as the "Vista" tab of `Stadium`; every grid section is drawn as a wedge of a bowl around the field (one ring per floor, `layoutSections()` in `geometry.js`) with its own level look; facilities drawn from their levels
 - **`components/`** — Shared UI: `Navbar`, `Leaderboard`, `StadiumGrid`, `SectionModal`, `Pagination`, `TeamBadge`, `SkillTierBadge`, `FavoriteButton`
 
 Styling is Tailwind CSS v3 with no component library.
@@ -131,6 +133,6 @@ Requires a PostgreSQL instance. Copy `backend/.env.example` to `backend/.env` an
 - User team is always `id = 1` (set in `config.js`). All "user team" queries filter by this constant.
 - Game simulation is stateless: `gameSimulator.js` computes the full game result in memory and persists events to `GameEvent` in bulk.
 - CPU teams in auctions bid automatically when the user advances a season day; no real-time loop.
-- Stadium sections are pre-seeded (not user-created); upgrades increase capacity/level on existing rows.
+- Stadium sections are pre-seeded (not user-created); upgrades increase capacity/level on existing rows, capped at level 15. Facilities (field/lights/board/medical) are separate team-level columns, not sections.
 - CPU teams get a flat end-of-season revenue payout (`cpuTeamManagement.js`, $100–300/fan, from `CPU_REVENUE_PER_FAN_MIN`/`CPU_REVENUE_PER_FAN_MAX` in `config.js`) separate from the per-game attendance/ticket/merch formula in `economy.js` — don't conflate the two when touching economy code.
 - Playoff seeding/desperation index is tracked per-team directly on the `Team` model (`desperation_index`, `min_growth_threshold`), not a separate table.

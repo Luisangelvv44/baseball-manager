@@ -3,7 +3,10 @@ const { RIVALRY_MAX, RIVALRY_ATTENDANCE_BONUS_MAX } = require('../config');
 // Calcula ingresos por entradas + merch para un partido EN CASA,
 // segun las gradas (capacidad/precio), la reputacion y la base de fans del equipo.
 // rivalryIntensity (0-RIVALRY_MAX) sube la tasa de asistencia cuando el rival visitante es intenso.
-function computeHomeGameRevenue(grandstandSections, reputation, fanBase, isPlayoff = false, rivalryIntensity = 0) {
+// facilityBonuses (ver stadiumFacilityService.getFacilityBonuses): asistencia extra, multiplicador de
+// merch y mantenimiento de instalaciones. Vacio = sin instalaciones mejoradas.
+function computeHomeGameRevenue(grandstandSections, reputation, fanBase, isPlayoff = false, rivalryIntensity = 0, facilityBonuses = {}) {
+  const { attendanceRateBonus = 0, merchMultiplier = 1, upkeep = 0 } = facilityBonuses;
   const totalCapacity = grandstandSections.reduce((sum, s) => sum + s.capacity, 0);
 
   if (totalCapacity === 0) {
@@ -14,8 +17,8 @@ function computeHomeGameRevenue(grandstandSections, reputation, fanBase, isPlayo
 
   // Asistencia: porcentaje aleatorio de la fan_base, tope = capacidad del estadio
   const fanAttendanceRate = isPlayoff
-    ? 0.14 + Math.random() * 0.11 + rivalryBoost // playoffs: 14-25% de la base de fans
-    : 0.04 + Math.random() * 0.10 + rivalryBoost; // temporada regular: 4-14% de la base de fans
+    ? 0.14 + Math.random() * 0.11 + rivalryBoost + attendanceRateBonus // playoffs: 14-25% de la base de fans
+    : 0.04 + Math.random() * 0.10 + rivalryBoost + attendanceRateBonus; // temporada regular: 4-14% de la base de fans
   const attendance = Math.min(totalCapacity, Math.floor((fanBase || 0) * fanAttendanceRate));
 
   // precio promedio ponderado por capacidad
@@ -24,8 +27,8 @@ function computeHomeGameRevenue(grandstandSections, reputation, fanBase, isPlayo
   ) / totalCapacity;
 
   const ticketRevenue = Math.round(attendance * weightedPrice);
-  const merchRevenue = computeMerchRevenue(fanBase);
-  const operatingCost = Math.round(totalCapacity * 0.5); // mantenimiento por partido
+  const merchRevenue = Math.round(computeMerchRevenue(fanBase) * merchMultiplier);
+  const operatingCost = Math.round(totalCapacity * 0.5) + upkeep; // mantenimiento por partido
 
   return {
     attendance,

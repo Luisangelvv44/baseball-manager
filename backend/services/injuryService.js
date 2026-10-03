@@ -1,6 +1,9 @@
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID } = require('../config');
 const { createNews } = require('./newsService');
+const { getFacilityBonuses } = require('./stadiumFacilityService');
+
+const MIN_INJURY_DAYS = 2; // piso de dias de baja aun con instalaciones medicas al maximo
 
 function getInjuryProbability(age) {
   if (age <= 22) return 0;
@@ -22,14 +25,22 @@ async function checkAndApplyGameInjuries(homeLineup, awayLineup) {
 
   const players = await prisma.player.findMany({
     where: { id: { in: playerIds }, injury_days_remaining: 0 },
-    select: { id: true, age: true },
+    select: { id: true, age: true, team_id: true },
   });
+
+  // Las instalaciones medicas solo benefician al equipo del usuario
+  const userTeam = players.some((p) => p.team_id === USER_TEAM_ID)
+    ? await prisma.team.findUnique({ where: { id: USER_TEAM_ID }, select: { medical_level: true } })
+    : null;
+  const { injuryProbMultiplier, injuryDaysReduction } = getFacilityBonuses(userTeam);
 
   const injuredIds = [];
   for (const player of players) {
-    const prob = getInjuryProbability(player.age);
+    const isUser = player.team_id === USER_TEAM_ID;
+    const prob = getInjuryProbability(player.age) * (isUser ? injuryProbMultiplier : 1);
     if (prob > 0 && Math.random() < prob) {
-      injuredIds.push({ id: player.id, days: randomDays() });
+      const days = isUser ? Math.max(MIN_INJURY_DAYS, randomDays() - injuryDaysReduction) : randomDays();
+      injuredIds.push({ id: player.id, days });
     }
   }
 

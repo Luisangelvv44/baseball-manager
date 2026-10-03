@@ -1,4 +1,4 @@
-export default function StadiumGrid({ sections, floors, onCellClick }) {
+export default function StadiumGrid({ sections, floors, maxLevel = 15, onCellClick }) {
   const map = {};
   sections.forEach((s) => {
     map[`${s.row_pos}-${s.col_pos}`] = s;

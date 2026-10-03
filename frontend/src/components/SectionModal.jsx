@@ -1,9 +1,10 @@
 import { useState } from 'react';
 
-export default function SectionModal({ section, onClose, onSavePrice, onUpgrade, onBuild }) {
+export default function SectionModal({ section, maxLevel = 15, onClose, onSavePrice, onUpgrade, onBuild }) {
   const [price, setPrice] = useState(section.price_per_ticket || 15);
 
   const isEmpty = section.section_type === 'empty';
+  const atMax = section.next_upgrade_cost == null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
@@ -25,7 +26,7 @@ export default function SectionModal({ section, onClose, onSavePrice, onUpgrade,
           <>
             <h3 className="font-bold text-lg mb-1">{section.label}</h3>
             <p className="text-sm text-gray-500 mb-4">
-              Nivel {section.upgrade_level} · Capacidad {section.capacity}
+              Nivel {section.upgrade_level} / {maxLevel} · Capacidad {section.capacity.toLocaleString()}
             </p>
 
             <label className="block text-sm font-medium mb-1">Precio de entrada ($)</label>
@@ -46,12 +47,18 @@ export default function SectionModal({ section, onClose, onSavePrice, onUpgrade,
               </button>
             </div>
 
-            <button
-              onClick={() => onUpgrade(section.id)}
-              className="w-full bg-amber-600 text-white rounded py-2 font-semibold hover:bg-amber-700"
-            >
-              Mejorar a nivel {section.upgrade_level + 1} (${Number(section.next_upgrade_cost).toLocaleString()})
-            </button>
+            {atMax ? (
+              <div className="w-full text-center bg-gray-100 text-gray-500 rounded py-2 font-semibold">
+                Nivel maximo
+              </div>
+            ) : (
+              <button
+                onClick={() => onUpgrade(section.id)}
+                className="w-full bg-amber-600 text-white rounded py-2 font-semibold hover:bg-amber-700"
+              >
+                Mejorar a nivel {section.upgrade_level + 1} (${Number(section.next_upgrade_cost).toLocaleString()})
+              </button>
+            )}
           </>
         )}
 

@@ -5,6 +5,7 @@ const { USER_TEAM_ID } = require('../config');
 const { playGame } = require('../services/gamePlay');
 const { getLineup } = require('../services/lineup');
 const { computeHomeGameRevenue, computeAwayGameRevenue } = require('../services/economy');
+const { getFacilityBonuses } = require('../services/stadiumFacilityService');
 const { getRivalryIntensity } = require('../services/rivalryService');
 const { updateSeriesAfterGame } = require('../services/playoffService');
 const { RIVALRY_BADGE_THRESHOLD } = require('../config');
@@ -136,7 +137,9 @@ router.post('/:id/simulate', async (req, res) => {
         where: { team_id: USER_TEAM_ID, section_type: 'grandstand' },
       });
       const rivalryIntensity = await getRivalryIntensity(game.home_team_id, game.away_team_id);
-      economy = computeHomeGameRevenue(sections, userTeam.reputation, userTeam.fan_base, isPlayoff, rivalryIntensity);
+      economy = computeHomeGameRevenue(
+        sections, userTeam.reputation, userTeam.fan_base, isPlayoff, rivalryIntensity, getFacilityBonuses(userTeam)
+      );
 
       await prisma.team.update({
         where: { id: USER_TEAM_ID },

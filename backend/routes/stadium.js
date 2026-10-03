@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID } = require('../config');
+const { USER_TEAM_ID, GRANDSTAND_MAX_LEVEL } = require('../config');
+const { describeFacilities, upgradeFacility, FacilityError } = require('../services/stadiumFacilityService');
 const {
   getUpgradeCost,
   getFloorExpandCost,
@@ -18,13 +19,19 @@ router.get('/', async (req, res) => {
         where: { team_id: USER_TEAM_ID },
         orderBy: [{ row_pos: 'asc' }, { col_pos: 'asc' }],
       }),
-      prisma.team.findUnique({ where: { id: USER_TEAM_ID }, select: { stadium_floors: true } }),
+      prisma.team.findUnique({ where: { id: USER_TEAM_ID } }),
     ]);
     res.json({
       floors: team.stadium_floors,
+      budget: Number(team.budget),
+      max_grandstand_level: GRANDSTAND_MAX_LEVEL,
+      facilities: describeFacilities(team),
       sections: sections.map((s) => ({
         ...s,
-        next_upgrade_cost: s.section_type === 'grandstand' ? getUpgradeCost(s.upgrade_level) : null,
+        next_upgrade_cost:
+          s.section_type === 'grandstand' && s.upgrade_level < GRANDSTAND_MAX_LEVEL
+            ? getUpgradeCost(s.upgrade_level)
+            : null,
       })),
     });
   } catch (err) {
@@ -64,6 +71,9 @@ router.post('/:id/upgrade', async (req, res) => {
 
     if (section.section_type !== 'grandstand') {
       return res.status(400).json({ error: 'Solo se pueden mejorar gradas' });
+    }
+    if (section.upgrade_level >= GRANDSTAND_MAX_LEVEL) {
+      return res.status(400).json({ error: `La grada ya esta al nivel maximo (${GRANDSTAND_MAX_LEVEL})` });
     }
 
     const cost = getUpgradeCost(section.upgrade_level);
@@ -210,6 +220,20 @@ router.post('/expand-floor', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al expandir el estadio' });
+  }
+});
+
+// POST /api/stadium/facilities/:key/upgrade -> sube de nivel una instalacion (campo, luces, marcador, medicas)
+router.post('/facilities/:key/upgrade', async (req, res) => {
+  try {
+    const result = await upgradeFacility(USER_TEAM_ID, req.params.key);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    if (err instanceof FacilityError) {
+      return res.status(err.status).json({ error: err.message, ...err.extra });
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Error al mejorar la instalacion' });
   }
 });
 

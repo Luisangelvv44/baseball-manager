@@ -97,4 +97,41 @@ module.exports = {
   SCOUT_BUDGET_AGE_REROLL_MAX_PROB: 0.85, // probabilidad de re-tirar edad a 17-18 con presupuesto tope
   SCOUT_BUDGET_SKILL_MIN_BONUS_MAX: 55, // puntos que suma al piso de current_skill inicial con presupuesto tope (15 -> 70)
   SCOUT_BUDGET_SKILL_MAX_BONUS_MAX: 50, // puntos que suma al techo de current_skill inicial con presupuesto tope (35 -> 85)
+
+  // ----- Estadio: gradas e instalaciones (ver services/stadiumFacilityService.js) -----
+  GRANDSTAND_MAX_LEVEL: 15, // tope de nivel por seccion de grada
+  FACILITY_UPKEEP_PER_LEVEL: 500, // costo extra por partido en casa, por cada nivel de instalacion sobre 1
+  // Instalaciones del equipo (columnas `<key>_level` en Team, todas arrancan en nivel 1).
+  // Costo de mejora L -> L+1 = base_cost * cost_factor^(L-1). `levels[i]` = nombre del nivel i+1.
+  // Efectos (solo equipo del usuario), por cada nivel sobre 1:
+  //   attendance_rate_per_level: suma a la tasa de asistencia (fraccion de la fan_base)
+  //   merch_pct_per_level:       multiplica el gasto de merch (+X%)
+  //   injury_prob_pct_per_level: reduce la probabilidad de lesion (-X%)
+  //   injury_days_every_levels:  -1 dia de baja cada N niveles sobre 1
+  STADIUM_FACILITIES: {
+    field: {
+      name: 'Campo y césped', column: 'field_level', max: 10, base_cost: 500_000, cost_factor: 2,
+      attendance_rate_per_level: 0.003,
+      levels: [
+        'Césped básico', 'Césped resembrado', 'Riego automático', 'Corte en franjas', 'Pista de advertencia',
+        'Infield nivelado', 'Corte en cuadros', 'Drenaje profesional', 'Césped híbrido', 'Césped de Grandes Ligas',
+      ],
+    },
+    lights: {
+      name: 'Iluminación', column: 'lights_level', max: 5, base_cost: 1_000_000, cost_factor: 2,
+      attendance_rate_per_level: 0.005,
+      levels: ['2 torres de luz', '4 torres de luz', '4 torres LED', '6 torres LED', '6 torres LED de alta potencia'],
+    },
+    board: {
+      name: 'Marcador', column: 'board_level', max: 5, base_cost: 500_000, cost_factor: 2,
+      merch_pct_per_level: 0.06,
+      levels: ['Marcador manual', 'Marcador LED', 'Marcador LED grande', 'Pantalla de video', 'Pantalla + laterales'],
+    },
+    medical: {
+      name: 'Instalaciones médicas', column: 'medical_level', max: 5, base_cost: 4_000_000, cost_factor: 2,
+      injury_prob_pct_per_level: 0.08,
+      injury_days_every_levels: 2,
+      levels: ['Botiquín', 'Enfermería', 'Sala de fisioterapia', 'Centro médico', 'Clínica deportiva'],
+    },
+  },
 };

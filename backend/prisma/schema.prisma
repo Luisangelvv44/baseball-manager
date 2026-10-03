@@ -30,6 +30,10 @@ model Team {
   min_growth_threshold   Float   @default(1.5)
   fan_base               Int     @default(0)
   stadium_floors         Int     @default(1)
+  field_level            Int     @default(1)
+  lights_level           Int     @default(1)
+  board_level            Int     @default(1)
+  medical_level          Int     @default(1)
   alerts_seen_at         DateTime?
 
   division              Division?            @relation(fields: [division_id], references: [id])
