@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID, CPU_REVENUE_PER_FAN_MIN, CPU_REVENUE_PER_FAN_MAX } = require('../config');
+const { seasonAverageFanBase } = require('../services/fanBaseTracker');
 
 // GET /api/teams -> todos los equipos con info de division (para leaderboard)
 router.get('/', async (req, res) => {
@@ -87,8 +88,8 @@ router.get('/overview', async (req, res) => {
       budget: t.is_user_team ? null : Number(t.budget),
       bid_aggressiveness_pct: t.is_user_team ? null : t.bid_aggressiveness * (1 + t.desperation_index) * 100,
       max_bid_amount: t.is_user_team ? null : Math.round(Number(t.budget) * t.bid_aggressiveness * (1 + t.desperation_index)),
-      revenue_min: t.is_user_team ? null : t.fan_base * CPU_REVENUE_PER_FAN_MIN,
-      revenue_max: t.is_user_team ? null : t.fan_base * CPU_REVENUE_PER_FAN_MAX,
+      revenue_min: t.is_user_team ? null : seasonAverageFanBase(t) * CPU_REVENUE_PER_FAN_MIN,
+      revenue_max: t.is_user_team ? null : seasonAverageFanBase(t) * CPU_REVENUE_PER_FAN_MAX,
     })));
   } catch (err) {
     console.error(err);

@@ -5,6 +5,7 @@ const { checkAndApplyGameInjuries } = require('./injuryService');
 const { backfillInjuredCpuPositions } = require('./cpuTeamManagement');
 const { createNews } = require('./newsService');
 const { updateRivalryAfterGame } = require('./rivalryService');
+const { FAN_RANGE_SELECT, trackFanBase } = require('./fanBaseTracker');
 const {
   detectPitcherGems,
   detectCycles,
@@ -285,7 +286,8 @@ async function applyRandomFanChange(teamId, won, min, max) {
   const team = await prisma.team.findUnique({ where: { id: teamId }, select: { fan_base: true } });
   const magnitude = randomFanMagnitude(min, max);
   const newFanBase = Math.max(10000, team.fan_base + (won ? magnitude : -magnitude));
-  await prisma.team.update({ where: { id: teamId }, data: { fan_base: newFanBase } });
+  const updated = await prisma.team.update({ where: { id: teamId }, data: { fan_base: newFanBase }, select: FAN_RANGE_SELECT });
+  await trackFanBase(updated);
 }
 
 async function updateStandings(teamId, runsFor, runsAgainst, won) {
@@ -301,8 +303,9 @@ async function updateStandings(teamId, runsFor, runsAgainst, won) {
     : -randomFanMagnitude(FAN_MIN_REGULAR, FAN_MAX_REGULAR);
   const newFanBase = Math.max(10000, team.fan_base + change);
 
-  await prisma.team.update({
+  const updated = await prisma.team.update({
     where: { id: teamId },
+    select: FAN_RANGE_SELECT,
     data: {
       wins: { increment: won ? 1 : 0 },
       losses: { increment: won ? 0 : 1 },
@@ -312,6 +315,7 @@ async function updateStandings(teamId, runsFor, runsAgainst, won) {
       fan_base: newFanBase,
     },
   });
+  await trackFanBase(updated);
 }
 
 module.exports = { playGame, randomFanMagnitude, applyRandomFanChange };

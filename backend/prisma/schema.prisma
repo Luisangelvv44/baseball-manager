@@ -29,6 +29,8 @@ model Team {
   desperation_index      Float   @default(0)
   min_growth_threshold   Float   @default(1.5)
   fan_base               Int     @default(0)
+  min_fan_base_season    Int?
+  max_fan_base_season    Int?
   stadium_floors         Int     @default(1)
   field_level            Int     @default(1)
   lights_level           Int     @default(1)

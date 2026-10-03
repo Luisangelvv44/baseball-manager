@@ -14,6 +14,8 @@ const mockTeam = {
   losses: 2,
   reputation: 50,
   fan_base: 20000,
+  min_fan_base_season: 20000,
+  max_fan_base_season: 20000,
   is_user_team: true,
   division_id: 1,
   division: { id: 1, name: 'East' },

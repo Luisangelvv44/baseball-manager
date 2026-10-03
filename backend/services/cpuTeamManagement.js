@@ -2,18 +2,20 @@ const prisma = require('../db/prisma');
 const { generatePlayer, POSITIONS, randomInt, calculateSalary } = require('../seeders/generators/playerGenerator');
 const { releasePlayerWithPenalty, findWeakestRosterPlayer, RELEASE_PENALTY_RATE } = require('./auctionService');
 const { assignAppearance } = require('./playerAppearanceService');
+const { seasonAverageFanBase } = require('./fanBaseTracker');
 const { CPU_REVENUE_PER_FAN_MIN, CPU_REVENUE_PER_FAN_MAX, MAX_ROSTER_SIZE } = require('../config');
 
 async function giveCpuTeamsRevenue() {
     const cpuTeamsRevenue = await prisma.team.findMany({
         where: { is_user_team: false },
-        select: { id: true, fan_base: true },
+        select: { id: true, fan_base: true, min_fan_base_season: true, max_fan_base_season: true },
     });
 
     for (const ct of cpuTeamsRevenue) {
         const span = CPU_REVENUE_PER_FAN_MAX - CPU_REVENUE_PER_FAN_MIN + 1;
         const revenuePerFan = Math.floor(Math.random() * span) + CPU_REVENUE_PER_FAN_MIN; // entero en [MIN, MAX] por fan
-        const revenue = ct.fan_base * revenuePerFan;
+        // Promedio (min + max) / 2 de la fanaticada en la temporada, no el valor al cierre
+        const revenue = seasonAverageFanBase(ct) * revenuePerFan;
         if (revenue > 0) {
             await prisma.team.update({
                 where: { id: ct.id },

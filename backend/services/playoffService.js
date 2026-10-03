@@ -1,6 +1,7 @@
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID } = require('../config');
 const { playGame, applyRandomFanChange } = require('./gamePlay');
+const { FAN_RANGE_SELECT, trackFanBase } = require('./fanBaseTracker');
 
 const FAN_MIN_PLAYOFF = 2000;
 const FAN_MAX_PLAYOFF = 20000;
@@ -11,10 +12,12 @@ const FAN_MAX_PLAYOFF = 20000;
 async function applyPlayoffBonus(teamId, fanPct, repPoints) {
   const team = await prisma.team.findUnique({ where: { id: teamId }, select: { fan_base: true } });
   const fanBoost = Math.round(team.fan_base * fanPct);
-  await prisma.team.update({
+  const updated = await prisma.team.update({
     where: { id: teamId },
     data: { reputation: { increment: repPoints }, fan_base: { increment: fanBoost } },
+    select: FAN_RANGE_SELECT,
   });
+  await trackFanBase(updated);
 }
 
 async function generatePlayoffBracket(seasonId) {
@@ -50,7 +53,7 @@ async function generatePlayoffBracket(seasonId) {
       data.reputation = { increment: 5 };
       data.fan_base = { increment: Math.round(t.fan_base * 0.10) };
     }
-    return prisma.team.update({ where: { id: t.id }, data });
+    return prisma.team.update({ where: { id: t.id }, data, select: FAN_RANGE_SELECT }).then(trackFanBase);
   }));
 
   let order = 0;
@@ -275,10 +278,12 @@ async function handleChampion(winnerId, seasonId) {
   const fandomBoost = Math.round(team.fan_base * 0.10);
   const championshipPrize = team.fan_base * 50;
 
-  await prisma.team.update({
+  const updated = await prisma.team.update({
     where: { id: winnerId },
     data: { reputation: { increment: 20 }, budget: { increment: championshipPrize }, fan_base: { increment: fandomBoost } },
+    select: FAN_RANGE_SELECT,
   });
+  await trackFanBase(updated);
 
   if (winnerId === USER_TEAM_ID) {
     await prisma.finance.create({

@@ -22,6 +22,7 @@ const { generatePlayoffBracket, advancePlayoffRound } = require('../services/pla
 const { retireOldPlayers } = require('../services/retiredPlayer');
 const { fluctuatePlayerSkills, updatePlayersContracts } = require('../services/playerService');
 const { giveCpuTeamsRevenue, fillMissingPositions } = require('../services/cpuTeamManagement');
+const { resetFanBaseRange } = require('../services/fanBaseTracker');
 const { applyCoachBonuses, deductCoachSalaries } = require('../services/coachService');
 const { recordLuxuryTaxProjection, applyLuxuryTax } = require('../services/luxuryTaxService');
 const { createDraft } = require('../services/draftService');
@@ -220,6 +221,7 @@ async function endOfSeasonCleanup(season) {
   await fluctuatePlayerSkills();
   await applyCoachBonuses();
   await giveCpuTeamsRevenue();
+  await resetFanBaseRange(); // El rango min/max de fan_base de la nueva temporada arranca en el valor actual
   await applyLuxuryTax(season, 999); // Impuesto al lujo: cobro real con roster final, antes del recorte de roster CPU
   await processSeasonEndRepayments(season); // Pagos de prestamos del Banco: debe ir antes del recorte, que lee budget
 
