@@ -32,6 +32,12 @@ module.exports = {
   NEWS_EXTRA_INNINGS_THRESHOLD: 10,
   NEWS_STREAK_MILESTONE: 5,
   NEWS_STREAK_LOOKBACK_GAMES: 50,
+  // Contratos (services/contractService.js): bono que se paga cada vez que el jugador logra
+  // una hazana (no-hitter, juego perfecto, ciclo, multi-HR, premio de temporada). El % del
+  // salario anual escala lineal con demand_factor (0.00-3.00): exigencia 3.00 -> MAX_PCT.
+  ACHIEVEMENT_BONUS_MAX_PCT: 0.03,
+  CPU_ACHIEVEMENT_BONUS_MAX_PCT: 0.01, // tope para equipos CPU, para que no quiebren con estrellas
+  ACHIEVEMENT_BONUS_SEASON_CAP_PCT: 0.15, // maximo cobrable por contrato y temporada, % del anual
   SEASON_AWARD_MIN_AB: 135, // ~1.5x GAMES_PER_SEASON: jugador debe haber bateado la mayor parte de la temporada
   SEASON_AWARD_MIN_IP: 60, // suficientes aperturas dado que un pitcher lanza el juego completo cuando le toca
   HISTORICAL_CPU_STAT_DIVISOR: 3, // en el ranking historico de carrera, los conteos (HR/H/RBI/W/K) de stints

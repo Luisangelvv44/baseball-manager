@@ -1,6 +1,7 @@
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID, MAX_ROSTER_SIZE, AUCTION_DEADLINE_DAY } = require('../config');
 const { createNews } = require('./newsService');
+const { signContract, closeActiveContract } = require('./contractService');
 
 function calculateGrowthCoefficient(player) {
   const yearsLeft = Math.max(0, player.growth_age - player.age);
@@ -368,6 +369,7 @@ async function releasePlayerWithPenalty(client, teamId, player, { forced = false
     where: { id: player.id },
     data: { team_id: null, last_team_id: teamId, status: 'free_agent' },
   });
+  await closeActiveContract(client, player.id, 'released');
 
   if (chargedPenalty > 0) {
     await client.team.update({ where: { id: teamId }, data: { budget: { decrement: chargedPenalty } } });
@@ -407,6 +409,9 @@ async function _signPlayerToTeam(client, auction, teamId, amount, years, season)
       salary: amount,
       contract_years_remaining: years,
     },
+  });
+  await signContract(client, { ...auction.player, id: auction.player_id }, {
+    teamId, annualSalary: amount, years, isRookie: Boolean(auction.player?.rookie_contract), seasonId: season?.id,
   });
 
   await client.team.update({

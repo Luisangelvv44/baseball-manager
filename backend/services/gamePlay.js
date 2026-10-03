@@ -5,6 +5,7 @@ const { checkAndApplyGameInjuries } = require('./injuryService');
 const { backfillInjuredCpuPositions } = require('./cpuTeamManagement');
 const { createNews } = require('./newsService');
 const { updateRivalryAfterGame } = require('./rivalryService');
+const { payAchievementBonus } = require('./contractService');
 const { FAN_RANGE_SELECT, trackFanBase } = require('./fanBaseTracker');
 const {
   detectPitcherGems,
@@ -192,6 +193,16 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
         gameRow.season_id,
         { teamId: m.teamId, alert: true }
       );
+    }
+
+    // Bonos por logro de contrato (con tope por temporada, ver contractService)
+    const achievements = [
+      ...gems.map((g) => ({ playerId: g.pitcherId, type: g.perfect ? 'perfect_game' : 'no_hitter' })),
+      ...cycles.map((c) => ({ playerId: c.playerId, type: 'cycle' })),
+      ...multiHomers.map((m) => ({ playerId: m.playerId, type: 'multi_hr' })),
+    ];
+    for (const a of achievements) {
+      await payAchievementBonus(prisma, { ...a, seasonDay: gameRow.day_number });
     }
   }
 

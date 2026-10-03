@@ -58,7 +58,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
   - Core: `Division`, `Team`, `Player`, `Season`, `SeasonRecord`, `GameSchedule`
   - Gameplay: `GameLineup`, `GameEvent`, `TeamLineup`, `PlayoffSeries`
   - Economy: `StadiumSection`, `Finance`, `LuxuryTaxRecord`
-  - Personnel: `Scout`, `Coach`, `Draft`, `DraftProspect`, `Trade`, `TradeItem`
+  - Personnel: `Scout`, `Coach`, `Draft`, `DraftProspect`, `Trade`, `TradeItem`, `Contract`
   - Market: `FreeAgentAuction`, `AuctionBid`
   - Broadcast: `BroadcastCompany`, `BroadcastOffer`, `BroadcastContract`
   - Misc: `NewsItem`, `HomeRunDerbyEvent`, `DerbyEntry`, `DerbySwing`
@@ -111,6 +111,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `playoffService.js` | Builds the playoff bracket (top 4 per division), tracks/updates each team's "desperation index", simulates series/rounds |
 | `broadcastService.js` | TV/radio broadcast contracts; generates per-company offers each season (reputation-gated), CPU teams auto-accept/reject |
 | `derbyService.js` | Home Run Derby: swing-by-swing HR probability from batter skill, CPU entrant selection, bracket/tiebreak simulation |
+| `contractService.js` | `Contract` table (current + historical). Mirrors `Player.salary`/`contract_years_remaining`/`rookie_contract` — every signing/renewal/trade/release/expiry/retirement calls it. Achievement bonus = 0–3% of annual by `demand_factor` (CPU capped at 1%), paid on no-hitters/perfect games/cycles/multi-HR/season awards with a per-season cap (`ACHIEVEMENT_BONUS_*` in `config.js`). `backfillContracts()` (behind `npm run contracts:backfill`) reconstructs past contracts from `PlayerSeasonRecord`. The player CV (`getPlayerCareerHistory`) shows every contracted season, with zeros when he didn't play |
 | `newsService.js` | Thin wrapper that creates `NewsItem` rows, used by other services to log league events |
 | `newsDetection.js` | Scans a simulated game's play-by-play for feats (no-hitters/perfect games, cycles, multi-HR games, extra-innings, win/loss streaks) to feed the news feed |
 

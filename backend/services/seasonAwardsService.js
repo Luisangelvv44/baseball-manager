@@ -1,6 +1,7 @@
 const prisma = require('../db/prisma');
 const { computeSeasonStats } = require('./statsService');
 const { createNews } = require('./newsService');
+const { payAchievementBonus } = require('./contractService');
 const { SEASON_AWARD_MIN_AB, SEASON_AWARD_MIN_IP } = require('../config');
 
 function battingScore(b) {
@@ -122,6 +123,9 @@ async function computeSeasonAwards(season) {
   for (const award of awards) {
     const headline = headlines[award.category]?.(award);
     if (headline) await createNews('awards', headline, season.current_day, season.id);
+    if (award.player_id != null) {
+      await payAchievementBonus(prisma, { playerId: award.player_id, type: 'award', seasonDay: season.current_day });
+    }
   }
 
   return awards;

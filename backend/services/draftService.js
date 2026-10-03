@@ -3,6 +3,7 @@ const { USER_TEAM_ID, DRAFT_POOL_SIZE, MARKET_PLAYER_CAP } = require('../config'
 const { FIRST_NAMES, LAST_NAMES } = require('../seeders/data/names');
 const { calculateSalary, calculateGrowthAge, randomDemandFactor, randomInt, randomChoice, POSITIONS } = require('../seeders/generators/playerGenerator');
 const { assignAppearance, syncMissingAppearances } = require('./playerAppearanceService');
+const { signContract } = require('./contractService');
 
 function generateProspect(draftId, index) {
   // Earlier picks (lower index) get higher quality prospects
@@ -90,7 +91,7 @@ async function draftPickPlayer(prospect, teamId) {
   ) * 100);
 
   if (prospect.source_player_id) {
-    return prisma.player.update({
+    const updated = await prisma.player.update({
       where: { id: prospect.source_player_id },
       data: {
         team_id: teamId,
@@ -100,6 +101,8 @@ async function draftPickPlayer(prospect, teamId) {
         contract_years_remaining: randomInt(2, 4),
       },
     });
+    await signDraftContract(updated, teamId);
+    return updated;
   }
 
   const created = await prisma.player.create({
@@ -120,7 +123,18 @@ async function draftPickPlayer(prospect, teamId) {
     },
   });
   await assignAppearance(prisma, created.id);
+  await signDraftContract(created, teamId);
   return created;
+}
+
+// El draft ocurre en offseason: el contrato rookie arranca la proxima temporada.
+function signDraftContract(player, teamId) {
+  return signContract(prisma, player, {
+    teamId,
+    annualSalary: player.salary,
+    years: player.contract_years_remaining,
+    isRookie: true,
+  });
 }
 
 // Al cerrar el draft: los prospectos no elegidos regulan el mercado.

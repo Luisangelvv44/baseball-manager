@@ -14,6 +14,7 @@ const {
 } = require('../config');
 const { generatePlayer, calculateSalary, randomInt, POSITIONS } = require('../seeders/generators/playerGenerator');
 const { syncMissingAppearances } = require('./playerAppearanceService');
+const { signContractFromPlayer } = require('./contractService');
 
 // Probabilidad de que un intento de mejora (que cuesta TODDLER_PROGRAM_SKILL_COST se
 // acierte o no) suba +1 de skill, para una temporada dada (0-indexada): 0.80 -> 0.35.
@@ -60,7 +61,7 @@ async function assignToddlerToTeam(client, player, teamId) {
     5000,
     Math.round(calculateSalary(player.potential_coefficient, player.current_skill, player.age) / 10 / 100) * 100
   );
-  return client.player.update({
+  const assigned = await client.player.update({
     where: { id: player.id },
     data: {
       team_id: teamId,
@@ -72,6 +73,8 @@ async function assignToddlerToTeam(client, player, teamId) {
       salary: rookieSalary,
     },
   });
+  await signContractFromPlayer(client, assigned);
+  return assigned;
 }
 
 async function finalizeSelection(client, programId) {

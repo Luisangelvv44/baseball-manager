@@ -6,6 +6,7 @@ const { calculateSalary } = require('../seeders/generators/playerGenerator');
 const { createNews } = require('../services/newsService');
 const { computeSeasonStats, getPlayerCareerHistory } = require('../services/statsService');
 const { assignAppearance } = require('../services/playerAppearanceService');
+const { replaceActiveContract } = require('../services/contractService');
 
 const SEARCH_RESULT_LIMIT = 20;
 
@@ -180,6 +181,16 @@ router.post('/:id/promote', async (req, res) => {
     }
 
     const updated = await prisma.player.update({ where: { id: Number(id) }, data });
+    if (player.rookie_contract) {
+      // Sale del contrato rookie: nuevo contrato a precio de Mayores por los anios que le quedan
+      await replaceActiveContract(prisma, updated, {
+        teamId: USER_TEAM_ID,
+        annualSalary: updated.salary,
+        years: Math.max(1, updated.contract_years_remaining),
+        yearsRemaining: updated.contract_years_remaining,
+        isRookie: false,
+      });
+    }
 
     const season = await prisma.season.findFirst({ where: { status: 'active' } });
     await createNews('signing',
@@ -266,7 +277,10 @@ router.post('/:id/renew', async (req, res) => {
         where: { id: Number(id) },
         data: { salary: newSalary, contract_years_remaining: years },
       });
-      return res.json({ success: true, player: updated });
+      const contract = await replaceActiveContract(prisma, updated, {
+        teamId: USER_TEAM_ID, annualSalary: newSalary, years, isRookie: player.rookie_contract,
+      });
+      return res.json({ success: true, player: updated, contract });
     }
 
     // Renovar un rookie convierte el contrato a precio de mercado real
@@ -309,8 +323,12 @@ router.post('/:id/renew', async (req, res) => {
         ...(isRookie && { rookie_contract: false }),
       },
     });
+    // El nuevo contrato fija el bono por logro segun la exigencia (demand_factor) del jugador
+    const contract = await replaceActiveContract(prisma, updated, {
+      teamId: USER_TEAM_ID, annualSalary: newSalary, years, isRookie: false,
+    });
 
-    res.json({ success: true, player: updated });
+    res.json({ success: true, player: updated, contract });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al renovar contrato' });

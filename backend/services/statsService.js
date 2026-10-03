@@ -309,7 +309,7 @@ async function getPlayerCareerHistory(playerId) {
   function getRow(seasonId, year, teamId, dayNumber) {
     const key = `${seasonId}:${teamId}`;
     if (!rows.has(key)) {
-      rows.set(key, { season_id: seasonId, year, team_id: teamId, min_day: dayNumber, batting: null, pitching: null });
+      rows.set(key, { season_id: seasonId, year, team_id: teamId, min_day: dayNumber, batting: null, pitching: null, contract_only: false });
     } else if (dayNumber < rows.get(key).min_day) {
       rows.get(key).min_day = dayNumber;
     }
@@ -432,7 +432,36 @@ async function getPlayerCareerHistory(playerId) {
     }
   }
 
-  const teamIds = [...new Set([...rows.values()].map((r) => r.team_id))];
+  // Temporadas cubiertas por contrato pero sin juegos: aparecen igual, con stats en 0
+  // (bateo, o pitcheo si es lanzador), porque el jugador si pertenecia a ese equipo.
+  const contracts = await prisma.contract.findMany({
+    where: { player_id: playerId },
+    orderBy: [{ start_season_id: 'asc' }, { id: 'asc' }],
+  });
+  if (contracts.length > 0) {
+    const allSeasons = await prisma.season.findMany({ orderBy: { id: 'asc' }, select: { id: true, year: true } });
+    const latestSeasonId = allSeasons.length ? allSeasons[allSeasons.length - 1].id : null;
+    for (const c of contracts) {
+      if (c.start_season_id == null || c.team_id == null) continue; // aun no arranca (offseason)
+      const endId = c.end_season_id ?? latestSeasonId;
+      for (const s of allSeasons) {
+        if (s.id < c.start_season_id || s.id > endId) continue;
+        if (rows.has(`${s.id}:${c.team_id}`)) continue;
+        const row = getRow(s.id, s.year, c.team_id, Number.MAX_SAFE_INTEGER);
+        row.contract_only = true;
+        if (player.position === 'P') {
+          row.pitching = { g: 0, w: 0, l: 0, ip: '0.0', era: null, so: 0, bb: 0, whip: null };
+        } else {
+          row.batting = { g: 0, ab: 0, h: 0, avg: null, hr: 0, rbi: 0, bb: 0, so: 0 };
+        }
+      }
+    }
+  }
+
+  const teamIds = [...new Set([
+    ...[...rows.values()].map((r) => r.team_id),
+    ...contracts.map((c) => c.team_id).filter((id) => id != null),
+  ])];
   const teams = teamIds.length > 0
     ? await prisma.team.findMany({ where: { id: { in: teamIds } }, select: { id: true, name: true } })
     : [];
@@ -450,9 +479,30 @@ async function getPlayerCareerHistory(playerId) {
       team_name: teamNameById[r.team_id] || 'Desconocido',
       batting: r.batting,
       pitching: r.pitching,
+      contract_only: r.contract_only,
     }));
 
-  return { player, seasons };
+  const contractRows = contracts
+    .slice()
+    .sort((a, b) => (b.start_season_id ?? Infinity) - (a.start_season_id ?? Infinity) || b.id - a.id)
+    .map((c) => ({
+      id: c.id,
+      team_id: c.team_id,
+      team_name: teamNameById[c.team_id] || (c.team_id == null ? 'Sin equipo' : 'Desconocido'),
+      start_season_id: c.start_season_id,
+      end_season_id: c.end_season_id,
+      is_rookie: c.is_rookie,
+      annual_salary: Number(c.annual_salary),
+      total_years: c.total_years,
+      years_remaining: c.years_remaining,
+      total_value: Number(c.total_value),
+      achievement_bonus: Number(c.achievement_bonus),
+      bonus_paid_total: Number(c.bonus_paid_total),
+      status: c.status,
+      is_reconstructed: c.is_reconstructed,
+    }));
+
+  return { player, seasons, contracts: contractRows };
 }
 
 module.exports = { computeSeasonStats, getPlayerCareerHistory, computeSeasonStintRecords };

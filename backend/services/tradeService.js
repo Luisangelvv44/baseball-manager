@@ -2,6 +2,7 @@ const prisma = require('../db/prisma');
 const { USER_TEAM_ID, TRADE_DEADLINE_DAY, TRADE_OFFER_EXPIRY_DAYS } = require('../config');
 const { calculateGrowthCoefficient, projectPeakSkill } = require('./auctionService');
 const { createNews } = require('./newsService');
+const { transferContract } = require('./contractService');
 
 const ACCEPT_TOLERANCE_BASE = 0.10;  // tolerancia base a un trade ligeramente desfavorable, escala con bid_aggressiveness
 const CPU_OFFER_CHANCE = 0.05;       // probabilidad diaria de que un equipo CPU genere una oferta al usuario
@@ -95,6 +96,7 @@ async function executeTrade(client, trade, season) {
       ? trade.recipient_team_id
       : trade.proposer_team_id;
     await client.player.update({ where: { id: item.player_id }, data: { team_id: destinationTeamId } });
+    await transferContract(client, item.player_id, destinationTeamId, season?.id);
     await client.teamLineup.deleteMany({ where: { player_id: item.player_id } });
   }
 

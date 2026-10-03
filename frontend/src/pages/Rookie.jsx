@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useTeam } from '../context/TeamContext.jsx';
 import SkillTierBadge from '../components/SkillTierBadge.jsx';
+import { achievementBonusPct, achievementBonusAmount } from '../utils/achievementBonus.js';
 
 const MAX_MINOR_ROSTER_SIZE = 15;
 
@@ -164,6 +165,13 @@ export default function Rookie() {
               <p><span className="font-medium">Jugador:</span> {renewingPlayer.first_name} {renewingPlayer.last_name}</p>
               <p><span className="font-medium">Salario actual:</span> ${Number(renewingPlayer.salary).toLocaleString()} / año</p>
               <p><span className="font-medium">Años restantes:</span> {renewingPlayer.contract_years_remaining}</p>
+              <p>
+                <span className="font-medium">Bono por logro exigido:</span>{' '}
+                {(achievementBonusPct(renewingPlayer.demand_factor) * 100).toFixed(1)}% del anual
+                {Number(renewSalary) > 0 && (
+                  <> (${achievementBonusAmount(renewingPlayer.demand_factor, renewSalary).toLocaleString()} por logro)</>
+                )}
+              </p>
             </div>
 
             <div className="space-y-3">

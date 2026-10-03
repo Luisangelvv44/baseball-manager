@@ -40,6 +40,8 @@ const prismaMock = {
   bank: createModel(),
   loan: createModel(),
   rivalry: createModel(),
+  contract: createModel(),
+  playerSeasonRecord: createModel(),
   $queryRaw: jest.fn(),
   $transaction: jest.fn(),
 };

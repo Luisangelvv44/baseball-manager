@@ -4,6 +4,7 @@ const { generateTeamNames } = require('./generators/teamGenerator');
 const { generateStadiumSections } = require('./generators/stadiumGenerator');
 const { generateToddlerCycle } = require('../services/toddlerProgramService');
 const { syncMissingAppearances } = require('../services/playerAppearanceService');
+const { backfillContracts } = require('../services/contractService');
 const { BANK_INITIAL_CAPITAL, BANK_BASE_INTEREST_RATE } = require('../config');
 
 const TEAMS_PER_DIVISION = 8;
@@ -83,6 +84,7 @@ async function seed() {
       }
       await tx.player.createMany({ data: freeAgents });
       await syncMissingAppearances(tx);
+      await backfillContracts(tx); // contrato vigente para cada jugador de roster CPU
 
       // ---------- Programa de Toddlers (ciclo 1) ----------
       console.log('Iniciando Programa de Toddlers...');

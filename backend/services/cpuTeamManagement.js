@@ -2,6 +2,7 @@ const prisma = require('../db/prisma');
 const { generatePlayer, POSITIONS, randomInt, calculateSalary } = require('../seeders/generators/playerGenerator');
 const { releasePlayerWithPenalty, findWeakestRosterPlayer, RELEASE_PENALTY_RATE } = require('./auctionService');
 const { assignAppearance } = require('./playerAppearanceService');
+const { signContractFromPlayer } = require('./contractService');
 const { seasonAverageFanBase } = require('./fanBaseTracker');
 const { CPU_REVENUE_PER_FAN_MIN, CPU_REVENUE_PER_FAN_MAX, MAX_ROSTER_SIZE } = require('../config');
 
@@ -51,6 +52,7 @@ async function createReplacement(teamId, position) {
   });
   const created = await prisma.player.create({ data: { ...replacement, level: 'MAJOR' } });
   await assignAppearance(prisma, created.id);
+  await signContractFromPlayer(prisma, created);
 }
 
 // De las posiciones con excedente MAJOR (>1), de mayor a menor excedente, elige a quien cortar:
@@ -221,6 +223,7 @@ async function createInjuryRookie(teamId, position) {
   });
   const created = await prisma.player.create({ data: { ...rookie, level: 'MAJOR' } });
   await assignAppearance(prisma, created.id);
+  await signContractFromPlayer(prisma, created);
   return created;
 }
 

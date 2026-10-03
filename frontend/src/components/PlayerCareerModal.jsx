@@ -2,6 +2,30 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import TeamBadge from './TeamBadge.jsx';
 import PlayerSpriteLoader from './PlayerSpriteLoader.jsx';
+import { formatCompactMoney } from '../utils/formatMoney.js';
+
+const CONTRACT_STATUS_LABELS = {
+  active: 'Vigente',
+  expired: 'Terminado',
+  replaced: 'Renovado',
+  released: 'Liberado',
+  traded: 'Traspasado',
+  retired: 'Retirado',
+};
+
+// Temporadas cubiertas por contrato pero sin juegos: se muestran en 0, atenuadas.
+function rowClass(s) {
+  return `border-b last:border-0${s.contract_only ? ' text-gray-400' : ''}`;
+}
+
+function SeasonCell({ season }) {
+  return (
+    <td className="py-1 px-2 text-left font-medium">
+      {season.season_id}
+      {season.contract_only && <span className="ml-1 text-[10px] font-normal">(sin jugar)</span>}
+    </td>
+  );
+}
 
 export default function PlayerCareerModal({ playerId, onClose }) {
   const [data, setData] = useState(null);
@@ -18,6 +42,7 @@ export default function PlayerCareerModal({ playerId, onClose }) {
   const seasons = data?.seasons ?? [];
   const battingRows = seasons.filter((s) => s.batting);
   const pitchingRows = seasons.filter((s) => s.pitching);
+  const contracts = data?.contracts ?? [];
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -68,8 +93,8 @@ export default function PlayerCareerModal({ playerId, onClose }) {
                         </thead>
                         <tbody>
                           {battingRows.map((s) => (
-                            <tr key={`bat-${s.season_id}-${s.team_id}`} className="border-b last:border-0">
-                              <td className="py-1 px-2 text-left font-medium">{s.season_id}</td>
+                            <tr key={`bat-${s.season_id}-${s.team_id}`} className={rowClass(s)}>
+                              <SeasonCell season={s} />
                               <td className="py-1 px-2 text-left"><TeamBadge name={s.team_name} /></td>
                               <td className="py-1 px-2">{s.batting.g}</td>
                               <td className="py-1 px-2">{s.batting.ab}</td>
@@ -107,8 +132,8 @@ export default function PlayerCareerModal({ playerId, onClose }) {
                         </thead>
                         <tbody>
                           {pitchingRows.map((s) => (
-                            <tr key={`pit-${s.season_id}-${s.team_id}`} className="border-b last:border-0">
-                              <td className="py-1 px-2 text-left font-medium">{s.season_id}</td>
+                            <tr key={`pit-${s.season_id}-${s.team_id}`} className={rowClass(s)}>
+                              <SeasonCell season={s} />
                               <td className="py-1 px-2 text-left"><TeamBadge name={s.team_name} /></td>
                               <td className="py-1 px-2">{s.pitching.g}</td>
                               <td className="py-1 px-2">{s.pitching.w}-{s.pitching.l}</td>
@@ -124,6 +149,58 @@ export default function PlayerCareerModal({ playerId, onClose }) {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {contracts.length > 0 && (
+              <div className="mt-6">
+                <h4 className="font-semibold text-sm text-gray-700 mb-2">Contratos</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-center">
+                    <thead>
+                      <tr className="text-xs text-gray-500 border-b">
+                        <th className="py-1 px-2 text-left">Temporadas</th>
+                        <th className="py-1 px-2 text-left">Equipo</th>
+                        <th className="py-1 px-2">Anual</th>
+                        <th className="py-1 px-2">Años</th>
+                        <th className="py-1 px-2">Restan</th>
+                        <th className="py-1 px-2">Total</th>
+                        <th className="py-1 px-2">Bono/logro</th>
+                        <th className="py-1 px-2">Bonos pagados</th>
+                        <th className="py-1 px-2">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {contracts.map((c) => (
+                        <tr key={c.id} className="border-b last:border-0">
+                          <td className="py-1 px-2 text-left">
+                            {c.start_season_id ?? 'Próxima'}
+                            {c.end_season_id != null && c.end_season_id !== c.start_season_id && ` – ${c.end_season_id}`}
+                            {c.end_season_id == null && c.start_season_id != null && ' – hoy'}
+                          </td>
+                          <td className="py-1 px-2 text-left">
+                            <TeamBadge name={c.team_name} />
+                            {c.is_rookie && <span className="ml-1 text-[10px] text-blue-600">Rookie</span>}
+                          </td>
+                          <td className="py-1 px-2">{formatCompactMoney(c.annual_salary)}</td>
+                          <td className="py-1 px-2">{c.total_years}</td>
+                          <td className="py-1 px-2">{c.status === 'active' ? c.years_remaining : '-'}</td>
+                          <td className="py-1 px-2">{formatCompactMoney(c.total_value)}</td>
+                          <td className="py-1 px-2">{c.achievement_bonus > 0 ? formatCompactMoney(c.achievement_bonus) : '-'}</td>
+                          <td className="py-1 px-2">{c.bonus_paid_total > 0 ? formatCompactMoney(c.bonus_paid_total) : '-'}</td>
+                          <td className="py-1 px-2">
+                            <span className={c.status === 'active' ? 'text-green-700 font-medium' : 'text-gray-500'}>
+                              {CONTRACT_STATUS_LABELS[c.status] ?? c.status}
+                            </span>
+                            {c.is_reconstructed && (
+                              <span className="ml-1 text-[10px] text-gray-400" title="Reconstruido desde el historial; montos aproximados">aprox.</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </>

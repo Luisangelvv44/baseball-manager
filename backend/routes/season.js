@@ -33,6 +33,13 @@ const { runCpuLoanPass, processSeasonEndRepayments } = require('../services/bank
 const { computeSeasonAwards } = require('../services/seasonAwardsService');
 const { archiveAndCleanupSeason } = require('../services/seasonArchiveService');
 const { runToddlerProgramSeasonEnd } = require('../services/toddlerProgramService');
+const {
+  advanceContractsAtSeasonEnd,
+  assignPendingStartSeason,
+  replaceActiveContract,
+  closeActiveContract,
+  closeActiveContracts,
+} = require('../services/contractService');
 const { applySeasonDecay } = require('../services/rivalryService');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
@@ -70,6 +77,8 @@ router.post('/start', async (req, res) => {
     const season = await prisma.season.create({
       data: { year: new Date().getFullYear(), current_day: 1, total_days: totalDays + PRE_SEASON_DAYS, status: 'active' },
     });
+    // Contratos firmados en el offseason (draft, graduaciones...) arrancan en esta temporada
+    await assignPendingStartSeason(prisma, season.id);
 
     await prisma.gameSchedule.createMany({
       data: games.map((g) => ({
@@ -180,6 +189,7 @@ async function endOfSeasonCleanup(season) {
   await archiveAndCleanupSeason(season.id);
 
   await updatePlayersContracts();
+  await advanceContractsAtSeasonEnd(prisma);
 
   // Incrementa el contador de temporadas para todo rookie vigente (equipo, agente libre o prospecto de scout)
   // Se excluyen jugadores en Minors: su graduacion se congela hasta que sean promovidos manualmente.
@@ -191,13 +201,24 @@ async function endOfSeasonCleanup(season) {
   // Gradúa a los que acumulan 3+ temporadas como rookie: precio real = salario actual x 10
   const graduatingRookies = await prisma.player.findMany({
     where: { rookie_contract: true, rookie_seasons: { gte: 3 }, level: 'MAJOR', status: { in: ['active', 'free_agent', 'scouted'] } },
-    select: { id: true, salary: true },
+    select: { id: true, salary: true, status: true, team_id: true, contract_years_remaining: true, demand_factor: true },
   });
   for (const p of graduatingRookies) {
+    const newSalary = Math.round(Number(p.salary) * 10);
     await prisma.player.update({
       where: { id: p.id },
-      data: { salary: Math.round(Number(p.salary) * 10), rookie_contract: false },
+      data: { salary: newSalary, rookie_contract: false },
     });
+    // Contrato nuevo a precio real desde la proxima temporada (los que expiran se cierran abajo)
+    if (p.status === 'active' && p.team_id != null && p.contract_years_remaining > 0) {
+      await replaceActiveContract(prisma, p, {
+        teamId: p.team_id,
+        annualSalary: newSalary,
+        years: p.contract_years_remaining,
+        isRookie: false,
+        seasonId: null,
+      });
+    }
   }
 
   const expiringPlayers = await prisma.player.findMany({
@@ -206,6 +227,7 @@ async function endOfSeasonCleanup(season) {
   });
   if (expiringPlayers.length > 0) {
     await prisma.teamLineup.deleteMany({ where: { player_id: { in: expiringPlayers.map((p) => p.id) } } });
+    await closeActiveContracts(prisma, expiringPlayers.map((p) => p.id), 'expired', season.id);
     for (const p of expiringPlayers) {
       await prisma.player.update({
         where: { id: p.id },
@@ -244,6 +266,7 @@ async function endOfSeasonCleanup(season) {
         where: { id: player.id },
         data: { status: 'free_agent', team_id: null, last_team_id: cpuTeam.id },
       });
+      await closeActiveContract(prisma, player.id, 'released', season.id);
       totalSalary -= Number(player.salary);
       rosterSize--;
     }
