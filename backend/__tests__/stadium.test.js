@@ -10,7 +10,15 @@ const {
   getFacilityBonuses,
   describeFacilities,
 } = require('../services/stadiumFacilityService');
-const { computeHomeGameRevenue, computeMaintenanceCost } = require('../services/economy');
+const {
+  computeHomeGameRevenue,
+  computeMaintenanceCost,
+  getFairTicketPrice,
+  getSectionFairPrice,
+  ringPremium,
+  priceDemandFactor,
+} = require('../services/economy');
+const { ringOf } = require('../seeders/generators/stadiumGenerator');
 
 const app = require('../index');
 
@@ -35,7 +43,9 @@ describe('stadiumFacilityService', () => {
   });
 
   it('bonuses are neutral at level 1 (and for missing team)', () => {
-    const neutral = { attendanceRateBonus: 0, merchMultiplier: 1, injuryProbMultiplier: 1, injuryDaysReduction: 0, upkeep: 0 };
+    const neutral = {
+      attendanceRateBonus: 0, merchMultiplier: 1, injuryProbMultiplier: 1, injuryDaysReduction: 0, fairPriceBonus: 0, upkeep: 0,
+    };
     expect(getFacilityBonuses({ field_level: 1, lights_level: 1, board_level: 1, medical_level: 1 })).toEqual(neutral);
     expect(getFacilityBonuses(null)).toEqual(neutral);
   });
@@ -46,7 +56,13 @@ describe('stadiumFacilityService', () => {
     expect(b.merchMultiplier).toBeCloseTo(1.24);
     expect(b.injuryProbMultiplier).toBeCloseTo(0.68);
     expect(b.injuryDaysReduction).toBe(2);
+    expect(b.fairPriceBonus).toBe((9 + 4 + 4) * 2); // campo, luces y marcador; medicas no
     expect(b.upkeep).toBe((9 + 4 + 4 + 4) * FACILITY_UPKEEP_PER_LEVEL);
+  });
+
+  it('medical facilities do not raise the fair price', () => {
+    expect(getFacilityBonuses({ medical_level: 5 }).fairPriceBonus).toBe(0);
+    expect(getFacilityBonuses({ board_level: 3 }).fairPriceBonus).toBe(4);
   });
 
   it('describeFacilities lists every facility starting at level 1', () => {
@@ -58,12 +74,15 @@ describe('stadiumFacilityService', () => {
 });
 
 describe('economy with facility bonuses', () => {
-  const sections = [{ capacity: 100000, price_per_ticket: 10 }];
+  // precio = precio justo con reputacion 50 ($35) -> la demanda no se ajusta por precio
+  const sections = [{ capacity: 100000, price_per_ticket: 35 }];
 
   it('is unchanged without bonuses', () => {
     jest.spyOn(Math, 'random').mockReturnValue(0);
     const r = computeHomeGameRevenue(sections, 50, 100000);
     expect(r.attendance).toBe(4000);
+    expect(r.fairPrice).toBe(35);
+    expect(r.ticketRevenue).toBe(140000);
     expect(r.merchRevenue).toBe(20000);
     expect(r.operatingCost).toBe(2001); // 4000 asistentes, casi el minimo de $0.5/persona
   });
@@ -76,6 +95,99 @@ describe('economy with facility bonuses', () => {
     expect(r.attendance).toBe(6000);
     expect(r.merchRevenue).toBe(30000);
     expect(r.operatingCost).toBe(6002); // 6000 asistentes (~$0.5/persona) + 3000 de upkeep
+  });
+});
+
+describe('ticket price demand', () => {
+  it('fair price grows with reputation and facility bonus', () => {
+    expect(getFairTicketPrice(50)).toBe(35);
+    expect(getFairTicketPrice(100)).toBe(60);
+    expect(getFairTicketPrice(50, 10)).toBe(45);
+  });
+
+  it('demand factor: bonus below fair price, exponential drop above it', () => {
+    expect(priceDemandFactor(35, 35)).toBe(1);
+    expect(priceDemandFactor(0, 35)).toBeCloseTo(1.3);
+    expect(priceDemandFactor(70, 35)).toBeCloseTo(Math.exp(-1));
+    const factors = [0, 20, 35, 50, 70, 105, 350].map((p) => priceDemandFactor(p, 35));
+    for (let i = 1; i < factors.length; i++) expect(factors[i]).toBeLessThan(factors[i - 1]);
+  });
+
+  it('cheap tickets draw more fans, capped by section capacity', () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+    const r = computeHomeGameRevenue([{ capacity: 100000, price_per_ticket: 0 }], 50, 100000);
+    expect(r.attendance).toBe(5200); // 4000 * 1.3
+    expect(r.ticketRevenue).toBe(0);
+
+    const small = computeHomeGameRevenue([{ capacity: 1000, price_per_ticket: 0 }], 50, 100000);
+    expect(small.attendance).toBe(1000);
+  });
+
+  it('gouging prices earn less than the fair price', () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+    const fair = computeHomeGameRevenue([{ capacity: 100000, price_per_ticket: 35 }], 50, 100000);
+    const doubled = computeHomeGameRevenue([{ capacity: 100000, price_per_ticket: 70 }], 50, 100000);
+    const gouged = computeHomeGameRevenue([{ capacity: 100000, price_per_ticket: 3500 }], 50, 100000);
+    expect(doubled.ticketRevenue).toBeLessThan(fair.ticketRevenue);
+    expect(gouged.attendance).toBe(0);
+    expect(gouged.ticketRevenue).toBe(0);
+  });
+
+  it('each grandstand is priced independently', () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+    const r = computeHomeGameRevenue([
+      { capacity: 50000, price_per_ticket: 35 },
+      { capacity: 50000, price_per_ticket: 3500 },
+    ], 50, 100000);
+    expect(r.attendance).toBe(2000); // solo la grada a precio justo recibe su mitad de la demanda
+    expect(r.ticketRevenue).toBe(70000);
+  });
+
+  it('ring 1 (next to the field) has the highest premium; unknown/far rings use the last one', () => {
+    expect(ringPremium(1)).toBe(1.5);
+    expect(ringPremium(2)).toBe(1.3);
+    expect(ringPremium(4)).toBe(1);
+    expect(ringPremium(9)).toBe(1);
+    expect(ringPremium(undefined)).toBe(1);
+    expect(getSectionFairPrice(35, 1)).toBeCloseTo(52.5);
+  });
+
+  it('ringOf matches the stadium grid (field 2x2 at the center)', () => {
+    // 1 planta: grid 4x4, campo en (2..3, 2..3)
+    expect(ringOf(3, 1, 1)).toBe(1);
+    expect(ringOf(4, 2, 1)).toBe(1);
+    // 2 plantas: grid 6x6, campo en (3..4, 3..4)
+    expect(ringOf(4, 2, 2)).toBe(1);
+    expect(ringOf(1, 1, 2)).toBe(2);
+  });
+
+  it('closer grandstands get more of the demand and a higher fair price', () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+    const near = { capacity: 50000, price_per_ticket: 35, ring: 1 };
+    const far = { capacity: 50000, price_per_ticket: 35, ring: 4 };
+    const r = computeHomeGameRevenue([near, far], 50, 100000);
+    // 4000 de demanda, pesos 1.5 : 1 -> 2400 cerca (precio 35 < justo 52.5, factor 1.1) y 1600 lejos
+    expect(r.attendance).toBe(2640 + 1600);
+
+    // al mismo precio alto, la grada cercana retiene mas gente que la lejana
+    const pricey = (ring) => computeHomeGameRevenue([{ capacity: 100000, price_per_ticket: 70, ring }], 50, 100000);
+    expect(pricey(1).attendance).toBeGreaterThan(pricey(4).attendance);
+  });
+
+  it('buyers that do not fit in a full grandstand spill over to others with room', () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+    const r = computeHomeGameRevenue([
+      { capacity: 1000, price_per_ticket: 35, ring: 1 },
+      { capacity: 100000, price_per_ticket: 35, ring: 4 },
+    ], 50, 100000);
+    expect(r.attendance).toBeGreaterThan(4000); // nadie se pierde: la cercana se llena y el resto va lejos
+    expect(r.attendance).toBeLessThanOrEqual(4000 * 1.1 + 1);
+  });
+
+  it('accepts Decimal-like prices from Prisma', () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+    const r = computeHomeGameRevenue([{ capacity: 100000, price_per_ticket: { valueOf: () => 35, toString: () => '35' } }], 50, 100000);
+    expect(r.ticketRevenue).toBe(140000);
   });
 });
 
@@ -111,6 +223,9 @@ describe('GET /api/stadium', () => {
     expect(res.body.sections[0].next_upgrade_cost).toBeNull();
     expect(res.body.sections[1].next_upgrade_cost).toBe(400000);
     expect(res.body.facilities.find((f) => f.key === 'field').level).toBe(4);
+    expect(res.body.fair_price).toBe(getFairTicketPrice(mockTeam.reputation, 3 * 2)); // campo nivel 4
+    expect(res.body.sections[0].ring).toBe(1);
+    expect(res.body.sections[0].fair_price).toBeCloseTo(res.body.fair_price * 1.5);
   });
 });
 

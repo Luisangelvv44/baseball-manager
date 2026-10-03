@@ -120,6 +120,9 @@ export default function Stadium() {
           <p className="text-gray-600 text-sm">
             Haz click en una grada para cambiar el precio o mejorarla (el costo de mejora se duplica en cada nivel,
             maximo nivel {data.max_grandstand_level}), o en una celda vacia para construir una grada nueva.
+            Precio justo base: <b>${Number(data.fair_price).toFixed(2)}</b> (sube con la reputacion y las
+            instalaciones). Las gradas mas cerca del campo tienen mas demanda y un precio justo mayor;
+            cobrar por encima del precio justo de una grada espanta a sus fans.
           </p>
 
           <div className="bg-white rounded-lg shadow p-6">
@@ -150,6 +153,7 @@ export default function Stadium() {
         <SectionModal
           section={selected}
           maxLevel={data.max_grandstand_level}
+          fairPrice={data.fair_price}
           onClose={() => setSelected(null)}
           onSavePrice={handleSavePrice}
           onUpgrade={handleUpgrade}

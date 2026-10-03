@@ -23,6 +23,7 @@ function getFacilityBonuses(team) {
   let merchMultiplier = 1;
   let injuryProbMultiplier = 1;
   let injuryDaysReduction = 0;
+  let fairPriceBonus = 0;
   let levelsAboveOne = 0;
 
   for (const key of Object.keys(STADIUM_FACILITIES)) {
@@ -33,6 +34,7 @@ function getFacilityBonuses(team) {
     if (def.merch_pct_per_level) merchMultiplier += extra * def.merch_pct_per_level;
     if (def.injury_prob_pct_per_level) injuryProbMultiplier -= extra * def.injury_prob_pct_per_level;
     if (def.injury_days_every_levels) injuryDaysReduction += Math.floor(extra / def.injury_days_every_levels);
+    if (def.fair_price_per_level) fairPriceBonus += extra * def.fair_price_per_level;
   }
 
   return {
@@ -40,6 +42,7 @@ function getFacilityBonuses(team) {
     merchMultiplier,
     injuryProbMultiplier: Math.max(0, injuryProbMultiplier),
     injuryDaysReduction,
+    fairPriceBonus,
     upkeep: levelsAboveOne * FACILITY_UPKEEP_PER_LEVEL,
   };
 }
@@ -49,6 +52,7 @@ function describeEffect(def, level) {
   const parts = [];
   if (def.attendance_rate_per_level) parts.push(`+${(extra * def.attendance_rate_per_level * 100).toFixed(1)}% asistencia`);
   if (def.merch_pct_per_level) parts.push(`+${Math.round(extra * def.merch_pct_per_level * 100)}% merch`);
+  if (def.fair_price_per_level) parts.push(`+$${extra * def.fair_price_per_level} precio justo`);
   if (def.injury_prob_pct_per_level) parts.push(`-${Math.round(extra * def.injury_prob_pct_per_level * 100)}% lesiones`);
   if (def.injury_days_every_levels) {
     const days = Math.floor(extra / def.injury_days_every_levels);

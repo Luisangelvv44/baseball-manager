@@ -6,6 +6,7 @@ const { playGame } = require('../services/gamePlay');
 const { getLineup } = require('../services/lineup');
 const { computeHomeGameRevenue, computeAwayGameRevenue } = require('../services/economy');
 const { getFacilityBonuses } = require('../services/stadiumFacilityService');
+const { ringOf } = require('../seeders/generators/stadiumGenerator');
 const { getRivalryIntensity } = require('../services/rivalryService');
 const { updateSeriesAfterGame } = require('../services/playoffService');
 const { RIVALRY_BADGE_THRESHOLD } = require('../config');
@@ -133,9 +134,9 @@ router.post('/:id/simulate', async (req, res) => {
 
     let economy;
     if (isUserHome) {
-      const sections = await prisma.stadiumSection.findMany({
+      const sections = (await prisma.stadiumSection.findMany({
         where: { team_id: USER_TEAM_ID, section_type: 'grandstand' },
-      });
+      })).map((s) => ({ ...s, ring: ringOf(s.row_pos, s.col_pos, userTeam.stadium_floors) }));
       const rivalryIntensity = await getRivalryIntensity(game.home_team_id, game.away_team_id);
       economy = computeHomeGameRevenue(
         sections, userTeam.reputation, userTeam.fan_base, isPlayoff, rivalryIntensity, getFacilityBonuses(userTeam)

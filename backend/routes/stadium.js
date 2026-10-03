@@ -2,11 +2,18 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID, GRANDSTAND_MAX_LEVEL } = require('../config');
-const { describeFacilities, upgradeFacility, FacilityError } = require('../services/stadiumFacilityService');
+const {
+  describeFacilities,
+  getFacilityBonuses,
+  upgradeFacility,
+  FacilityError,
+} = require('../services/stadiumFacilityService');
+const { getFairTicketPrice, getSectionFairPrice } = require('../services/economy');
 const {
   getUpgradeCost,
   getFloorExpandCost,
   generateOuterRingCells,
+  ringOf,
   BUILD_COST,
   BASE_PRICE,
 } = require('../seeders/generators/stadiumGenerator');
@@ -21,18 +28,25 @@ router.get('/', async (req, res) => {
       }),
       prisma.team.findUnique({ where: { id: USER_TEAM_ID } }),
     ]);
+    const fairPrice = getFairTicketPrice(team.reputation, getFacilityBonuses(team).fairPriceBonus);
     res.json({
       floors: team.stadium_floors,
       budget: Number(team.budget),
       max_grandstand_level: GRANDSTAND_MAX_LEVEL,
       facilities: describeFacilities(team),
-      sections: sections.map((s) => ({
-        ...s,
-        next_upgrade_cost:
-          s.section_type === 'grandstand' && s.upgrade_level < GRANDSTAND_MAX_LEVEL
-            ? getUpgradeCost(s.upgrade_level)
-            : null,
-      })),
+      fair_price: fairPrice,
+      sections: sections.map((s) => {
+        const ring = ringOf(s.row_pos, s.col_pos, team.stadium_floors);
+        return {
+          ...s,
+          ring,
+          fair_price: s.section_type === 'grandstand' ? getSectionFairPrice(fairPrice, ring) : null,
+          next_upgrade_cost:
+            s.section_type === 'grandstand' && s.upgrade_level < GRANDSTAND_MAX_LEVEL
+              ? getUpgradeCost(s.upgrade_level)
+              : null,
+        };
+      }),
     });
   } catch (err) {
     console.error(err);

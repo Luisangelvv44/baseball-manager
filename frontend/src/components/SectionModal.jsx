@@ -1,10 +1,27 @@
 import { useState } from 'react';
 
-export default function SectionModal({ section, maxLevel = 15, onClose, onSavePrice, onUpgrade, onBuild }) {
+// Copia de priceDemandFactor (backend/services/economy.js) con TICKET_PRICE_ELASTICITY y
+// TICKET_UNDERPRICE_DEMAND_BONUS_MAX de backend/config.js; mantener sincronizado.
+function priceDemandFactor(price, fairPrice) {
+  const ratio = Math.max(0, Number(price) || 0) / fairPrice;
+  if (ratio <= 1) return 1 + 0.3 * (1 - ratio);
+  return Math.exp(-(ratio - 1));
+}
+
+function demandColor(pct) {
+  if (pct >= 90) return 'text-green-600';
+  if (pct >= 40) return 'text-amber-600';
+  return 'text-red-600';
+}
+
+export default function SectionModal({ section, maxLevel = 15, fairPrice, onClose, onSavePrice, onUpgrade, onBuild }) {
   const [price, setPrice] = useState(section.price_per_ticket || 15);
 
   const isEmpty = section.section_type === 'empty';
   const atMax = section.next_upgrade_cost == null;
+  // precio justo propio de la grada (incluye la prima por cercania al campo); fallback al del equipo
+  const sectionFairPrice = section.fair_price ?? fairPrice;
+  const demandPct = sectionFairPrice ? Math.round(priceDemandFactor(price, sectionFairPrice) * 100) : null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
@@ -27,10 +44,13 @@ export default function SectionModal({ section, maxLevel = 15, onClose, onSavePr
             <h3 className="font-bold text-lg mb-1">{section.label}</h3>
             <p className="text-sm text-gray-500 mb-4">
               Nivel {section.upgrade_level} / {maxLevel} · Capacidad {section.capacity.toLocaleString()}
+              {section.ring != null && (
+                <> · Anillo {section.ring}{section.ring === 1 ? ' (pegada al campo)' : ''}</>
+              )}
             </p>
 
             <label className="block text-sm font-medium mb-1">Precio de entrada ($)</label>
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-2">
               <input
                 type="number"
                 min="0"
@@ -46,6 +66,12 @@ export default function SectionModal({ section, maxLevel = 15, onClose, onSavePr
                 Guardar
               </button>
             </div>
+            {demandPct != null && (
+              <p className="text-xs text-gray-600 mb-4">
+                Precio justo: <b>${Number(sectionFairPrice).toFixed(2)}</b> · Demanda estimada:{' '}
+                <b className={demandColor(demandPct)}>{demandPct}%</b>
+              </p>
+            )}
 
             {atMax ? (
               <div className="w-full text-center bg-gray-100 text-gray-500 rounded py-2 font-semibold">

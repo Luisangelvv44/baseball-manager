@@ -107,6 +107,16 @@ module.exports = {
   STADIUM_MAINTENANCE_COST_PER_FAN_MAX: 10, // costo por asistente al llegar a MAX_ATTENDANCE (tope)
   STADIUM_MAINTENANCE_MAX_ATTENDANCE: 1_000_000, // asistencia en la que el costo por persona llega a su maximo
   STADIUM_MAINTENANCE_EXPONENT: 2, // >1 = crecimiento acelerado (barato al principio, rapido cerca del tope)
+  // Demanda de entradas segun precio (ver services/economy.js priceDemandFactor). Si cambias estos valores,
+  // actualiza tambien la copia en frontend/src/components/SectionModal.jsx (estimacion de demanda).
+  // precio justo = BASE + PER_REP * reputacion + fair_price_per_level de instalaciones
+  TICKET_FAIR_PRICE_BASE: 10,
+  TICKET_FAIR_PRICE_PER_REP: 0.5,
+  TICKET_PRICE_ELASTICITY: 1, // sobre el precio justo: demanda = exp(-K * (precio/justo - 1)) -> 2x = 37%, 3x = 14%
+  TICKET_UNDERPRICE_DEMAND_BONUS_MAX: 0.3, // bajo el precio justo: hasta +30% de demanda con entrada gratis
+  // Cercania al campo, por anillo (indice 0 = anillo 1, pegado al campo; anillos mas lejanos usan el ultimo valor).
+  // Multiplica el precio justo de la grada Y su peso al repartir la demanda (las cercanas se llenan primero).
+  TICKET_RING_PREMIUM: [1.5, 1.3, 1.15, 1.0],
   // Instalaciones del equipo (columnas `<key>_level` en Team, todas arrancan en nivel 1).
   // Costo de mejora L -> L+1 = base_cost * cost_factor^(L-1). `levels[i]` = nombre del nivel i+1.
   // Efectos (solo equipo del usuario), por cada nivel sobre 1:
@@ -114,10 +124,12 @@ module.exports = {
   //   merch_pct_per_level:       multiplica el gasto de merch (+X%)
   //   injury_prob_pct_per_level: reduce la probabilidad de lesion (-X%)
   //   injury_days_every_levels:  -1 dia de baja cada N niveles sobre 1
+  //   fair_price_per_level:      suma $X al precio justo de las entradas
   STADIUM_FACILITIES: {
     field: {
       name: 'Campo y césped', column: 'field_level', max: 10, base_cost: 500_000, cost_factor: 2,
       attendance_rate_per_level: 0.003,
+      fair_price_per_level: 2,
       levels: [
         'Césped básico', 'Césped resembrado', 'Riego automático', 'Corte en franjas', 'Pista de advertencia',
         'Infield nivelado', 'Corte en cuadros', 'Drenaje profesional', 'Césped híbrido', 'Césped de Grandes Ligas',
@@ -126,11 +138,13 @@ module.exports = {
     lights: {
       name: 'Iluminación', column: 'lights_level', max: 5, base_cost: 1_000_000, cost_factor: 2,
       attendance_rate_per_level: 0.005,
+      fair_price_per_level: 2,
       levels: ['2 torres de luz', '4 torres de luz', '4 torres LED', '6 torres LED', '6 torres LED de alta potencia'],
     },
     board: {
       name: 'Marcador', column: 'board_level', max: 5, base_cost: 500_000, cost_factor: 2,
       merch_pct_per_level: 0.06,
+      fair_price_per_level: 2,
       levels: ['Marcador manual', 'Marcador LED', 'Marcador LED grande', 'Pantalla de video', 'Pantalla + laterales'],
     },
     medical: {

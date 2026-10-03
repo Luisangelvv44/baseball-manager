@@ -76,6 +76,15 @@ function generateStadiumSections(teamId) {
   });
 }
 
+// Anillo (1 = el mas cercano al campo) de una celda en un grid de N = 2F+2 con el campo 2x2 al centro.
+// Misma logica que ringOf en frontend/src/stadium/geometry.js.
+function ringOf(row, col, floors) {
+  const lo = floors + 1;
+  const hi = floors + 2;
+  const d = (v) => (v < lo ? lo - v : v > hi ? v - hi : 0);
+  return Math.max(d(row), d(col));
+}
+
 // nivel 1→2 = $20,000, 2→3 = $40,000, 3→4 = $80,000, etc.
 function getUpgradeCost(currentLevel) {
   return UPGRADE_BASE_COST * Math.pow(2, Math.max(0, currentLevel - 1));
@@ -115,6 +124,7 @@ module.exports = {
   getUpgradeCost,
   getFloorExpandCost,
   generateOuterRingCells,
+  ringOf,
   GRID_SIZE,
   BASE_PRICE,
   BASE_CAPACITY,
