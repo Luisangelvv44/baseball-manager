@@ -41,6 +41,7 @@ const {
   closeActiveContracts,
 } = require('../services/contractService');
 const { applySeasonDecay } = require('../services/rivalryService');
+const { getSeasonEdition } = require('../services/seasonEdition');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
@@ -49,7 +50,9 @@ router.get('/', async (req, res) => {
       where: { status: { in: ['active', 'playoffs', 'draft', 'completed'] } },
       orderBy: { id: 'desc' },
     });
-    res.json(season ? { ...season, preSeasonDays: PRE_SEASON_DAYS, auctionDeadlineDay: AUCTION_DEADLINE_DAY } : null);
+    if (!season) return res.json(null);
+    const edition = await getSeasonEdition(season.id);
+    res.json({ ...season, edition, preSeasonDays: PRE_SEASON_DAYS, auctionDeadlineDay: AUCTION_DEADLINE_DAY });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener temporada' });

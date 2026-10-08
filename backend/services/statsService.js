@@ -1,4 +1,5 @@
 const prisma = require('../db/prisma');
+const { getSeasonEditionMap } = require('./seasonEdition');
 
 // Agrega bateo (AB/H/HR/BB/SO/RBI) y pitcheo (IP/ERA/WHIP/W/L/SO/BB) por jugador
 // para una temporada dada. Si se pasa teamId, se limita a los jugadores de ese
@@ -470,11 +471,13 @@ async function getPlayerCareerHistory(playerId) {
   // year no es único por temporada (se fija al año real de creación, ver routes/season.js),
   // así que el orden cronológico real es season_id; min_day solo desempata estadías
   // de distintos equipos dentro de la misma temporada (traspasos).
+  const editionBySeasonId = await getSeasonEditionMap();
   const seasons = [...rows.values()]
     .sort((a, b) => b.season_id - a.season_id || a.min_day - b.min_day)
     .map((r) => ({
       season_id: r.season_id,
       year: r.year,
+      edition: editionBySeasonId.get(r.season_id) ?? null,
       team_id: r.team_id,
       team_name: teamNameById[r.team_id] || 'Desconocido',
       batting: r.batting,
@@ -491,6 +494,8 @@ async function getPlayerCareerHistory(playerId) {
       team_name: teamNameById[c.team_id] || (c.team_id == null ? 'Sin equipo' : 'Desconocido'),
       start_season_id: c.start_season_id,
       end_season_id: c.end_season_id,
+      start_edition: editionBySeasonId.get(c.start_season_id) ?? null,
+      end_edition: editionBySeasonId.get(c.end_season_id) ?? null,
       is_rookie: c.is_rookie,
       annual_salary: Number(c.annual_salary),
       total_years: c.total_years,

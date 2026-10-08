@@ -3,6 +3,7 @@ const router = express.Router();
 const prisma = require('../db/prisma');
 const { SEASON_AWARD_MIN_IP } = require('../config');
 const { recalculateCareerStats } = require('../services/allTimeStatsService');
+const { getSeasonEditionMap } = require('../services/seasonEdition');
 
 // GET /api/history/champions -> cantidad de campeonatos ganados por cada equipo
 router.get('/champions', async (req, res) => {
@@ -48,6 +49,7 @@ router.get('/seasons', async (req, res) => {
       },
     });
     const finalsBySeasonId = Object.fromEntries(finals.map((f) => [f.season_id, f]));
+    const editionBySeasonId = await getSeasonEditionMap();
 
     const result = records.map((r) => {
       const standingsArr = Array.isArray(r.standings) ? r.standings : [];
@@ -62,6 +64,7 @@ router.get('/seasons', async (req, res) => {
         id: r.id,
         season_id: r.season_id,
         year: r.year,
+        edition: editionBySeasonId.get(r.season_id) ?? null,
         champion_name: r.champion_name,
         champion_wins: championEntry?.wins ?? null,
         champion_losses: championEntry?.losses ?? null,
@@ -214,23 +217,25 @@ router.get('/records', async (req, res) => {
       prisma.seasonAward.findFirst({
         where: { category: 'SEASON_HR_RECORD' },
         orderBy: { value: 'desc' },
-        include: { player: { select: { first_name: true, last_name: true } }, team: { select: { name: true } }, season: { select: { year: true } } },
+        include: { player: { select: { first_name: true, last_name: true } }, team: { select: { name: true } }, season: { select: { id: true, year: true } } },
       }),
       prisma.seasonAward.findFirst({
         where: { category: 'SEASON_ERA_RECORD' },
         orderBy: { value: 'asc' },
-        include: { player: { select: { first_name: true, last_name: true } }, team: { select: { name: true } }, season: { select: { year: true } } },
+        include: { player: { select: { first_name: true, last_name: true } }, team: { select: { name: true } }, season: { select: { id: true, year: true } } },
       }),
       prisma.seasonAward.findFirst({
         where: { category: 'SEASON_WIN_STREAK_RECORD' },
         orderBy: { value: 'desc' },
-        include: { team: { select: { name: true } }, season: { select: { year: true } } },
+        include: { team: { select: { name: true } }, season: { select: { id: true, year: true } } },
       }),
     ]);
 
+    const editionBySeasonId = await getSeasonEditionMap();
     const seasonRecord = (award) => award && {
       value: award.value,
       year: award.season.year,
+      edition: editionBySeasonId.get(award.season.id) ?? null,
       player_name: award.player ? `${award.player.first_name} ${award.player.last_name}` : null,
       team_name: award.team?.name ?? null,
     };

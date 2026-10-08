@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import TeamBadge from '../components/TeamBadge.jsx';
+import { seasonLabel } from '../utils/seasonLabel.js';
 
 const DAY_HEADERS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 const PAGE_SIZE = 30; // dias por pagina del calendario (un "mes")
@@ -106,7 +107,7 @@ export default function Schedule() {
     <div className="space-y-4">
       {/* Header */}
       <div className="bg-white rounded-lg shadow p-4">
-        <h2 className="text-xl font-bold">Calendario — Temporada {season.year}</h2>
+        <h2 className="text-xl font-bold">Calendario — {seasonLabel(season.edition)}</h2>
         {currentDay <= preSeasonDays && (
           <p className="text-yellow-700 text-sm mt-1">
             Pre-temporada activa · Quedan {preSeasonDays - currentDay + 1} días para el inicio

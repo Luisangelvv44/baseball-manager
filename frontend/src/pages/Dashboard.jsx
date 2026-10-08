@@ -5,6 +5,7 @@ import Leaderboard from '../components/Leaderboard.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
 import { useTeam } from '../context/TeamContext.jsx';
 import { advanceDayAndRoute } from '../utils/advanceDayFlow.js';
+import { seasonLabel } from '../utils/seasonLabel.js';
 
 export default function Dashboard() {
   const { refreshTeam, refreshAlerts } = useTeam();
@@ -149,17 +150,17 @@ export default function Dashboard() {
       {season && season.status === 'playoffs' && (
         <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
           <p className="font-semibold text-yellow-800">¡Temporada regular terminada — Playoffs en curso!</p>
-          <p className="text-yellow-700 text-sm">Temporada {season.year} · Ve a la sección de Playoffs para jugar.</p>
+          <p className="text-yellow-700 text-sm">{seasonLabel(season.edition)} · Ve a la sección de Playoffs para jugar.</p>
         </div>
       )}
       {season && season.status === 'active' && season.current_day > season.preSeasonDays && (
         <div className="bg-white rounded-lg shadow p-4 text-sm text-gray-600">
-          Temporada {season.year} · Dia {season.current_day - season.preSeasonDays} de {season.total_days - season.preSeasonDays}
+          {seasonLabel(season.edition)} · Dia {season.current_day - season.preSeasonDays} de {season.total_days - season.preSeasonDays}
         </div>
       )}
       {season && season.status === 'draft' && (
         <div className="bg-purple-50 border border-purple-300 rounded-lg p-4">
-          <p className="font-semibold text-purple-800">Draft Anual — Temporada {season.year}</p>
+          <p className="font-semibold text-purple-800">Draft Anual — {seasonLabel(season.edition)}</p>
           <p className="text-purple-700 text-sm">
             Los playoffs terminaron. Cada equipo elige un prospecto en orden inverso de la tabla. Ve al Draft para tu pick.
           </p>
@@ -167,7 +168,7 @@ export default function Dashboard() {
       )}
       {season && season.status === 'completed' && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <p className="font-semibold text-gray-700">Temporada {season.year} completada</p>
+          <p className="font-semibold text-gray-700">{seasonLabel(season.edition)} completada</p>
           <p className="text-gray-500 text-sm">El draft terminó. Puedes iniciar la siguiente temporada.</p>
         </div>
       )}

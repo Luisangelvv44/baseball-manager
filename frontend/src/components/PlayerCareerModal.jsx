@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import TeamBadge from './TeamBadge.jsx';
 import PlayerSpriteLoader from './PlayerSpriteLoader.jsx';
 import { formatCompactMoney } from '../utils/formatMoney.js';
+import { seasonLabel } from '../utils/seasonLabel.js';
 
 const CONTRACT_STATUS_LABELS = {
   active: 'Vigente',
@@ -21,7 +22,7 @@ function rowClass(s) {
 function SeasonCell({ season }) {
   return (
     <td className="py-1 px-2 text-left font-medium">
-      {season.season_id}
+      {seasonLabel(season.edition)}
       {season.contract_only && <span className="ml-1 text-[10px] font-normal">(sin jugar)</span>}
     </td>
   );
@@ -174,8 +175,8 @@ export default function PlayerCareerModal({ playerId, onClose }) {
                       {contracts.map((c) => (
                         <tr key={c.id} className="border-b last:border-0">
                           <td className="py-1 px-2 text-left">
-                            {c.start_season_id ?? 'Próxima'}
-                            {c.end_season_id != null && c.end_season_id !== c.start_season_id && ` – ${c.end_season_id}`}
+                            {c.start_season_id != null ? seasonLabel(c.start_edition) : 'Próxima'}
+                            {c.end_season_id != null && c.end_season_id !== c.start_season_id && ` – ${seasonLabel(c.end_edition)}`}
                             {c.end_season_id == null && c.start_season_id != null && ' – hoy'}
                           </td>
                           <td className="py-1 px-2 text-left">

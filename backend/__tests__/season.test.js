@@ -72,11 +72,14 @@ describe('GET /api/season', () => {
 
   it('returns season with preSeasonDays when active', async () => {
     prisma.season.findFirst.mockResolvedValue(mockSeason);
+    prisma.season.count.mockResolvedValue(3);
     const res = await request(app).get('/api/season');
     expect(res.status).toBe(200);
     expect(res.body.id).toBe(1);
     expect(res.body.status).toBe('active');
     expect(res.body).toHaveProperty('preSeasonDays');
+    expect(res.body.edition).toBe(3);
+    expect(prisma.season.count).toHaveBeenCalledWith({ where: { id: { lte: 1 } } });
   });
 });
 
