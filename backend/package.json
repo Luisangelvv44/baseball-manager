@@ -14,6 +14,7 @@
     "injury:backfill": "node scripts/runInjuryBackfill.js",
     "appearances:backfill": "node scripts/assignAppearances.js",
     "contracts:backfill": "node scripts/assignContracts.js",
+    "reputation:backfill": "node scripts/backfillChampionshipReputation.js",
     "postinstall": "prisma generate --schema=prisma/schema.prisma",
     "test": "jest"
   },
