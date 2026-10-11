@@ -1,7 +1,8 @@
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID } = require('../config');
+const { USER_TEAM_ID, REPUTATION_MISSED_PLAYOFFS_PENALTY } = require('../config');
 const { playGame, applyRandomFanChange } = require('./gamePlay');
 const { FAN_RANGE_SELECT, trackFanBase } = require('./fanBaseTracker');
+const { clampReputation } = require('./reputationService');
 
 const FAN_MIN_PLAYOFF = 2000;
 const FAN_MAX_PLAYOFF = 20000;
@@ -10,11 +11,11 @@ const FAN_MAX_PLAYOFF = 20000;
 // fanPct se calcula sobre el fan_base actual del equipo (snapshot al momento del avance).
 // Se aplica igual a CPU y usuario.
 async function applyPlayoffBonus(teamId, fanPct, repPoints) {
-  const team = await prisma.team.findUnique({ where: { id: teamId }, select: { fan_base: true } });
+  const team = await prisma.team.findUnique({ where: { id: teamId }, select: { fan_base: true, reputation: true } });
   const fanBoost = Math.round(team.fan_base * fanPct);
   const updated = await prisma.team.update({
     where: { id: teamId },
-    data: { reputation: { increment: repPoints }, fan_base: { increment: fanBoost } },
+    data: { reputation: clampReputation(team.reputation + repPoints), fan_base: { increment: fanBoost } },
     select: FAN_RANGE_SELECT,
   });
   await trackFanBase(updated);
@@ -28,7 +29,7 @@ async function generatePlayoffBracket(seasonId) {
   const teams = await prisma.team.findMany({
     where: { division_id: { not: null } },
     orderBy: [{ wins: 'desc' }, { losses: 'asc' }],
-    select: { id: true, division_id: true, wins: true, losses: true, desperation_index: true, fan_base: true },
+    select: { id: true, division_id: true, wins: true, losses: true, desperation_index: true, fan_base: true, reputation: true },
   });
 
   const divGroups = {};
@@ -50,8 +51,11 @@ async function generatePlayoffBracket(seasonId) {
     const data = { desperation_index: next };
     if (qualifiedIds.has(t.id)) {
       // Bono por clasificar a playoffs: +10% fans, +5 reputacion
-      data.reputation = { increment: 5 };
+      data.reputation = clampReputation(t.reputation + 5);
       data.fan_base = { increment: Math.round(t.fan_base * 0.10) };
+    } else {
+      // Quedar fuera de playoffs es lo unico que resta reputacion
+      data.reputation = clampReputation(t.reputation - REPUTATION_MISSED_PLAYOFFS_PENALTY);
     }
     return prisma.team.update({ where: { id: t.id }, data, select: FAN_RANGE_SELECT }).then(trackFanBase);
   }));
@@ -273,14 +277,14 @@ async function advancePlayoffRound(seasonId) {
 }
 
 async function handleChampion(winnerId, seasonId) {
-  const team = await prisma.team.findUnique({ where: { id: winnerId }, select: { fan_base: true } });
+  const team = await prisma.team.findUnique({ where: { id: winnerId }, select: { fan_base: true, reputation: true } });
   // Bono por ganar la final: +10% fans, +20 reputacion
   const fandomBoost = Math.round(team.fan_base * 0.10);
   const championshipPrize = team.fan_base * 50;
 
   const updated = await prisma.team.update({
     where: { id: winnerId },
-    data: { reputation: { increment: 20 }, budget: { increment: championshipPrize }, fan_base: { increment: fandomBoost } },
+    data: { reputation: clampReputation(team.reputation + 20), budget: { increment: championshipPrize }, fan_base: { increment: fandomBoost } },
     select: FAN_RANGE_SELECT,
   });
   await trackFanBase(updated);

@@ -115,6 +115,16 @@ describe('playGame - feats detection', () => {
   });
 });
 
+describe('playGame - standings', () => {
+  it('does not change reputation per game (only season results do)', async () => {
+    simulateGame.mockReturnValue(buildResult());
+    await playGame(mockGame);
+    const standingsUpdates = prisma.team.update.mock.calls.filter((c) => 'wins' in c[0].data);
+    expect(standingsUpdates).toHaveLength(2);
+    for (const [args] of standingsUpdates) expect(args.data).not.toHaveProperty('reputation');
+  });
+});
+
 describe('playGame - streaks', () => {
   function finishedGame({ day, homeId = 1, awayId = 2, homeScore, awayScore }) {
     return { home_team_id: homeId, away_team_id: awayId, home_score: homeScore, away_score: awayScore, day_number: day };

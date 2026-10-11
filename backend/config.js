@@ -78,6 +78,12 @@ module.exports = {
   BANK_INITIAL_CAPITAL: 300_000_000,
   BANK_BASE_INTEREST_RATE: 0.08,
 
+  // ----- Reputacion (ver services/reputationService.js) -----
+  // Solo cambia por resultados de temporada: bonos de playoffs (playoffService) o castigo por no clasificar.
+  REPUTATION_MIN: 1,
+  REPUTATION_MAX: 10_000,
+  REPUTATION_MISSED_PLAYOFFS_PENALTY: 25,
+
   // ----- Rivalidades (ver services/rivalryService.js) -----
   RIVALRY_DIVISION_SEED: 15, // intensidad inicial si comparten division, al crear el primer registro
   RIVALRY_BASE_GAME_BONUS: 1, // cualquier enfrentamiento suma esto, reñido o no
@@ -115,9 +121,13 @@ module.exports = {
   STADIUM_MAINTENANCE_EXPONENT: 2, // >1 = crecimiento acelerado (barato al principio, rapido cerca del tope)
   // Demanda de entradas segun precio (ver services/economy.js priceDemandFactor). Si cambias estos valores,
   // actualiza tambien la copia en frontend/src/components/SectionModal.jsx (estimacion de demanda).
-  // precio justo = BASE + PER_REP * reputacion + fair_price_per_level de instalaciones
+  // precio justo = BASE + termino de reputacion + fair_price_per_level de instalaciones.
+  // Termino de reputacion: PER_REP * rep hasta REP_LINEAR_CAP; por encima crece con raiz cuadrada
+  // (+ SQRT_FACTOR * (sqrt(rep) - sqrt(CAP))) -> rep 1 000 ~ $71, rep 10 000 ~ $105.
   TICKET_FAIR_PRICE_BASE: 10,
   TICKET_FAIR_PRICE_PER_REP: 0.5,
+  TICKET_FAIR_PRICE_REP_LINEAR_CAP: 100,
+  TICKET_FAIR_PRICE_REP_SQRT_FACTOR: 0.5,
   TICKET_PRICE_ELASTICITY: 1, // sobre el precio justo: demanda = exp(-K * (precio/justo - 1)) -> 2x = 37%, 3x = 14%
   TICKET_UNDERPRICE_DEMAND_BONUS_MAX: 0.3, // bajo el precio justo: hasta +30% de demanda con entrada gratis
   // Cercania al campo, por anillo (indice 0 = anillo 1, pegado al campo; anillos mas lejanos usan el ultimo valor).

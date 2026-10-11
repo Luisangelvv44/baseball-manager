@@ -7,15 +7,23 @@ const {
   STADIUM_MAINTENANCE_EXPONENT,
   TICKET_FAIR_PRICE_BASE,
   TICKET_FAIR_PRICE_PER_REP,
+  TICKET_FAIR_PRICE_REP_LINEAR_CAP,
+  TICKET_FAIR_PRICE_REP_SQRT_FACTOR,
   TICKET_PRICE_ELASTICITY,
   TICKET_UNDERPRICE_DEMAND_BONUS_MAX,
   TICKET_RING_PREMIUM,
 } = require('../config');
 
 // Precio que los fans consideran razonable: sube con la reputacion y con las instalaciones
-// (fairPriceBonus de stadiumFacilityService.getFacilityBonuses).
+// (fairPriceBonus de stadiumFacilityService.getFacilityBonuses). Lineal hasta REP_LINEAR_CAP y con
+// rendimientos decrecientes (raiz cuadrada) por encima, para que la reputacion acumulada no dispare la taquilla.
 function getFairTicketPrice(reputation, fairPriceBonus = 0) {
-  return TICKET_FAIR_PRICE_BASE + TICKET_FAIR_PRICE_PER_REP * (Number(reputation) || 0) + fairPriceBonus;
+  const rep = Math.max(0, Number(reputation) || 0);
+  const cap = TICKET_FAIR_PRICE_REP_LINEAR_CAP;
+  const repTerm = rep <= cap
+    ? TICKET_FAIR_PRICE_PER_REP * rep
+    : TICKET_FAIR_PRICE_PER_REP * cap + TICKET_FAIR_PRICE_REP_SQRT_FACTOR * (Math.sqrt(rep) - Math.sqrt(cap));
+  return TICKET_FAIR_PRICE_BASE + repTerm + fairPriceBonus;
 }
 
 // Prima por cercania al campo segun el anillo de la grada (1 = pegada al campo). Sin anillo = la mas lejana.

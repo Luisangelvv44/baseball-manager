@@ -105,6 +105,13 @@ describe('ticket price demand', () => {
     expect(getFairTicketPrice(50, 10)).toBe(45);
   });
 
+  it('fair price has diminishing returns above reputation 100', () => {
+    expect(getFairTicketPrice(1000)).toBeCloseTo(70.81, 2);
+    expect(getFairTicketPrice(10000)).toBeCloseTo(105, 5);
+    const prices = [100, 101, 500, 1000, 5000, 10000].map((r) => getFairTicketPrice(r));
+    for (let i = 1; i < prices.length; i++) expect(prices[i]).toBeGreaterThan(prices[i - 1]);
+  });
+
   it('demand factor: bonus below fair price, exponential drop above it', () => {
     expect(priceDemandFactor(35, 35)).toBe(1);
     expect(priceDemandFactor(0, 35)).toBeCloseTo(1.3);

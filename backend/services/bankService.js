@@ -258,7 +258,11 @@ async function processSeasonEndRepayments(season) {
         data: { balance_remaining: 0, total_paid: newTotalPaid, status: 'defaulted', defaulted_at: new Date(), missed_payments: newMissedPayments },
       });
       await prisma.bank.update({ where: { id: BANK_ID }, data: { total_defaulted: { increment: newBalance } } });
-      const newReputation = Math.max(LOAN_DEFAULT_MIN_REPUTATION, team.reputation - LOAN_DEFAULT_REPUTATION_PENALTY);
+      // El piso de mora nunca sube la reputacion de un equipo que ya estaba por debajo de el
+      const newReputation = Math.min(
+        team.reputation,
+        Math.max(LOAN_DEFAULT_MIN_REPUTATION, team.reputation - LOAN_DEFAULT_REPUTATION_PENALTY)
+      );
       await prisma.team.update({ where: { id: team.id }, data: { reputation: newReputation } });
       await createNews(
         'loan',
