@@ -84,7 +84,7 @@ describe('economy with facility bonuses', () => {
     expect(r.fairPrice).toBe(35);
     expect(r.ticketRevenue).toBe(140000);
     expect(r.merchRevenue).toBe(20000);
-    expect(r.operatingCost).toBe(2001); // 4000 asistentes, casi el minimo de $0.5/persona
+    expect(r.operatingCost).toBe(2000); // 4000 asistentes en el primer tramo ($0.5/persona)
   });
 
   it('applies attendance, merch and upkeep bonuses', () => {
@@ -94,7 +94,7 @@ describe('economy with facility bonuses', () => {
     });
     expect(r.attendance).toBe(6000);
     expect(r.merchRevenue).toBe(30000);
-    expect(r.operatingCost).toBe(6002); // 6000 asistentes (~$0.5/persona) + 3000 de upkeep
+    expect(r.operatingCost).toBe(6000); // 6000 asistentes a $0.5/persona + 3000 de upkeep
   });
 });
 
@@ -203,19 +203,32 @@ describe('computeMaintenanceCost', () => {
     expect(computeMaintenanceCost(0)).toBe(0);
   });
 
-  it('reaches $10 per fan at 1M attendance and stays capped above it', () => {
-    expect(computeMaintenanceCost(1_000_000)).toBe(10_000_000);
-    expect(computeMaintenanceCost(2_000_000)).toBe(20_000_000);
+  it('charges only the first tier rate to small crowds', () => {
+    expect(computeMaintenanceCost(20_000, 60)).toBe(10_000); // 20 000 x $0.5
   });
 
-  it('grows with an accelerated curve', () => {
-    expect(computeMaintenanceCost(500_000)).toBe(1_437_500); // $2.875/persona
+  it('charges each fan the rate of the tier it falls in (high tiers as a share of the fair price)', () => {
+    // precio justo $60: tramos de $0.5, $2, 15% = $9, 35% = $21, 70% = $42
+    expect(computeMaintenanceCost(100_000, 60)).toBe(170_000); // 10K + 80 000 x $2
+    expect(computeMaintenanceCost(500_000, 60)).toBe(3_770_000); // + 400 000 x $9
+    expect(computeMaintenanceCost(2_000_000, 60)).toBe(35_270_000); // + 1.5M x $21
+    expect(computeMaintenanceCost(3_000_000, 60)).toBe(77_270_000); // + 1M x $42, sin tope
   });
 
-  it('charges more per fan as attendance grows', () => {
-    const perFan = [50_000, 200_000, 500_000, 900_000].map((a) => computeMaintenanceCost(a) / a);
-    for (let i = 1; i < perFan.length; i++) expect(perFan[i]).toBeGreaterThan(perFan[i - 1]);
-    expect(perFan[0]).toBeGreaterThanOrEqual(0.5);
+  it('scales the high tiers with the team fair price but not the fixed ones', () => {
+    expect(computeMaintenanceCost(100_000, 20)).toBe(computeMaintenanceCost(100_000, 60));
+    expect(computeMaintenanceCost(1_000_000, 20)).toBeLessThan(computeMaintenanceCost(1_000_000, 60));
+  });
+
+  it('never lowers the marginal cost as attendance grows', () => {
+    const marginal = [10_000, 50_000, 300_000, 1_000_000, 2_500_000, 5_000_000]
+      .map((a) => computeMaintenanceCost(a + 1000, 60) - computeMaintenanceCost(a, 60));
+    for (let i = 1; i < marginal.length; i++) expect(marginal[i]).toBeGreaterThanOrEqual(marginal[i - 1]);
+  });
+
+  it('accepts custom tiers', () => {
+    const tiers = [{ upTo: 10, perFan: 1 }, { upTo: Infinity, fairPriceShare: 0.5 }];
+    expect(computeMaintenanceCost(15, 6, tiers)).toBe(25); // 10 x $1 + 5 x $3
   });
 });
 

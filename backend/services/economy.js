@@ -1,10 +1,7 @@
 const {
   RIVALRY_MAX,
   RIVALRY_ATTENDANCE_BONUS_MAX,
-  STADIUM_MAINTENANCE_COST_PER_FAN_MIN,
-  STADIUM_MAINTENANCE_COST_PER_FAN_MAX,
-  STADIUM_MAINTENANCE_MAX_ATTENDANCE,
-  STADIUM_MAINTENANCE_EXPONENT,
+  STADIUM_MAINTENANCE_TIERS,
   TICKET_FAIR_PRICE_BASE,
   TICKET_FAIR_PRICE_PER_REP,
   TICKET_FAIR_PRICE_REP_LINEAR_CAP,
@@ -47,14 +44,20 @@ function priceDemandFactor(price, fairPrice) {
   return Math.exp(-TICKET_PRICE_ELASTICITY * (ratio - 1));
 }
 
-// Mantenimiento/logistica de un partido en casa: costo por asistente que sube de MIN a MAX
-// (curva acelerada) a medida que la asistencia se acerca a STADIUM_MAINTENANCE_MAX_ATTENDANCE.
-function computeMaintenanceCost(attendance) {
+// Mantenimiento/logistica de un partido en casa, progresivo por tramos (STADIUM_MAINTENANCE_TIERS):
+// cada asistente paga la tarifa del tramo en el que cae, como un impuesto por tramos. Un tramo cobra un
+// monto fijo (perFan) o una fraccion del precio justo del equipo (fairPriceShare).
+function computeMaintenanceCost(attendance, fairPrice, tiers = STADIUM_MAINTENANCE_TIERS) {
   if (!attendance || attendance <= 0) return 0;
-  const ratio = Math.min(1, attendance / STADIUM_MAINTENANCE_MAX_ATTENDANCE);
-  const costPerFan = STADIUM_MAINTENANCE_COST_PER_FAN_MIN
-    + (STADIUM_MAINTENANCE_COST_PER_FAN_MAX - STADIUM_MAINTENANCE_COST_PER_FAN_MIN) * ratio ** STADIUM_MAINTENANCE_EXPONENT;
-  return Math.round(attendance * costPerFan);
+  let cost = 0;
+  let from = 0;
+  for (const { upTo, perFan, fairPriceShare = 0 } of tiers) {
+    if (attendance <= from) break;
+    const rate = perFan ?? fairPriceShare * (Number(fairPrice) || 0);
+    cost += (Math.min(attendance, upTo) - from) * rate;
+    from = upTo;
+  }
+  return Math.round(cost);
 }
 
 // Calcula ingresos por entradas + merch para un partido EN CASA,
@@ -118,7 +121,7 @@ function computeHomeGameRevenue(grandstandSections, reputation, fanBase, isPlayo
   }
   ticketRevenue = Math.round(ticketRevenue);
   const merchRevenue = Math.round(computeMerchRevenue(fanBase) * merchMultiplier);
-  const operatingCost = computeMaintenanceCost(attendance) + upkeep; // mantenimiento segun asistencia + instalaciones
+  const operatingCost = computeMaintenanceCost(attendance, fairPrice) + upkeep; // mantenimiento segun asistencia + instalaciones
 
   return {
     attendance,

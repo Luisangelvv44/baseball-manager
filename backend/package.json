@@ -15,6 +15,7 @@
     "appearances:backfill": "node scripts/assignAppearances.js",
     "contracts:backfill": "node scripts/assignContracts.js",
     "reputation:backfill": "node scripts/backfillChampionshipReputation.js",
+    "maintenance:calibrate": "node scripts/calibrateMaintenance.js",
     "postinstall": "prisma generate --schema=prisma/schema.prisma",
     "test": "jest"
   },

@@ -131,12 +131,19 @@ module.exports = {
   // ----- Estadio: gradas e instalaciones (ver services/stadiumFacilityService.js) -----
   GRANDSTAND_MAX_LEVEL: 15, // tope de nivel por seccion de grada
   FACILITY_UPKEEP_PER_LEVEL: 500, // costo extra por partido en casa, por cada nivel de instalacion sobre 1
-  // Mantenimiento por partido en casa segun asistencia (ver services/economy.js computeMaintenanceCost):
-  // costo/persona = MIN + (MAX - MIN) * min(1, asistencia / MAX_ATTENDANCE) ^ EXPONENT
-  STADIUM_MAINTENANCE_COST_PER_FAN_MIN: 0.5, // costo por asistente con asistencia minima
-  STADIUM_MAINTENANCE_COST_PER_FAN_MAX: 10, // costo por asistente al llegar a MAX_ATTENDANCE (tope)
-  STADIUM_MAINTENANCE_MAX_ATTENDANCE: 1_000_000, // asistencia en la que el costo por persona llega a su maximo
-  STADIUM_MAINTENANCE_EXPONENT: 2, // >1 = crecimiento acelerado (barato al principio, rapido cerca del tope)
+  // Mantenimiento por partido en casa segun asistencia (ver services/economy.js computeMaintenanceCost).
+  // Progresivo por tramos, como un impuesto: cada asistente paga la tarifa del tramo en el que cae, asi que
+  // los estadios pequenos casi no pagan y crecer encarece solo a los asistentes nuevos (sin saltos).
+  // Los tramos bajos cobran un monto fijo (perFan); los altos, una fraccion del precio justo del equipo
+  // (fairPriceShare), asi el freno pesa igual a un equipo barato que a uno caro. El ultimo tramo no tiene
+  // tope (upTo: Infinity). Calibracion: `npm run maintenance:calibrate`.
+  STADIUM_MAINTENANCE_TIERS: [
+    { upTo: 20_000, perFan: 0.5 },
+    { upTo: 100_000, perFan: 2 },
+    { upTo: 500_000, fairPriceShare: 0.15 },
+    { upTo: 2_000_000, fairPriceShare: 0.35 },
+    { upTo: Infinity, fairPriceShare: 0.7 },
+  ],
   // Demanda de entradas segun precio (ver services/economy.js priceDemandFactor). Si cambias estos valores,
   // actualiza tambien la copia en frontend/src/components/SectionModal.jsx (estimacion de demanda).
   // precio justo = BASE + termino de reputacion + fair_price_per_level de instalaciones.
