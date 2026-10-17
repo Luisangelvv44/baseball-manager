@@ -117,6 +117,13 @@ export const api = {
     const qs = params.toString();
     return request(qs ? `/news?${qs}` : '/news');
   },
+  getGazette: (day, seasonId) => {
+    const params = new URLSearchParams();
+    if (day != null) params.set('day', day);
+    if (seasonId != null) params.set('seasonId', seasonId);
+    const qs = params.toString();
+    return request(qs ? `/news/gazette?${qs}` : '/news/gazette');
+  },
   getAlerts: () => request('/news/alerts'),
   markAlertsSeen: () => request('/news/alerts/seen', { method: 'POST' }),
 

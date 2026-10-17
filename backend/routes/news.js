@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID } = require('../config');
+const { buildGazette } = require('../services/gazetteService');
 
 const ALERT_FEED_LIMIT = 30;
 
@@ -60,6 +61,21 @@ router.post('/alerts/seen', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al marcar alertas como vistas' });
+  }
+});
+
+// GET /api/news/gazette — edición del periódico para un día: noticias + marcadores, tabla, mercado.
+router.get('/gazette', async (req, res) => {
+  try {
+    const seasonId = req.query.seasonId ? parseInt(req.query.seasonId, 10) : null;
+    const day = req.query.day !== undefined ? parseInt(req.query.day, 10) : null;
+    if ((seasonId !== null && isNaN(seasonId)) || (day !== null && isNaN(day))) {
+      return res.status(400).json({ error: 'Parámetros inválidos' });
+    }
+    res.json(await buildGazette({ seasonId, day }));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener la gaceta' });
   }
 });
 
