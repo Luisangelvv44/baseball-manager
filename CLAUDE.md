@@ -77,7 +77,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `scouts.js` | Scouts: list/hire, assign, collect scouting reports |
 | `auctions.js` | Free agent auctions: list/detail/bid |
 | `lineup.js` | Get/set the team's lineup |
-| `broadcast.js` | Broadcast offers (accept/reject), current contract, companies |
+| `broadcast.js` | Broadcast offers in the price war (accept = sign now / reject), user TV+radio contracts, companies (money, season earnings, reputation tier) |
 | `playoffs.js` | Bracket view, simulate a series game, simulate/advance a round |
 | `coaches.js` | Hire/fire coaches, assign to a player |
 | `draft.js` | Current draft pool, advance CPU picks, user pick |
@@ -110,7 +110,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `tradeService.js` | Trade offer evaluation/valuation (skill + upside − salary − age risk) and CPU accept/reject logic, deadline-aware |
 | `luxuryTaxService.js` | Progressive luxury tax on payroll above the league 75th-percentile threshold, with an inefficiency surcharge based on cost-per-skill vs. league median |
 | `playoffService.js` | Builds the playoff bracket (top 4 per division), tracks/updates each team's "desperation index", simulates series/rounds |
-| `broadcastService.js` | TV/radio broadcast contracts; generates per-company offers each season (reputation-gated), CPU teams auto-accept/reject |
+| `broadcastService.js` | TV/radio broadcast price war (`BROADCAST_*` in `config.js`). Companies hold `money` (TV $1B, radio $500M) and earn per game `fan_base × ($2–$10 mixed by reputation rank + random)` per contracted team (radio ½, `creditBroadcastEarnings` from `gamePlay`). Opening offers at season start, gated by reputation rank tiers (most expensive companies only offer to the top 3); days 1–10 outbid companies raise their price/fan/game up to 10% of expected earnings, total ≤ 40% of their money. User signs any offer instantly; CPU teams sign the best affordable one on day 10. 1 TV + 1 radio contract per team, up to 10 years, total paid in equal annual parts (company → team) |
 | `derbyService.js` | Home Run Derby: swing-by-swing HR probability from batter skill, CPU entrant selection, bracket/tiebreak simulation |
 | `contractService.js` | `Contract` table (current + historical). Mirrors `Player.salary`/`contract_years_remaining`/`rookie_contract` — every signing/renewal/trade/release/expiry/retirement calls it. Achievement bonus = 0–3% of annual by `demand_factor` (CPU capped at 1%), paid on no-hitters/perfect games/cycles/multi-HR/season awards with a per-season cap (`ACHIEVEMENT_BONUS_*` in `config.js`). `backfillContracts()` (behind `npm run contracts:backfill`) reconstructs past contracts from `PlayerSeasonRecord`. The player CV (`getPlayerCareerHistory`) shows every contracted season, with zeros when he didn't play |
 | `newsService.js` | Thin wrapper that creates `NewsItem` rows, used by other services to log league events |

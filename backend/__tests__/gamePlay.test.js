@@ -2,6 +2,7 @@ jest.mock('../db/prisma');
 jest.mock('../services/lineup', () => ({ getLineup: jest.fn() }));
 jest.mock('../services/gameSimulator', () => ({ simulateGame: jest.fn() }));
 jest.mock('../services/injuryService', () => ({ checkAndApplyGameInjuries: jest.fn().mockResolvedValue([]) }));
+jest.mock('../services/broadcastService', () => ({ creditBroadcastEarnings: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../services/rivalryService', () => ({
   updateRivalryAfterGame: jest.fn().mockResolvedValue({ intensity: 0, wins_a: 0, wins_b: 0 }),
 }));

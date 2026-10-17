@@ -5,7 +5,6 @@ module.exports = {
   PRE_SEASON_DAYS: 15,
   ROSTER_CHECK_DAY: 15, // mismo valor que PRE_SEASON_DAYS por diseno: ultimo dia de pre-temporada
   PLAYER_INVESTMENT_DAY: 14, // 2 dias antes del inicio de temporada regular (dia 16 = PRE_SEASON_DAYS + 1)
-  OFFER_WINDOW_END_DAY: 3,
   GAMES_PER_MATCHUP: 3, // cada enfrentamiento del calendario base se juega esta cantidad de veces (dias consecutivos)
   GAMES_PER_SEASON: 90, // 30 dias del doble round-robin base x GAMES_PER_MATCHUP
   MAX_ROSTER_SIZE: 25,
@@ -83,6 +82,25 @@ module.exports = {
   REPUTATION_MIN: 1,
   REPUTATION_MAX: 10_000,
   REPUTATION_MISSED_PLAYOFFS_PENALTY: 25,
+
+  // ----- Transmisoras: guerra de precios (ver services/broadcastService.js) -----
+  BROADCAST_OFFER_WINDOW_END_DAY: 10, // dias 1-10 de pujas; el dia 10 firman los CPU
+  BROADCAST_TV_STARTING_MONEY: 1_000_000_000,
+  BROADCAST_RADIO_STARTING_MONEY: 500_000_000,
+  BROADCAST_MAX_OFFER_SHARE_OF_MONEY: 0.4, // el total de un contrato no puede pasar del 40% del dinero de la empresa
+  // Ganancia de la empresa por fan y por partido: MIN + (MAX - MIN) * (REP_WEIGHT * repFactor + (1 - REP_WEIGHT) * aleatorio)
+  BROADCAST_EARN_PER_FAN_MIN: 2,
+  BROADCAST_EARN_PER_FAN_MAX: 10,
+  BROADCAST_EARN_REP_WEIGHT: 0.5,
+  BROADCAST_RADIO_EARN_FACTOR: 0.5, // la radio gana (y puja) la mitad que la TV
+  BROADCAST_MAX_BID_SHARE_OF_EARNINGS: 0.10, // tope de puja por fan/partido = 10% de la ganancia esperada
+  BROADCAST_BID_RAISE_PROB: 0.7, // probabilidad diaria de que una empresa superada suba su oferta
+  BROADCAST_BID_RAISE_MIN: 0.03, // subida sobre la mejor oferta: +3% a +10%
+  BROADCAST_BID_RAISE_MAX: 0.10,
+  BROADCAST_MAX_CONTRACT_YEARS: 10,
+  // Estandares por reputacion: la empresa en la posicion i (por precio base, dentro de su tipo) solo ofrece
+  // al top N de reputacion de la liga. Posiciones fuera de la lista usan el ultimo valor.
+  BROADCAST_RANK_TIERS: [3, 3, 6, 6, 10, 10, 10, 16, 16, 16],
 
   // ----- Rivalidades (ver services/rivalryService.js) -----
   RIVALRY_DIVISION_SEED: 15, // intensidad inicial si comparten division, al crear el primer registro

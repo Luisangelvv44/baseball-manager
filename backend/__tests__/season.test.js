@@ -11,11 +11,10 @@ jest.mock('../services/auctionService', () => ({
 }));
 jest.mock('../services/broadcastService', () => ({
   generateOffersForSeason: jest.fn().mockResolvedValue(undefined),
-  processCpuTeamResponses: jest.fn().mockResolvedValue(undefined),
+  runBiddingRound: jest.fn().mockResolvedValue(undefined),
   finalizeContracts: jest.fn().mockResolvedValue(undefined),
   payBroadcastRevenue: jest.fn().mockResolvedValue(undefined),
   decrementContractSeasons: jest.fn().mockResolvedValue(undefined),
-  OFFER_WINDOW_END_DAY: 999,
 }));
 jest.mock('../services/playoffService', () => ({
   generatePlayoffBracket: jest.fn().mockResolvedValue(undefined),

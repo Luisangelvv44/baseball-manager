@@ -5,7 +5,7 @@ const { generateStadiumSections } = require('./generators/stadiumGenerator');
 const { generateToddlerCycle } = require('../services/toddlerProgramService');
 const { syncMissingAppearances } = require('../services/playerAppearanceService');
 const { backfillContracts } = require('../services/contractService');
-const { BANK_INITIAL_CAPITAL, BANK_BASE_INTEREST_RATE } = require('../config');
+const { BANK_INITIAL_CAPITAL, BANK_BASE_INTEREST_RATE, BROADCAST_TV_STARTING_MONEY, BROADCAST_RADIO_STARTING_MONEY } = require('../config');
 
 const TEAMS_PER_DIVISION = 8;
 const USER_STARTING_BUDGET = 10000000;
@@ -117,10 +117,10 @@ async function seed() {
         { name: 'Local Diamond Radio',price_per_fan: 0.0200 },
       ];
       for (const c of TV_COMPANIES) {
-        await tx.broadcastCompany.create({ data: { ...c, type: 'TV' } });
+        await tx.broadcastCompany.create({ data: { ...c, type: 'TV', money: BROADCAST_TV_STARTING_MONEY } });
       }
       for (const c of RADIO_COMPANIES) {
-        await tx.broadcastCompany.create({ data: { ...c, type: 'RADIO' } });
+        await tx.broadcastCompany.create({ data: { ...c, type: 'RADIO', money: BROADCAST_RADIO_STARTING_MONEY } });
       }
 
       // ---------- Banco ----------

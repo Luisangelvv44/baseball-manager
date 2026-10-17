@@ -1,6 +1,7 @@
 // Inserta las empresas de transmisión e inicializa fan_base en equipos existentes.
 // Seguro de correr sobre un save existente (no borra datos).
 const prisma = require('../db/prisma');
+const { BROADCAST_TV_STARTING_MONEY, BROADCAST_RADIO_STARTING_MONEY } = require('../config');
 
 const TV_COMPANIES = [
   { name: 'ESPN Baseball',      price_per_fan: 0.5000 },
@@ -33,10 +34,10 @@ async function main() {
   if (existing === 0) {
     console.log('Insertando empresas de transmisión...');
     for (const c of TV_COMPANIES) {
-      await prisma.broadcastCompany.create({ data: { ...c, type: 'TV' } });
+      await prisma.broadcastCompany.create({ data: { ...c, type: 'TV', money: BROADCAST_TV_STARTING_MONEY } });
     }
     for (const c of RADIO_COMPANIES) {
-      await prisma.broadcastCompany.create({ data: { ...c, type: 'RADIO' } });
+      await prisma.broadcastCompany.create({ data: { ...c, type: 'RADIO', money: BROADCAST_RADIO_STARTING_MONEY } });
     }
     console.log('20 empresas creadas.');
   } else {

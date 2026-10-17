@@ -1,66 +1,48 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID } = require('../config');
-const { OFFER_WINDOW_END_DAY } = require('../services/broadcastService');
+const { USER_TEAM_ID, BROADCAST_OFFER_WINDOW_END_DAY } = require('../config');
+const { acceptUserOffer, getCompaniesWithTiers } = require('../services/broadcastService');
 
-// GET /api/broadcast/offers → ofertas pendientes del equipo del usuario
+// GET /api/broadcast/offers → ofertas vivas del usuario en la guerra de precios.
+// is_best: va ganando su guerra (TV o radio); raised_last_day: subio en el ultimo avance de dia.
 router.get('/offers', async (req, res) => {
   try {
     const season = await prisma.season.findFirst({ where: { status: 'active' } });
-    if (!season) return res.json([]);
+    if (!season) return res.json({ windowEndDay: BROADCAST_OFFER_WINDOW_END_DAY, offers: [] });
 
     const offers = await prisma.broadcastOffer.findMany({
       where: { team_id: USER_TEAM_ID, season_id: season.id, status: 'PENDING' },
       include: { company: true },
-      orderBy: { id: 'asc' },
+      orderBy: [{ price_per_fan: 'desc' }, { id: 'asc' }],
     });
-    res.json(offers);
+
+    const bestByType = {};
+    for (const o of offers) {
+      bestByType[o.company.type] = Math.max(bestByType[o.company.type] ?? 0, Number(o.price_per_fan));
+    }
+
+    res.json({
+      windowEndDay: BROADCAST_OFFER_WINDOW_END_DAY,
+      offers: offers.map((o) => ({
+        ...o,
+        is_best: Number(o.price_per_fan) === bestByType[o.company.type],
+        raised_last_day: o.last_raised_day != null && o.last_raised_day === season.current_day - 1,
+      })),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener ofertas' });
   }
 });
 
-// POST /api/broadcast/offers/:id/accept → aceptar oferta
+// POST /api/broadcast/offers/:id/accept → firma la oferta al instante
 router.post('/offers/:id/accept', async (req, res) => {
   try {
     const season = await prisma.season.findFirst({ where: { status: 'active' } });
-    if (!season) return res.status(400).json({ error: 'No hay temporada activa' });
-
-    if (season.current_day > OFFER_WINDOW_END_DAY) {
-      return res.status(400).json({ error: 'La ventana de negociación ya cerró' });
-    }
-
-    const offer = await prisma.broadcastOffer.findUnique({
-      where: { id: parseInt(req.params.id) },
-    });
-    if (!offer || offer.team_id !== USER_TEAM_ID || offer.status !== 'PENDING') {
-      return res.status(400).json({ error: 'Oferta no válida' });
-    }
-
-    // Verificar que no tenga contrato activo
-    const activeContract = await prisma.broadcastContract.findFirst({
-      where: { team_id: USER_TEAM_ID, seasons_remaining: { gt: 0 } },
-    });
-    if (activeContract) {
-      return res.status(400).json({ error: 'Ya tienes un contrato de transmisión activo' });
-    }
-
-    // Verificar que no haya aceptado ya otra oferta esta temporada
-    const alreadyAccepted = await prisma.broadcastOffer.findFirst({
-      where: { team_id: USER_TEAM_ID, season_id: season.id, status: 'ACCEPTED' },
-    });
-    if (alreadyAccepted) {
-      return res.status(400).json({ error: 'Ya aceptaste una oferta esta temporada. Solo puedes aceptar una.' });
-    }
-
-    await prisma.broadcastOffer.update({
-      where: { id: offer.id },
-      data: { status: 'ACCEPTED' },
-    });
-
-    res.json({ success: true });
+    const result = await acceptUserOffer(parseInt(req.params.id), season);
+    if (result.error) return res.status(400).json({ error: result.error });
+    res.json({ success: true, contract: result.contract });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al aceptar oferta' });
@@ -73,7 +55,7 @@ router.post('/offers/:id/reject', async (req, res) => {
     const season = await prisma.season.findFirst({ where: { status: 'active' } });
     if (!season) return res.status(400).json({ error: 'No hay temporada activa' });
 
-    if (season.current_day > OFFER_WINDOW_END_DAY) {
+    if (season.current_day > BROADCAST_OFFER_WINDOW_END_DAY) {
       return res.status(400).json({ error: 'La ventana de negociación ya cerró' });
     }
 
@@ -96,33 +78,38 @@ router.post('/offers/:id/reject', async (req, res) => {
   }
 });
 
-// GET /api/broadcast/contract → contrato activo del usuario
-router.get('/contract', async (req, res) => {
+// GET /api/broadcast/contracts → contratos activos del usuario (máximo uno de TV y uno de radio)
+router.get('/contracts', async (req, res) => {
   try {
-    const contract = await prisma.broadcastContract.findFirst({
+    const contracts = await prisma.broadcastContract.findMany({
       where: { team_id: USER_TEAM_ID, seasons_remaining: { gt: 0 } },
       include: { company: true },
+      orderBy: { id: 'asc' },
     });
-    res.json(contract || null);
+    res.json(contracts);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Error al obtener contrato' });
+    res.status(500).json({ error: 'Error al obtener contratos' });
   }
 });
 
-// GET /api/broadcast/companies → todas las empresas con sus contratos actuales
+// GET /api/broadcast/companies → empresas con su dinero, ganancia de la temporada, nivel de reputación
+// (rank_limit = solo ofrecen al top N) y contratos vigentes
 router.get('/companies', async (req, res) => {
   try {
-    const companies = await prisma.broadcastCompany.findMany({
+    const companies = await getCompaniesWithTiers({
       include: {
         contracts: {
           where: { seasons_remaining: { gt: 0 } },
-          include: { team: { select: { id: true, name: true } } },
+          include: { team: { select: { id: true, name: true, fan_base: true } } },
         },
       },
-      orderBy: [{ type: 'asc' }, { price_per_fan: 'desc' }],
     });
-    res.json(companies);
+    // audience: suma del fan_base de los equipos con contrato vigente
+    res.json(companies.map((c) => ({
+      ...c,
+      audience: c.contracts.reduce((sum, ct) => sum + (ct.team.fan_base || 0), 0),
+    })));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener empresas' });

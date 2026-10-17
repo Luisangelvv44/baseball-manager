@@ -7,6 +7,7 @@ const { createNews } = require('./newsService');
 const { updateRivalryAfterGame } = require('./rivalryService');
 const { payAchievementBonus } = require('./contractService');
 const { FAN_RANGE_SELECT, trackFanBase } = require('./fanBaseTracker');
+const { creditBroadcastEarnings } = require('./broadcastService');
 const {
   detectPitcherGems,
   detectCycles,
@@ -68,6 +69,9 @@ async function playGame(gameRow, saveEvents = false, skipStandings = false) {
     await checkAndCreateStreakNews(gameRow.home_team_id, homeTeam.name, gameRow.day_number, gameRow.season_id);
     await checkAndCreateStreakNews(gameRow.away_team_id, awayTeam.name, gameRow.day_number, gameRow.season_id);
   }
+
+  // Las transmisoras con contrato ganan dinero por cada partido de sus equipos (regular y playoffs)
+  await creditBroadcastEarnings([gameRow.home_team_id, gameRow.away_team_id]);
 
   if (saveEvents) {
     await prisma.gameEvent.createMany({

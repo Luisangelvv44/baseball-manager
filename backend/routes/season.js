@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, AUCTION_DEADLINE_DAY, ROSTER_CHECK_DAY, LUXURY_TAX_PROJECTION_DAY, PLAYER_INVESTMENT_DAY, LOAN_WINDOW_END_DAY, RIVALRY_BADGE_THRESHOLD } = require('../config');
+const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, AUCTION_DEADLINE_DAY, ROSTER_CHECK_DAY, LUXURY_TAX_PROJECTION_DAY, PLAYER_INVESTMENT_DAY, LOAN_WINDOW_END_DAY, RIVALRY_BADGE_THRESHOLD, BROADCAST_OFFER_WINDOW_END_DAY } = require('../config');
 const { generateSchedule } = require('../services/scheduleGenerator');
 const { simulateScheduledGamesForDay, simulateOtherActivePlayoffSeries } = require('../services/dayGamesSimulator');
 const {
@@ -12,11 +12,10 @@ const {
 } = require('../services/auctionService');
 const {
   generateOffersForSeason,
-  processCpuTeamResponses,
+  runBiddingRound,
   finalizeContracts,
   payBroadcastRevenue,
   decrementContractSeasons,
-  OFFER_WINDOW_END_DAY,
 } = require('../services/broadcastService');
 const { generatePlayoffBracket, advancePlayoffRound } = require('../services/playoffService');
 const { retireOldPlayers } = require('../services/retiredPlayer');
@@ -146,9 +145,8 @@ router.post('/start', async (req, res) => {
     // Pagar contratos de transmisión vigentes (temporadas siguientes del contrato)
     await payBroadcastRevenue(season);
 
-    // Generar nuevas ofertas de transmisoras y respuesta automática de equipos CPU
+    // Ofertas iniciales de las transmisoras; las pujas siguen dia a dia hasta BROADCAST_OFFER_WINDOW_END_DAY
     await generateOffersForSeason(season);
-    await processCpuTeamResponses(season);
 
     res.json({ success: true, season, totalGames: games.length, totalDays, totalSeasonSalary, auctionsCreated });
   } catch (err) {
@@ -402,7 +400,11 @@ router.post('/advance-day', async (req, res) => {
       await generateCpuTradeOffers(null, season);
     }
 
-    if (day === OFFER_WINDOW_END_DAY) {
+    // Guerra de precios de las transmisoras: pujas diarias y firma de los CPU el ultimo dia
+    if (day <= BROADCAST_OFFER_WINDOW_END_DAY) {
+      await runBiddingRound(season);
+    }
+    if (day === BROADCAST_OFFER_WINDOW_END_DAY) {
       await finalizeContracts(season);
     }
 

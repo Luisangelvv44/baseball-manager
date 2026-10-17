@@ -136,7 +136,7 @@ export const api = {
   getBroadcastOffers: () => request('/broadcast/offers'),
   acceptOffer: (id) => request(`/broadcast/offers/${id}/accept`, { method: 'POST' }),
   rejectOffer: (id) => request(`/broadcast/offers/${id}/reject`, { method: 'POST' }),
-  getBroadcastContract: () => request('/broadcast/contract'),
+  getBroadcastContracts: () => request('/broadcast/contracts'),
   getBroadcastCompanies: () => request('/broadcast/companies'),
 
   // Traspasos

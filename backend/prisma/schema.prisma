@@ -399,10 +399,12 @@ model AuctionBid {
 }
 
 model BroadcastCompany {
-  id            Int     @id @default(autoincrement())
-  name          String  @db.VarChar(100)
-  type          String  @db.VarChar(5)
-  price_per_fan Decimal @db.Decimal(6, 4)
+  id              Int     @id @default(autoincrement())
+  name            String  @db.VarChar(100)
+  type            String  @db.VarChar(5)
+  price_per_fan   Decimal @db.Decimal(6, 4)
+  money           Decimal @default(0) @db.Decimal(16, 2)
+  season_earnings Decimal @default(0) @db.Decimal(16, 2)
 
   offers    BroadcastOffer[]
   contracts BroadcastContract[]
@@ -411,15 +413,18 @@ model BroadcastCompany {
 }
 
 model BroadcastOffer {
-  id            Int      @id @default(autoincrement())
-  company_id    Int
-  team_id       Int
-  season_id     Int
-  seasons       Int
-  price_per_fan Decimal  @db.Decimal(6, 4)
-  status        String   @db.VarChar(20)
-  expires_day   Int
-  created_at    DateTime @default(now())
+  id              Int      @id @default(autoincrement())
+  company_id      Int
+  team_id         Int
+  season_id       Int
+  seasons         Int
+  price_per_fan   Decimal  @db.Decimal(6, 4)
+  status          String   @db.VarChar(20)
+  expires_day     Int
+  total_value     Decimal? @db.Decimal(16, 2)
+  annual_payment  Decimal? @db.Decimal(16, 2)
+  last_raised_day Int?
+  created_at      DateTime @default(now())
 
   company BroadcastCompany @relation(fields: [company_id], references: [id])
   team    Team             @relation(fields: [team_id], references: [id])
@@ -438,6 +443,8 @@ model BroadcastContract {
   seasons_remaining Int
   price_per_fan     Decimal  @db.Decimal(6, 4)
   signed_season_id  Int
+  total_value       Decimal? @db.Decimal(16, 2)
+  annual_payment    Decimal? @db.Decimal(16, 2)
   created_at        DateTime @default(now())
 
   company BroadcastCompany @relation(fields: [company_id], references: [id])
