@@ -85,6 +85,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `history.js` | Champions, past seasons, all-time stats/recalculation |
 | `trades.js` | Sent/received offers, history, create/accept/reject/cancel |
 | `derby.js` | Home run derby: list/detail, create entry, simulate |
+| `map.js` | League map: cities (team name minus mascot), user team's current city (host of its last finished game this season, else home) and next game (`?gameId=` pins it) |
 
 **Services** (`services/`):
 
@@ -113,6 +114,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `broadcastService.js` | TV/radio broadcast price war (`BROADCAST_*` in `config.js`). Companies hold `money` (TV $1B, radio $500M) and earn per game `fan_base × ($2–$10 mixed by reputation rank + random)` per contracted team (radio ½, `creditBroadcastEarnings` from `gamePlay`). Opening offers at season start, gated by reputation rank tiers (most expensive companies only offer to the top 3); days 1–10 outbid companies raise their price/fan/game up to 10% of expected earnings, total ≤ 40% of their money. User signs any offer instantly; CPU teams sign the best affordable one on day 10. 1 TV + 1 radio contract per team, up to 10 years, total paid in equal annual parts (company → team) |
 | `derbyService.js` | Home Run Derby: swing-by-swing HR probability from batter skill, CPU entrant selection, bracket/tiebreak simulation |
 | `contractService.js` | `Contract` table (current + historical). Mirrors `Player.salary`/`contract_years_remaining`/`rookie_contract` — every signing/renewal/trade/release/expiry/retirement calls it. Achievement bonus = 0–3% of annual by `demand_factor` (CPU capped at 1%), paid on no-hitters/perfect games/cycles/multi-HR/season awards with a per-season cap (`ACHIEVEMENT_BONUS_*` in `config.js`). `backfillContracts()` (behind `npm run contracts:backfill`) reconstructs past contracts from `PlayerSeasonRecord`. The player CV (`getPlayerCareerHistory`) shows every contracted season, with zeros when he didn't play |
+| `mapService.js` | `cityName()` + `getMapState()` behind `GET /api/map`; travel location is derived from the schedule, nothing persisted |
 | `newsService.js` | Thin wrapper that creates `NewsItem` rows, used by other services to log league events |
 | `newsDetection.js` | Scans a simulated game's play-by-play for feats (no-hitters/perfect games, cycles, multi-HR games, extra-innings, win/loss streaks) to feed the news feed |
 
@@ -121,6 +123,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 - **`App.jsx`** — React Router v6 route definitions; 22 top-level routes plus `/game/:id` and `/derby/:id`
 - **`api.js`** — Thin fetch wrapper used by all pages (no axios/react-query); one flat `api` object grouped by feature (teams, players, stadium, season, games, finances, scouts, lineup, auctions, playoffs, coaches, draft, news, history, broadcast, trades, derby)
 - **`pages/`** — 23 files: `NewGame`, `Dashboard`, `Roster`, `Rookie`, `Market`, `Stars`, `Trades`, `Stadium`, `Scouts`, `Finances`, `TeamsOverview`, `Schedule`, `Lineup`, `Broadcast`, `Playoffs`, `Coaches`, `Draft`, `News`, `History`, `GameView`, `Derby`, `DerbyView`, and `AllTimePlayers` (rendered as a tab inside `History`, not its own route)
+- **`map/`** — PixiJS 7 league map (`geometry.js` hashes each city name to a spot on a fixed fictional continent, `MapScene.js`, `LeagueMap.jsx` for the `/map` page, `TravelOverlay.jsx`). After "Avanzar Día" lands on a user game, `advanceDayFlow.js` navigates with `state.travel` and `GameView` shows the overlay (flight from the current city, or "Play Ball" if already there) before `GameIntro`
 - **`stadium/`** — PixiJS 7 top-down stadium view (`geometry.js`, `builders.js`, `StadiumScene.js`, `StadiumView.jsx`), lazy-loaded as the "Vista" tab of `Stadium`; every grid section is drawn as a wedge of a bowl around the field (one ring per floor, `layoutSections()` in `geometry.js`) with its own level look; facilities drawn from their levels
 - **`components/`** — Shared UI: `Navbar`, `Leaderboard`, `StadiumGrid`, `SectionModal`, `Pagination`, `TeamBadge`, `SkillTierBadge`, `FavoriteButton`
 

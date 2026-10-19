@@ -3,7 +3,7 @@
 
 const NEUTRAL = { accent: 'hsl(215 16% 47%)', soft: 'hsl(215 16% 47% / 0.12)' };
 
-function hueFromName(name) {
+export function hueFromName(name) {
   let h = 0;
   for (let i = 0; i < name.length; i++) {
     h = (h * 31 + name.charCodeAt(i)) >>> 0;

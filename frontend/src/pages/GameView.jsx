@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../api.js';
 import TeamBadge from '../components/TeamBadge.jsx';
 import SkillTierBadge from '../components/SkillTierBadge.jsx';
@@ -8,6 +8,8 @@ import { useTeam } from '../context/TeamContext.jsx';
 import { advanceDayAndRoute } from '../utils/advanceDayFlow.js';
 import { getTeamLogo } from '../utils/teamLogos.js';
 import { teamColor } from '../utils/teamColor.js';
+
+const TravelOverlay = lazy(() => import('../map/TravelOverlay.jsx'));
 
 const RESULT_TEXT = {
   SO: 'Ponche',
@@ -380,6 +382,7 @@ function PlayByPlayFeed({ events, nameMap, homeTeam, awayTeam }) {
 export default function GameView() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { refreshTeam, refreshAlerts } = useTeam();
   const [game, setGame] = useState(null);
   const [homeTeam, setHomeTeam] = useState(null);
@@ -394,6 +397,7 @@ export default function GameView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showIntro, setShowIntro] = useState(false);
+  const [showTravel, setShowTravel] = useState(false);
   const [tab, setTab] = useState('previa');
   const timerRef = useRef(null);
 
@@ -418,12 +422,16 @@ export default function GameView() {
 
       if (info.game.status === 'finished') {
         setShowIntro(false);
+        setShowTravel(false);
         setTab('envivo');
         setEvents(info.events);
         setVisibleEvents(info.events);
         setScore({ home: info.game.home_score, away: info.game.away_score });
       } else {
-        setShowIntro(true);
+        // recien llegado desde "Avanzar Dia": primero el mapa (viaje / Play Ball), luego la intro
+        const travel = !!location.state?.travel;
+        setShowTravel(travel);
+        setShowIntro(!travel);
         setTab('previa');
         setEvents([]);
         setVisibleEvents([]);
@@ -434,6 +442,13 @@ export default function GameView() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function finishTravel() {
+    setShowTravel(false);
+    setShowIntro(true);
+    // quita la marca del historial para que recargar la pagina no repita el viaje
+    navigate(location.pathname, { replace: true, state: null });
   }
 
   async function handleSimulate() {
@@ -529,6 +544,11 @@ export default function GameView() {
 
   return (
     <div className="space-y-4">
+      {showTravel && (
+        <Suspense fallback={<div className="fixed inset-0 z-50 bg-[#1d4e73]" />}>
+          <TravelOverlay gameId={id} onFinish={finishTravel} />
+        </Suspense>
+      )}
       {showIntro && homeTeam && awayTeam && (
         <GameIntro homeTeam={homeTeam} awayTeam={awayTeam} onFinish={() => setShowIntro(false)} />
       )}

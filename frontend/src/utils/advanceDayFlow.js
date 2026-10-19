@@ -27,7 +27,8 @@ export async function advanceDayAndRoute({ navigate, refreshTeam, refreshAlerts,
   }
   if (result.userGameId) {
     setMessage?.(`Dia ${result.day}. Tienes un partido${result.inPlayoffs ? ' de playoffs' : ''} hoy.`);
-    return navigate(`/game/${result.userGameId}`);
+    // travel: GameView muestra primero el mapa (viaje o "Play Ball") y luego la intro del partido
+    return navigate(`/game/${result.userGameId}`, { state: { travel: true } });
   }
 
   setMessage?.(`Dia ${result.day}. Sin partido hoy. Se simularon ${result.simulated} partidos.`);

@@ -26,6 +26,7 @@ import DerbyView from './pages/DerbyView.jsx';
 import Jerseys from './pages/Jerseys.jsx';
 import Toddlers from './pages/Toddlers.jsx';
 import Bank from './pages/Bank.jsx';
+import MapPage from './pages/MapPage.jsx';
 
 export default function App() {
   return (
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="/jerseys" element={<Jerseys />} />
           <Route path="/toddlers" element={<Toddlers />} />
           <Route path="/bank" element={<Bank />} />
+          <Route path="/map" element={<MapPage />} />
           <Route path="/derby" element={<Derby />} />
           <Route path="/derby/:id" element={<DerbyView />} />
         </Routes>

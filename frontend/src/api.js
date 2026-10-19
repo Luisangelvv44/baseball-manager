@@ -139,6 +139,9 @@ export const api = {
   getRivalries: () => request('/rivalries'),
   getTeamRivalries: (teamId) => request(`/rivalries/team/${teamId}`),
 
+  // Mapa de la liga (gameId opcional: destino = ese partido)
+  getMap: (gameId) => request(gameId ? `/map?gameId=${gameId}` : '/map'),
+
   // Transmisión
   getBroadcastOffers: () => request('/broadcast/offers'),
   acceptOffer: (id) => request(`/broadcast/offers/${id}/accept`, { method: 'POST' }),

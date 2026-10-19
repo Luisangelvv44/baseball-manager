@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Newspaper, Calendar, Users, Sprout, ClipboardList,
   ShoppingCart, ArrowLeftRight, Star, Zap, Landmark, Binoculars,
   UserCog, Wallet, Shield, Radio, Trophy, ListChecks, History,
-  Banknote, Shirt, Baby,
+  Banknote, Shirt, Baby, Map as MapIcon,
 } from 'lucide-react';
 import { useTeam } from '../context/TeamContext.jsx';
 import TeamBadge from './TeamBadge.jsx';
@@ -26,6 +26,7 @@ const LINKS = [
   { to: '/coaches', label: 'Coaches', icon: UserCog },
   { to: '/finances', label: 'Finanzas', icon: Wallet },
   { to: '/teams-overview', label: 'Equipos', icon: Shield },
+  { to: '/map', label: 'Mapa', icon: MapIcon },
   { to: '/broadcast', label: 'Transmisión', icon: Radio },
   { to: '/playoffs', label: 'Playoffs', icon: Trophy },
   { to: '/draft', label: 'Draft', icon: ListChecks },
