@@ -194,5 +194,26 @@ module.exports = {
       injury_days_every_levels: 2,
       levels: ['Botiquín', 'Enfermería', 'Sala de fisioterapia', 'Centro médico', 'Clínica deportiva'],
     },
+    // Fachada principal (group 'facade'): se muestra en la pestaña "Fachada" del estadio
+    facade_entrance: {
+      name: 'Entrada principal', group: 'facade', column: 'facade_entrance_level', max: 5, base_cost: 750_000, cost_factor: 2,
+      fair_price_per_level: 3,
+      levels: ['Reja de acceso', 'Torniquetes', 'Pórtico de ladrillo', 'Arco monumental', 'Gran pórtico de cristal'],
+    },
+    facade_sign: {
+      name: 'Letrero del estadio', group: 'facade', column: 'facade_sign_level', max: 5, base_cost: 400_000, cost_factor: 2,
+      merch_pct_per_level: 0.04,
+      levels: ['Cartel pintado', 'Letras metálicas', 'Letras iluminadas', 'Letrero de neón', 'Letrero LED gigante'],
+    },
+    facade_plaza: {
+      name: 'Plaza exterior', group: 'facade', column: 'facade_plaza_level', max: 5, base_cost: 600_000, cost_factor: 2,
+      attendance_rate_per_level: 0.004,
+      levels: ['Estacionamiento de tierra', 'Explanada asfaltada', 'Plaza con jardines', 'Plaza con fuente', 'Paseo de la Fama'],
+    },
+    facade_shop: {
+      name: 'Tienda oficial', group: 'facade', column: 'facade_shop_level', max: 5, base_cost: 500_000, cost_factor: 2,
+      merch_pct_per_level: 0.05,
+      levels: ['Puesto ambulante', 'Kiosco', 'Tienda pequeña', 'Tienda oficial', 'Megastore del club'],
+    },
   },
 };

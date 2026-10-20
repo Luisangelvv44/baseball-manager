@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { api } from '../api.js';
 import StadiumGrid from '../components/StadiumGrid.jsx';
 import SectionModal from '../components/SectionModal.jsx';
+import FacadeView from '../stadium/FacadeView.jsx';
 import { useTeam } from '../context/TeamContext.jsx';
 
 // PixiJS pesa ~450 kB: la vista cenital se carga solo al abrir el estadio
@@ -12,6 +13,7 @@ const FLOOR_COSTS = [null, 2_000_000, 4_000_000, 8_000_000];
 
 const TABS = [
   ['view', 'Vista'],
+  ['facade', 'Fachada'],
   ['stands', 'Gradas'],
 ];
 
@@ -115,6 +117,8 @@ export default function Stadium() {
             onManageStands={() => setTab('stands')}
           />
         </Suspense>
+      ) : tab === 'facade' ? (
+        <FacadeView data={data} onUpgradeFacility={handleFacilityUpgrade} />
       ) : (
         <>
           <p className="text-gray-600 text-sm">

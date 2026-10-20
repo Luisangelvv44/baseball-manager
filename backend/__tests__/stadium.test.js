@@ -71,6 +71,23 @@ describe('stadiumFacilityService', () => {
     expect(list.every((f) => f.level === 1 && f.next_cost > 0 && f.nextLevelName)).toBe(true);
     expect(list.find((f) => f.key === 'field').max).toBe(10);
   });
+
+  it('facade parts are grouped apart and add their bonuses', () => {
+    const list = describeFacilities({});
+    expect(list.filter((f) => f.group === 'facade').map((f) => f.key)).toEqual([
+      'facade_entrance', 'facade_sign', 'facade_plaza', 'facade_shop',
+    ]);
+    expect(list.find((f) => f.key === 'field').group).toBe('facility');
+
+    const b = getFacilityBonuses({
+      facade_entrance_level: 5, facade_sign_level: 5, facade_plaza_level: 5, facade_shop_level: 5,
+    });
+    expect(b.fairPriceBonus).toBe(4 * 3);
+    expect(b.merchMultiplier).toBeCloseTo(1 + 4 * 0.04 + 4 * 0.05);
+    expect(b.attendanceRateBonus).toBeCloseTo(4 * 0.004);
+    expect(b.upkeep).toBe(16 * FACILITY_UPKEEP_PER_LEVEL);
+    expect(getFacilityUpgradeCost('facade_entrance', 1)).toBe(750_000);
+  });
 });
 
 describe('economy with facility bonuses', () => {

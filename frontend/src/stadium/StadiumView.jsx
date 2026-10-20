@@ -150,7 +150,7 @@ export default function StadiumView({ data, onUpgradeFacility, onManageStands })
             </button>
           </div>
 
-          {data.facilities.map((f) => {
+          {data.facilities.filter((f) => f.group !== 'facade').map((f) => {
             const atMax = f.level >= f.max;
             const poor = !atMax && data.budget < f.next_cost;
             const disabled = atMax || poor || !!busyKey;

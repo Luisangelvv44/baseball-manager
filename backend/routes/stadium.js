@@ -30,6 +30,7 @@ router.get('/', async (req, res) => {
     ]);
     const fairPrice = getFairTicketPrice(team.reputation, getFacilityBonuses(team).fairPriceBonus);
     res.json({
+      team_name: team.name,
       floors: team.stadium_floors,
       budget: Number(team.budget),
       max_grandstand_level: GRANDSTAND_MAX_LEVEL,
@@ -238,6 +239,7 @@ router.post('/expand-floor', async (req, res) => {
 });
 
 // POST /api/stadium/facilities/:key/upgrade -> sube de nivel una instalacion (campo, luces, marcador, medicas)
+// o un elemento de la fachada (entrada, letrero, plaza, tienda)
 router.post('/facilities/:key/upgrade', async (req, res) => {
   try {
     const result = await upgradeFacility(USER_TEAM_ID, req.params.key);

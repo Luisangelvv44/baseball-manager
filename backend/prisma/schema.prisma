@@ -36,6 +36,10 @@ model Team {
   lights_level           Int       @default(1)
   board_level            Int       @default(1)
   medical_level          Int       @default(1)
+  facade_entrance_level  Int       @default(1)
+  facade_sign_level      Int       @default(1)
+  facade_plaza_level     Int       @default(1)
+  facade_shop_level      Int       @default(1)
   alerts_seen_at         DateTime?
 
   division              Division?             @relation(fields: [division_id], references: [id])

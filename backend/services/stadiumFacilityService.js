@@ -1,7 +1,8 @@
 const prisma = require('../db/prisma');
 const { STADIUM_FACILITIES, FACILITY_UPKEEP_PER_LEVEL } = require('../config');
 
-// Instalaciones del estadio a nivel de equipo (campo, iluminacion, marcador, medicas).
+// Instalaciones del estadio a nivel de equipo (campo, iluminacion, marcador, medicas)
+// y elementos de la fachada principal (group 'facade').
 // Viven como columnas `<key>_level` en Team; nivel 1 = sin efecto.
 
 function levelOf(team, key) {
@@ -69,6 +70,7 @@ function describeFacilities(team) {
     return {
       key,
       name: def.name,
+      group: def.group || 'facility',
       level,
       max: def.max,
       levelName: def.levels[level - 1],
