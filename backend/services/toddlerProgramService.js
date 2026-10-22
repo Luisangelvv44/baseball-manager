@@ -11,6 +11,7 @@ const {
   TODDLER_PROGRAM_IMPROVE_PROB_START,
   TODDLER_PROGRAM_IMPROVE_PROB_STEP,
   TODDLER_PROGRAM_IMPROVE_PROB_MIN,
+  HEIR_MAX_PER_CYCLE,
 } = require('../config');
 const { generatePlayer, calculateSalary, randomInt, POSITIONS } = require('../seeders/generators/playerGenerator');
 const { syncMissingAppearances } = require('./playerAppearanceService');
@@ -27,14 +28,35 @@ function improveProbForSeason(seasonsElapsed) {
 
 // Crea un ciclo nuevo del programa: 1 fila ToddlerProgram + TODDLER_PROGRAM_SIZE
 // jugadores (status 'toddler_program', edad 8, skill -15, sin salario ni equipo).
+// Hasta HEIR_MAX_PER_CYCLE hijos de leyendas en espera ('heir_pending', ver legacyService.js)
+// ocupan su lugar entre los 32, en orden de llegada; el resto espera al siguiente ciclo.
 // `client` puede ser el prisma singleton o un tx de transaccion (lo usa el seed).
 async function generateToddlerCycle(client, cycleNumber) {
   const program = await client.toddlerProgram.create({
     data: { cycle_number: cycleNumber, seasons_elapsed: 0, budget: 0, status: 'active', current_pick: 1 },
   });
 
+  const heirs = await client.player.findMany({
+    where: { status: 'heir_pending' },
+    orderBy: { id: 'asc' },
+    take: Math.min(HEIR_MAX_PER_CYCLE, TODDLER_PROGRAM_SIZE),
+    select: { id: true },
+  });
+  if (heirs.length > 0) {
+    await client.player.updateMany({
+      where: { id: { in: heirs.map((h) => h.id) } },
+      data: {
+        status: 'toddler_program',
+        age: TODDLER_PROGRAM_START_AGE,
+        current_skill: TODDLER_PROGRAM_START_SKILL,
+        level: 'MINOR',
+        toddler_program_id: program.id,
+      },
+    });
+  }
+
   const toddlers = [];
-  for (let i = 0; i < TODDLER_PROGRAM_SIZE; i++) {
+  for (let i = 0; i < TODDLER_PROGRAM_SIZE - heirs.length; i++) {
     const base = generatePlayer({
       position: POSITIONS[i % POSITIONS.length],
       age: TODDLER_PROGRAM_START_AGE,
@@ -82,12 +104,14 @@ async function finalizeSelection(client, programId) {
   await client.player.updateMany({ where: { toddler_program_id: programId }, data: { toddler_program_id: null } });
 }
 
-// Elige el mejor toddler disponible para `teamId`: mayor skill, con un ligero sesgo a
-// una posicion donde el equipo tenga menos de 2 jugadores activos. Lo asigna al equipo.
+// Elige el mejor toddler disponible para `teamId`: el hijo de una leyenda propia si lo hay;
+// si no, mayor skill, con un ligero sesgo a una posicion donde el equipo tenga menos de 2
+// jugadores activos. Lo asigna al equipo.
 async function pickBestForTeam(client, program, teamId) {
   const available = await client.player.findMany({
     where: { toddler_program_id: program.id, status: 'toddler_program', team_id: null },
     orderBy: [{ current_skill: 'desc' }, { id: 'asc' }],
+    include: { parent: { select: { hall_of_fame: { select: { primary_team_id: true } } } } },
   });
   if (available.length === 0) return null;
 
@@ -98,7 +122,9 @@ async function pickBestForTeam(client, program, teamId) {
   const counts = {};
   for (const r of roster) counts[r.position] = (counts[r.position] || 0) + 1;
   const need = POSITIONS.find((p) => (counts[p] || 0) < 2);
-  const chosen = (need && available.find((a) => a.position === need)) || available[0];
+  // Lealtad: un equipo CPU prefiere al hijo de una leyenda de su franquicia si sigue disponible
+  const legacyHeir = available.find((a) => a.parent?.hall_of_fame?.primary_team_id === teamId);
+  const chosen = legacyHeir || (need && available.find((a) => a.position === need)) || available[0];
 
   await assignToddlerToTeam(client, chosen, teamId);
   return chosen;

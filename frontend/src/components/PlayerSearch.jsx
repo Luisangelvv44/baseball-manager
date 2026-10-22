@@ -7,6 +7,7 @@ function statusLine(p) {
   if (p.status === 'retired') return p.last_team_name ? `Retirado — ${p.last_team_name}` : 'Retirado';
   if (p.status === 'free_agent') return 'Agente libre';
   if (p.status === 'toddler_program') return 'Programa de Toddlers';
+  if (p.status === 'heir_pending') return 'Hijo de leyenda — espera Toddlers';
   return p.status;
 }
 

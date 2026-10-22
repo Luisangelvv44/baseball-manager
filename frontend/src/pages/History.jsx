@@ -375,6 +375,11 @@ function HallOfFamePlaque({ entry }) {
         {entry.last_vote_pct}% de los votos
         {entry.years_on_ballot === 1 ? ' · primera papeleta' : ` · ${entry.years_on_ballot}º año`}
       </div>
+      {entry.heirs?.length > 0 && (
+        <div className="text-xs text-amber-700 text-center">
+          🧬 Heredero: {entry.heirs.map((h) => h.name).join(', ')}
+        </div>
+      )}
     </div>
   );
 }
@@ -454,6 +459,9 @@ function HallOfFameTab() {
                       <td className="px-3 py-2">
                         <div className="font-semibold text-gray-800">{e.player_name}</div>
                         <div className="text-xs text-gray-400">{e.position} · {e.seasons_played} temp.</div>
+                        {e.heirs?.length > 0 && (
+                          <div className="text-xs text-amber-700">🧬 Heredero: {e.heirs.map((h) => h.name).join(', ')}</div>
+                        )}
                       </td>
                       <td className="px-3 py-2">{e.team_name ? <TeamBadge name={e.team_name} /> : '—'}</td>
                       <td className="px-3 py-2 text-xs text-gray-600"><CareerLine entry={e} /></td>

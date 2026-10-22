@@ -252,6 +252,11 @@ function ToddlerTable({ toddlers, selectable, busy, onPick }) {
               <tr key={t.id} className="border-t hover:bg-gray-50">
                 <td className="p-2 font-medium">
                   {t.first_name} {t.last_name}
+                  {t.parent && (
+                    <div className="text-xs font-normal text-amber-700">
+                      🧬 Hijo de {t.parent.first_name} {t.parent.last_name}
+                    </div>
+                  )}
                 </td>
                 <td className="p-2">
                   <span className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">{t.position}</span>

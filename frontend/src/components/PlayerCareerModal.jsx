@@ -64,6 +64,7 @@ export default function PlayerCareerModal({ playerId, onClose }) {
               <div>
                 <h3 className="font-bold text-lg mb-1">{data.player.first_name} {data.player.last_name}</h3>
                 <p className="text-sm text-gray-500">{data.player.position}</p>
+                <Lineage player={data.player} />
               </div>
             </div>
 
@@ -211,6 +212,30 @@ export default function PlayerCareerModal({ playerId, onClose }) {
           Cerrar
         </button>
       </div>
+    </div>
+  );
+}
+
+const HEIR_STATUS_LABEL = {
+  heir_pending: 'espera el Programa de Toddlers',
+  toddler_program: 'en el Programa de Toddlers',
+  retired: 'retirado',
+  free_agent: 'agente libre',
+};
+
+function Lineage({ player }) {
+  const children = player.children || [];
+  if (!player.parent && children.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-col gap-1 text-xs text-amber-700">
+      {player.parent && (
+        <span>🧬 Hijo de {player.parent.first_name} {player.parent.last_name}</span>
+      )}
+      {children.map((c) => (
+        <span key={c.id}>
+          🧬 Padre de {c.first_name} {c.last_name} ({c.team?.name ?? HEIR_STATUS_LABEL[c.status] ?? c.status})
+        </span>
+      ))}
     </div>
   );
 }

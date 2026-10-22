@@ -38,6 +38,7 @@ router.get('/', async (req, res) => {
         select: {
           id: true, first_name: true, last_name: true, position: true,
           age: true, current_skill: true, potential_coefficient: true,
+          parent: { select: { first_name: true, last_name: true } },
         },
       });
       const contribs = await prisma.toddlerContribution.findMany({ where: { program_id: active.id } });
@@ -77,6 +78,7 @@ router.get('/', async (req, res) => {
         select: {
           id: true, first_name: true, last_name: true, position: true,
           age: true, current_skill: true, potential_coefficient: true,
+          parent: { select: { first_name: true, last_name: true } },
           team_id: true, status: true,
         },
       });

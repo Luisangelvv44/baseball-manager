@@ -62,6 +62,19 @@ module.exports = {
   HOF_PITCHER_WEIGHTS: { wins: 5, strikeouts: 0.6, innings: 0.6, earned_runs: -0.8 },
   HOF_AWARD_POINTS: { MVP: 40, CY_YOUNG: 40, ROOKIE_OF_YEAR: 8, SEASON_HR_RECORD: 15, SEASON_ERA_RECORD: 15 },
 
+  // ----- Herederos (Legado fase 2, ver services/legacyService.js) -----
+  // Al entrar a la papeleta del Salon de la Fama, una leyenda puede tener un hijo que espera
+  // ('heir_pending') hasta el siguiente ciclo de Toddlers, donde reemplaza a un toddler aleatorio.
+  HEIR_ELITE_PERCENTILE: 0.97, // percentil de legado a partir del cual se usa HEIR_CHANCE_ELITE
+  HEIR_CHANCE_ELITE: 0.6,
+  HEIR_CHANCE_BALLOT: 0.25, // resto de la papeleta (percentil >= HOF_BALLOT_MIN_PERCENTILE)
+  HEIR_MAX_PER_CYCLE: 4, // herederos inyectados por ciclo de Toddlers; el resto espera al siguiente
+  HEIR_SAME_POSITION_CHANCE: 0.6,
+  HEIR_JUNIOR_CHANCE: 0.3, // hereda tambien el nombre de pila ("Jr.")
+  HEIR_PARENT_POTENTIAL_WEIGHT: 0.6, // potencial = padre * peso + aleatorio * (1 - peso) + bono
+  HEIR_POTENTIAL_BONUS: 5,
+  HEIR_FACE_INHERIT_CHANCE: 0.5, // el tono de piel se hereda siempre; la cara, a veces
+
   // ----- Programa de Toddlers (ver services/toddlerProgramService.js) -----
   TODDLER_PROGRAM_SEASONS: 10, // temporadas que dura un ciclo antes de la eleccion
   TODDLER_PROGRAM_SIZE: 32, // DEBE ser 16 equipos x TODDLER_PROGRAM_PICKS_PER_TEAM (todos los toddler se reparten)

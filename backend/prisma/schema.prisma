@@ -115,6 +115,7 @@ model Player {
   injury_days_remaining    Int       @default(0)
   level                    String    @default("MAJOR") @db.VarChar(10)
   toddler_program_id       Int?
+  parent_id                Int? // padre leyenda (herederos, ver legacyService.js)
   career_home_runs         Int       @default(0)
   career_hits              Int       @default(0)
   career_rbi               Int       @default(0)
@@ -139,12 +140,15 @@ model Player {
   player_season_records  PlayerSeasonRecord[]
   contracts              Contract[]
   hall_of_fame           HallOfFameCandidate?
+  parent                 Player?              @relation("Lineage", fields: [parent_id], references: [id])
+  children               Player[]             @relation("Lineage")
 
   @@index([team_id])
   @@index([last_team_id])
   @@index([status])
   @@index([team_id, level])
   @@index([toddler_program_id])
+  @@index([parent_id])
 }
 
 // Apariencia visual (PlayerSprite): IDs de los componentes elegidos al crear el

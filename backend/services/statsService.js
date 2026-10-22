@@ -259,7 +259,15 @@ async function computeSeasonStintRecords(seasonId) {
 async function getPlayerCareerHistory(playerId) {
   const player = await prisma.player.findUnique({
     where: { id: playerId },
-    select: { id: true, first_name: true, last_name: true, position: true },
+    select: {
+      id: true, first_name: true, last_name: true, position: true,
+      // Linaje (herederos de leyendas, ver legacyService.js)
+      parent: { select: { id: true, first_name: true, last_name: true } },
+      children: {
+        select: { id: true, first_name: true, last_name: true, status: true, team: { select: { name: true } } },
+        orderBy: { id: 'asc' },
+      },
+    },
   });
   if (!player) return null;
 

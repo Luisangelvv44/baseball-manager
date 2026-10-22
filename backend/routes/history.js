@@ -269,7 +269,12 @@ router.get('/hall-of-fame', async (req, res) => {
       prisma.hallOfFameCandidate.findMany({
         where: { status: { in: ['inducted', 'candidate'] } },
         include: {
-          player: { select: { first_name: true, last_name: true, position: true } },
+          player: {
+            select: {
+              first_name: true, last_name: true, position: true,
+              children: { select: { id: true, first_name: true, last_name: true }, orderBy: { id: 'asc' } },
+            },
+          },
           primary_team: { select: { name: true } },
         },
       }),
@@ -280,6 +285,7 @@ router.get('/hall-of-fame', async (req, res) => {
       player_id: c.player_id,
       player_name: `${c.player.first_name} ${c.player.last_name}`,
       position: c.player.position,
+      heirs: (c.player.children || []).map((h) => ({ id: h.id, name: `${h.first_name} ${h.last_name}` })),
       role: c.role,
       team_name: c.primary_team?.name ?? null,
       is_user_team: c.primary_team_id === USER_TEAM_ID,

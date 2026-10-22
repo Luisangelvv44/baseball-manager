@@ -13,6 +13,9 @@ const {
   computeVotePct,
   resolveVote,
   roleOf,
+  heirChance,
+  buildHeirData,
+  buildHeirAppearance,
 } = require('../services/legacyService');
 const { USER_TEAM_ID, HISTORICAL_CPU_STAT_DIVISOR, HOF_INDUCTION_REPUTATION_BONUS } = require('../config');
 
@@ -40,6 +43,8 @@ beforeEach(() => {
   prisma.player.findMany.mockResolvedValue([]);
   prisma.playerSeasonRecord.findMany.mockResolvedValue([]);
   prisma.seasonAward.findMany.mockResolvedValue([]);
+  prisma.player.create.mockImplementation(({ data }) => Promise.resolve({ id: 500, ...data }));
+  prisma.playerAppearance.create.mockResolvedValue({});
 });
 
 describe('pure helpers', () => {
@@ -183,9 +188,14 @@ describe('runHallOfFameSeason', () => {
     ]);
     prisma.seasonAward.findMany.mockResolvedValue([{ player_id: 10, category: 'MVP' }]);
 
-    const { registered } = await runHallOfFameSeason(season, noNoise);
+    const { registered, heirs } = await runHallOfFameSeason(season, noNoise);
 
     expect(registered).toEqual([10]);
+    // percentil 18.5/19 >= 0.97 -> chance elite 0.6 > rng 0.5 -> tiene heredero
+    expect(heirs).toEqual([500]);
+    expect(prisma.player.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ parent_id: 10, status: 'heir_pending', last_name: 'One' }),
+    });
     const creates = prisma.hallOfFameCandidate.create.mock.calls.map(([arg]) => arg.data);
     expect(creates).toEqual([
       expect.objectContaining({ player_id: 10, role: 'BATTER', seasons_played: 6, status: 'candidate', evaluated_season_id: 20 }),
@@ -220,5 +230,59 @@ describe('GET /api/history/hall-of-fame', () => {
     expect(res.body.inducted[0]).toMatchObject({ player_name: 'A B', is_user_team: true, inducted_edition: 3, vote_history: [{ edition: 3, pct: 90 }] });
     expect(res.body.ballot[0]).toMatchObject({ player_name: 'C D', team_name: null, retired_edition: 3, vote_history: [] });
     expect(res.body.rules).toEqual({ induction_pct: 75, drop_pct: 5, max_years: 10 });
+  });
+});
+
+describe('heirs', () => {
+  const parent = {
+    id: 9, first_name: 'Pedro', last_name: 'Martinez', position: 'SS', potential_coefficient: 90,
+  };
+
+  it('heirChance is higher for elite legends', () => {
+    expect(heirChance(0.99)).toBe(0.6);
+    expect(heirChance(0.92)).toBe(0.25);
+  });
+
+  it('buildHeirData: junior keeps first name, same position, pending with parent link', () => {
+    const heir = buildHeirData(parent, () => 0); // junior + misma posicion
+    expect(heir).toMatchObject({
+      first_name: 'Pedro',
+      last_name: 'Martinez Jr.',
+      position: 'SS',
+      status: 'heir_pending',
+      team_id: null,
+      parent_id: 9,
+      salary: 0,
+    });
+    expect(heir.potential_coefficient).toBeGreaterThanOrEqual(30);
+    expect(heir.potential_coefficient).toBeLessThanOrEqual(99);
+  });
+
+  it('buildHeirData: non-junior gets a new first name and no "Jr." chain', () => {
+    const heir = buildHeirData({ ...parent, last_name: 'Martinez Jr.' }, () => 0);
+    expect(heir.last_name).toBe('Martinez');
+    expect(heir.first_name).toEqual(expect.any(String));
+  });
+
+  it('buildHeirAppearance always inherits skin tone and sometimes the face', () => {
+    const parentLook = { skin_tone: 7, face_type: 4 };
+    expect(buildHeirAppearance(1, parentLook, () => 0)).toMatchObject({ player_id: 1, skin_tone: 7, face_type: 4 });
+    expect(buildHeirAppearance(1, parentLook, () => 0.99).skin_tone).toBe(7);
+    expect(buildHeirAppearance(1, null, () => 0).player_id).toBe(1);
+  });
+
+  it('no heir when the roll misses', async () => {
+    const pool = Array.from({ length: 18 }, (_, i) => ({ role: 'BATTER', legacy_score: i }));
+    prisma.hallOfFameCandidate.findMany.mockResolvedValueOnce(pool).mockResolvedValueOnce([]);
+    prisma.player.findMany.mockResolvedValue([{ id: 10, first_name: 'Star', last_name: 'One', position: 'CF', potential_coefficient: 80 }]);
+    prisma.playerSeasonRecord.findMany.mockResolvedValue(
+      [1, 2, 3, 4, 5, 6].map((s) => record({ player_id: 10, season_id: s, hits: 50 })),
+    );
+
+    const { registered, heirs } = await runHallOfFameSeason(season, () => 0.95);
+
+    expect(registered).toEqual([10]);
+    expect(heirs).toEqual([]);
+    expect(prisma.player.create).not.toHaveBeenCalled();
   });
 });

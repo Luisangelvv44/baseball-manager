@@ -15,9 +15,21 @@ const {
   HOF_BATTER_WEIGHTS,
   HOF_PITCHER_WEIGHTS,
   HOF_AWARD_POINTS,
+  HEIR_ELITE_PERCENTILE,
+  HEIR_CHANCE_ELITE,
+  HEIR_CHANCE_BALLOT,
+  HEIR_SAME_POSITION_CHANCE,
+  HEIR_JUNIOR_CHANCE,
+  HEIR_PARENT_POTENTIAL_WEIGHT,
+  HEIR_POTENTIAL_BONUS,
+  HEIR_FACE_INHERIT_CHANCE,
+  TODDLER_PROGRAM_START_SKILL,
 } = require('../config');
 const { createNews } = require('./newsService');
 const { clampReputation } = require('./reputationService');
+const { randomAppearanceData } = require('./playerAppearanceService');
+const { generatePotentialCoefficient, calculateGrowthAge, POSITIONS } = require('../seeders/generators/playerGenerator');
+const { FIRST_NAMES } = require('../seeders/data/names');
 
 const round1 = (n) => Math.round(n * 10) / 10;
 
@@ -200,14 +212,78 @@ async function voteBallot(season, pools, rng) {
   return results;
 }
 
+// ----- Herederos -----
+
+function heirChance(percentile) {
+  return percentile >= HEIR_ELITE_PERCENTILE ? HEIR_CHANCE_ELITE : HEIR_CHANCE_BALLOT;
+}
+
+const pick = (list, rng) => list[Math.floor(rng() * list.length)];
+
+// Datos del hijo de una leyenda: mismo apellido (a veces "Jr."), posicion del padre la mayoria
+// de las veces, potencial mezclado con el del padre. Queda 'heir_pending' (sin equipo ni ciclo)
+// hasta que generateToddlerCycle lo inyecta en el siguiente ciclo de Toddlers.
+function buildHeirData(parent, rng = Math.random) {
+  const junior = rng() < HEIR_JUNIOR_CHANCE && !parent.last_name.endsWith(' Jr.');
+  const position = rng() < HEIR_SAME_POSITION_CHANCE ? parent.position : pick(POSITIONS, rng);
+  const potential = Math.max(30, Math.min(99, Math.round(
+    parent.potential_coefficient * HEIR_PARENT_POTENTIAL_WEIGHT
+      + generatePotentialCoefficient() * (1 - HEIR_PARENT_POTENTIAL_WEIGHT),
+  ) + HEIR_POTENTIAL_BONUS));
+
+  return {
+    first_name: junior ? parent.first_name : pick(FIRST_NAMES, rng),
+    last_name: (junior ? `${parent.last_name} Jr.` : parent.last_name.replace(/ Jr\.$/, '')).slice(0, 50),
+    age: 0,
+    position,
+    potential_coefficient: potential,
+    growth_age: calculateGrowthAge(potential),
+    current_skill: TODDLER_PROGRAM_START_SKILL,
+    salary: 0,
+    contract_years_remaining: 0,
+    status: 'heir_pending',
+    level: 'MINOR',
+    team_id: null,
+    parent_id: parent.id,
+  };
+}
+
+// Apariencia del hijo: tono de piel siempre del padre, la cara a veces, el resto aleatorio.
+function buildHeirAppearance(heirId, parentAppearance, rng = Math.random) {
+  const base = randomAppearanceData(heirId);
+  if (!parentAppearance) return base;
+  return {
+    ...base,
+    skin_tone: parentAppearance.skin_tone,
+    ...(rng() < HEIR_FACE_INHERIT_CHANCE ? { face_type: parentAppearance.face_type } : {}),
+  };
+}
+
+async function createHeir(season, parent, primaryTeamId, rng) {
+  const heir = await prisma.player.create({ data: buildHeirData(parent, rng) });
+  await prisma.playerAppearance.create({ data: buildHeirAppearance(heir.id, parent.appearance, rng) });
+  await createNews(
+    'hall_of_fame',
+    `🧬 ${fullName(heir)}, hijo de ${fullName(parent)}, sueña con seguir los pasos de su padre: entrará al próximo ciclo del Programa de Toddlers`,
+    season.current_day,
+    season.id,
+    { teamId: primaryTeamId, alert: primaryTeamId === USER_TEAM_ID },
+  );
+  return heir;
+}
+
 // Evalua a todo jugador retirado que aun no tenga fila: los que se retiraron esta temporada y,
 // la primera vez que corre, todos los retirados historicos del save (la "clase inaugural").
-async function registerRetirees(season, pools) {
+// Cada uno que entra a la papeleta puede ademas tener un heredero (ver heirChance).
+async function registerRetirees(season, pools, rng) {
   const retirees = await prisma.player.findMany({
     where: { status: 'retired', hall_of_fame: { is: null } },
-    select: { id: true, first_name: true, last_name: true, position: true },
+    select: {
+      id: true, first_name: true, last_name: true, position: true, potential_coefficient: true,
+      appearance: { select: { skin_tone: true, face_type: true } },
+    },
   });
-  if (retirees.length === 0) return [];
+  if (retirees.length === 0) return { candidates: [], heirs: [] };
 
   const ids = retirees.map((p) => p.id);
   const [records, awards] = await Promise.all([
@@ -235,9 +311,11 @@ async function registerRetirees(season, pools) {
   });
 
   const newCandidates = [];
+  const heirs = [];
   for (const e of evaluated) {
     const eligible = e.career.seasonsPlayed >= HOF_MIN_SEASONS;
-    const qualifies = eligible && percentileOf(e.score, pools[e.role]) >= HOF_BALLOT_MIN_PERCENTILE;
+    const percentile = percentileOf(e.score, pools[e.role]);
+    const qualifies = eligible && percentile >= HOF_BALLOT_MIN_PERCENTILE;
     await prisma.hallOfFameCandidate.create({
       data: {
         player_id: e.player.id,
@@ -250,7 +328,12 @@ async function registerRetirees(season, pools) {
         status: qualifies ? 'candidate' : 'not_qualified',
       },
     });
-    if (qualifies) newCandidates.push(e);
+    if (qualifies) {
+      newCandidates.push(e);
+      if (rng() < heirChance(percentile)) {
+        heirs.push((await createHeir(season, e.player, e.career.primaryTeamId, rng)).id);
+      }
+    }
   }
 
   if (newCandidates.length > 0) {
@@ -267,7 +350,7 @@ async function registerRetirees(season, pools) {
       season.id,
     );
   }
-  return newCandidates.map((e) => e.player.id);
+  return { candidates: newCandidates.map((e) => e.player.id), heirs };
 }
 
 // Fin de temporada: corre despues de retireOldPlayers() y de archivar la temporada
@@ -275,8 +358,8 @@ async function registerRetirees(season, pools) {
 async function runHallOfFameSeason(season, rng = Math.random) {
   const pools = await loadScorePools();
   const votes = await voteBallot(season, pools, rng);
-  const registered = await registerRetirees(season, pools);
-  return { votes, registered };
+  const { candidates, heirs } = await registerRetirees(season, pools, rng);
+  return { votes, registered: candidates, heirs };
 }
 
 module.exports = {
@@ -287,4 +370,7 @@ module.exports = {
   computeVotePct,
   resolveVote,
   roleOf,
+  heirChance,
+  buildHeirData,
+  buildHeirAppearance,
 };
