@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { SEASON_AWARD_MIN_IP } = require('../config');
+const { SEASON_AWARD_MIN_IP, USER_TEAM_ID, HOF_INDUCTION_PCT, HOF_DROP_PCT, HOF_MAX_BALLOT_YEARS } = require('../config');
 const { recalculateCareerStats } = require('../services/allTimeStatsService');
 const { getSeasonEditionMap } = require('../services/seasonEdition');
 
@@ -258,6 +258,61 @@ router.get('/records', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener el libro de records' });
+  }
+});
+
+// GET /api/history/hall-of-fame -> exaltados (mas recientes primero) y papeleta actual
+// (por % de la ultima votacion). Ver services/legacyService.js.
+router.get('/hall-of-fame', async (req, res) => {
+  try {
+    const [rows, editions] = await Promise.all([
+      prisma.hallOfFameCandidate.findMany({
+        where: { status: { in: ['inducted', 'candidate'] } },
+        include: {
+          player: { select: { first_name: true, last_name: true, position: true } },
+          primary_team: { select: { name: true } },
+        },
+      }),
+      getSeasonEditionMap(),
+    ]);
+
+    const toEntry = (c) => ({
+      player_id: c.player_id,
+      player_name: `${c.player.first_name} ${c.player.last_name}`,
+      position: c.player.position,
+      role: c.role,
+      team_name: c.primary_team?.name ?? null,
+      is_user_team: c.primary_team_id === USER_TEAM_ID,
+      legacy_score: c.legacy_score,
+      seasons_played: c.seasons_played,
+      career_totals: c.career_totals,
+      years_on_ballot: c.years_on_ballot,
+      last_vote_pct: c.last_vote_pct,
+      vote_history: (Array.isArray(c.vote_history) ? c.vote_history : []).map((v) => ({
+        edition: editions.get(v.season_id) ?? null,
+        pct: v.pct,
+      })),
+      inducted_edition: c.inducted_season_id != null ? editions.get(c.inducted_season_id) ?? null : null,
+      retired_edition: editions.get(c.evaluated_season_id) ?? null,
+    });
+
+    const inducted = rows
+      .filter((c) => c.status === 'inducted')
+      .sort((a, b) => b.inducted_season_id - a.inducted_season_id || b.last_vote_pct - a.last_vote_pct)
+      .map(toEntry);
+    const ballot = rows
+      .filter((c) => c.status === 'candidate')
+      .sort((a, b) => (b.last_vote_pct ?? -1) - (a.last_vote_pct ?? -1) || b.legacy_score - a.legacy_score)
+      .map(toEntry);
+
+    res.json({
+      inducted,
+      ballot,
+      rules: { induction_pct: HOF_INDUCTION_PCT, drop_pct: HOF_DROP_PCT, max_years: HOF_MAX_BALLOT_YEARS },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener el Salón de la Fama' });
   }
 });
 

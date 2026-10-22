@@ -44,6 +44,7 @@ const TABS = [
   { key: 'awards', label: 'Premios' },
   { key: 'records', label: 'Récords' },
   { key: 'rivalries', label: 'Rivalidades' },
+  { key: 'hof', label: 'Salón de la Fama' },
 ];
 
 const AWARD_LABELS = {
@@ -94,6 +95,8 @@ export default function History() {
         <RecordsTab />
       ) : tab === 'rivalries' ? (
         <RivalriesTab />
+      ) : tab === 'hof' ? (
+        <HallOfFameTab />
       ) : loading ? (
         <div className="text-center py-10 text-gray-400">Cargando históricos...</div>
       ) : (
@@ -329,6 +332,158 @@ function RivalriesTab() {
           <div className="text-xs text-gray-400">Intensidad: {Math.round(r.intensity)}/100</div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function CareerLine({ entry }) {
+  const t = entry.career_totals || {};
+  if (entry.role === 'PITCHER') {
+    return (
+      <span>
+        {t.wins ?? 0}-{t.losses ?? 0} · {t.strikeouts ?? 0} K · EFE {t.era != null ? t.era.toFixed(2) : '—'}
+      </span>
+    );
+  }
+  return (
+    <span>
+      {t.hits ?? 0} H · {t.home_runs ?? 0} HR · {t.rbi ?? 0} RBI
+    </span>
+  );
+}
+
+function HallOfFamePlaque({ entry }) {
+  return (
+    <div
+      className={`rounded-lg shadow p-4 flex flex-col gap-2 border bg-gradient-to-b from-amber-50 to-white ${
+        entry.is_user_team ? 'border-amber-400 ring-2 ring-amber-200' : 'border-amber-200'
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-amber-700">Clase de {seasonLabel(entry.inducted_edition)}</span>
+        <span className="text-lg">🏛️</span>
+      </div>
+      <div className="text-center flex flex-col items-center gap-1">
+        <p className="font-bold text-lg text-gray-800 leading-tight">{entry.player_name}</p>
+        <span className="text-xs text-gray-500">{entry.position} · {entry.seasons_played} temporadas</span>
+        {entry.team_name && <TeamBadge name={entry.team_name} size="md" className="text-gray-500 justify-center" />}
+      </div>
+      <div className="text-xs text-gray-600 text-center">
+        <CareerLine entry={entry} />
+      </div>
+      <div className="text-xs text-gray-400 text-center">
+        {entry.last_vote_pct}% de los votos
+        {entry.years_on_ballot === 1 ? ' · primera papeleta' : ` · ${entry.years_on_ballot}º año`}
+      </div>
+    </div>
+  );
+}
+
+function VoteBar({ pct, inductionPct }) {
+  return (
+    <div className="relative w-28 h-2 bg-gray-200 rounded">
+      <div
+        className={`h-2 rounded ${pct >= inductionPct ? 'bg-amber-500' : 'bg-gray-500'}`}
+        style={{ width: `${Math.min(100, pct)}%` }}
+      />
+      <div className="absolute top-[-3px] h-[14px] w-px bg-red-500" style={{ left: `${inductionPct}%` }} />
+    </div>
+  );
+}
+
+function HallOfFameTab() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api
+      .getHallOfFame()
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="text-center py-10 text-gray-400">Cargando Salón de la Fama...</div>;
+  if (!data) return <div className="text-center py-10 text-gray-500">No se pudo cargar el Salón de la Fama.</div>;
+
+  const { inducted, ballot, rules } = data;
+
+  return (
+    <div className="flex flex-col gap-8">
+      <section>
+        <h2 className="text-xl font-bold text-gray-800 mb-1">Salón de la Fama</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Los mejores retirados se votan cada temporada: con {rules.induction_pct}% entran, con menos de {rules.drop_pct}% o
+          tras {rules.max_years} intentos salen de la papeleta.
+        </p>
+        {inducted.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">Todavía no hay exaltados.</div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {inducted.map((e) => (
+              <HallOfFamePlaque key={e.player_id} entry={e} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h3 className="text-lg font-bold text-gray-800 mb-3">Papeleta actual</h3>
+        {ballot.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">No hay candidatos en la papeleta.</div>
+        ) : (
+          <div className="bg-white rounded-lg shadow overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+                <tr>
+                  <th className="text-left px-3 py-2">Jugador</th>
+                  <th className="text-left px-3 py-2">Equipo</th>
+                  <th className="text-left px-3 py-2">Carrera</th>
+                  <th className="text-right px-3 py-2">Legado</th>
+                  <th className="text-center px-3 py-2">Año</th>
+                  <th className="text-left px-3 py-2">Última votación</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ballot.map((e) => {
+                  const history = e.vote_history;
+                  const prev = history.length >= 2 ? history[history.length - 2].pct : null;
+                  const trend = prev == null ? null : e.last_vote_pct - prev;
+                  return (
+                    <tr key={e.player_id} className={`border-t ${e.is_user_team ? 'bg-amber-50' : ''}`}>
+                      <td className="px-3 py-2">
+                        <div className="font-semibold text-gray-800">{e.player_name}</div>
+                        <div className="text-xs text-gray-400">{e.position} · {e.seasons_played} temp.</div>
+                      </td>
+                      <td className="px-3 py-2">{e.team_name ? <TeamBadge name={e.team_name} /> : '—'}</td>
+                      <td className="px-3 py-2 text-xs text-gray-600"><CareerLine entry={e} /></td>
+                      <td className="px-3 py-2 text-right font-mono">{Math.round(e.legacy_score)}</td>
+                      <td className="px-3 py-2 text-center text-gray-600">
+                        {e.years_on_ballot}/{rules.max_years}
+                      </td>
+                      <td className="px-3 py-2">
+                        {e.last_vote_pct == null ? (
+                          <span className="text-xs text-gray-400">Debuta en la próxima votación</span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <VoteBar pct={e.last_vote_pct} inductionPct={rules.induction_pct} />
+                            <span className="font-mono text-gray-700">{e.last_vote_pct}%</span>
+                            {trend != null && (
+                              <span className={`text-xs ${trend >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                {trend >= 0 ? '▲' : '▼'} {Math.abs(trend).toFixed(1)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

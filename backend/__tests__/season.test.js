@@ -22,6 +22,7 @@ jest.mock('../services/playoffService', () => ({
   advancePlayoffRound: jest.fn().mockResolvedValue({ champion: false }),
 }));
 jest.mock('../services/retiredPlayer', () => ({ retireOldPlayers: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('../services/legacyService', () => ({ runHallOfFameSeason: jest.fn().mockResolvedValue({ votes: [], registered: [] }) }));
 jest.mock('../services/playerService', () => ({
   fluctuatePlayerSkills: jest.fn().mockResolvedValue(undefined),
   updatePlayersContracts: jest.fn().mockResolvedValue(undefined),

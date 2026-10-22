@@ -134,6 +134,7 @@ export const api = {
   recalculateAllTimeStats: () => request('/history/alltime/recalculate', { method: 'POST' }),
   getSeasonAwards: (seasonId) => request(seasonId != null ? `/history/awards?season_id=${seasonId}` : '/history/awards'),
   getRecords: () => request('/history/records'),
+  getHallOfFame: () => request('/history/hall-of-fame'),
 
   // Rivalidades
   getRivalries: () => request('/rivalries'),

@@ -72,6 +72,7 @@ model Team {
   rivalries_as_a        Rivalry[]             @relation("RivalryTeamA")
   rivalries_as_b        Rivalry[]             @relation("RivalryTeamB")
   contracts             Contract[]
+  hall_of_fame_members  HallOfFameCandidate[]
 }
 
 model Rivalry {
@@ -137,6 +138,7 @@ model Player {
   season_awards          SeasonAward[]
   player_season_records  PlayerSeasonRecord[]
   contracts              Contract[]
+  hall_of_fame           HallOfFameCandidate?
 
   @@index([team_id])
   @@index([last_team_id])
@@ -782,4 +784,33 @@ model Contract {
   @@index([player_id, status])
   @@index([team_id, status])
   @@map("contracts")
+}
+
+// Salon de la Fama: una fila por jugador retirado ya evaluado (ver services/legacyService.js).
+// Al retirarse se congela su legacy_score y se compara (percentil, por rol) contra los demas
+// retirados con carrera suficiente: los mejores entran a la papeleta ('candidate') y se votan
+// cada fin de temporada desde la siguiente al retiro, hasta entrar ('inducted', >= 75%), caer
+// por debajo del 5% o agotar los 10 intentos ('dropped'). El resto queda 'not_qualified'.
+model HallOfFameCandidate {
+  id                  Int      @id @default(autoincrement())
+  player_id           Int      @unique
+  role                String   @db.VarChar(10) // BATTER | PITCHER
+  legacy_score        Float
+  seasons_played      Int
+  career_totals       Json // totales reales (sin ponderar) para la placa
+  primary_team_id     Int? // equipo con mas temporadas
+  evaluated_season_id Int // temporada en que se retiro / se evaluo
+  status              String   @default("candidate") @db.VarChar(20) // not_qualified | candidate | inducted | dropped
+  years_on_ballot     Int      @default(0)
+  last_vote_pct       Float?
+  vote_history        Json? // [{ season_id, pct }]
+  inducted_season_id  Int?
+  created_at          DateTime @default(now())
+
+  player       Player @relation(fields: [player_id], references: [id])
+  primary_team Team?  @relation(fields: [primary_team_id], references: [id])
+
+  @@index([status])
+  @@index([role])
+  @@map("hall_of_fame_candidates")
 }

@@ -19,6 +19,7 @@ const {
 } = require('../services/broadcastService');
 const { generatePlayoffBracket, advancePlayoffRound } = require('../services/playoffService');
 const { retireOldPlayers } = require('../services/retiredPlayer');
+const { runHallOfFameSeason } = require('../services/legacyService');
 const { fluctuatePlayerSkills, updatePlayersContracts } = require('../services/playerService');
 const { giveCpuTeamsRevenue, fillMissingPositions } = require('../services/cpuTeamManagement');
 const { resetFanBaseRange } = require('../services/fanBaseTracker');
@@ -241,6 +242,9 @@ async function endOfSeasonCleanup(season) {
   await prisma.team.updateMany({ data: { wins: 0, losses: 0, runs_scored: 0, runs_allowed: 0 } });
   await prisma.player.updateMany({ data: { age: { increment: 1 } } });
   await retireOldPlayers();
+  // Salon de la Fama: vota la papeleta y evalua a los recien retirados (lee player_season_records,
+  // ya archivados arriba por archiveAndCleanupSeason)
+  await runHallOfFameSeason(season);
   await fluctuatePlayerSkills();
   await applyCoachBonuses();
   await giveCpuTeamsRevenue();

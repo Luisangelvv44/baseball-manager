@@ -61,7 +61,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
   - Personnel: `Scout`, `Coach`, `Draft`, `DraftProspect`, `Trade`, `TradeItem`, `Contract`
   - Market: `FreeAgentAuction`, `AuctionBid`
   - Broadcast: `BroadcastCompany`, `BroadcastOffer`, `BroadcastContract`
-  - Misc: `NewsItem`, `HomeRunDerbyEvent`, `DerbyEntry`, `DerbySwing`
+  - Misc: `NewsItem`, `HomeRunDerbyEvent`, `DerbyEntry`, `DerbySwing`, `HallOfFameCandidate`
 
 **Routes** (`routes/`) handle HTTP concerns only; business logic lives in **Services** (`services/`). Each route file is mounted at `/api/<name>`:
 
@@ -82,7 +82,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `coaches.js` | Hire/fire coaches, assign to a player |
 | `draft.js` | Current draft pool, advance CPU picks, user pick |
 | `news.js` | League news feed |
-| `history.js` | Champions, past seasons, all-time stats/recalculation |
+| `history.js` | Champions, past seasons, all-time stats/recalculation, Hall of Fame (`/hall-of-fame`: inducted + current ballot) |
 | `trades.js` | Sent/received offers, history, create/accept/reject/cancel |
 | `derby.js` | Home run derby: list/detail, create entry, simulate |
 | `map.js` | League map: cities (team name minus mascot), user team's current city (host of its last finished game this season, else home) and next game (`?gameId=` pins it) |
@@ -98,7 +98,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `economy.js` | Home game revenue: demand (4–14% of fan_base regular season, 14–25% playoffs) split across grandstands by capacity × ring premium (`TICKET_RING_PREMIUM`, ring 1 = next to the field, via `ringOf()` in `stadiumGenerator.js`), each scaled by `priceDemandFactor(price, sectionFairPrice)` (team fair price = `TICKET_FAIR_PRICE_*` + reputation (linear to 100, sqrt above) + facility `fair_price_per_level`, × ring premium; up to +30% below it, exponential drop above it) and capped at section capacity, overflow buyers spilling to sections with room, × that section's ticket price + merch (1–5% of fan_base × $20–50/fan) − operating cost (per attendee, $0.5 → $10 on an accelerated curve that caps at 1M attendance; `STADIUM_MAINTENANCE_*` in `config.js`); away games earn merch only. Optional `facilityBonuses` arg (user team) adds attendance rate, scales merch and adds facility upkeep |
 | `lineup.js` | Converts DB roster to ordered lineup array |
 | `gamePlay.js` | Orchestrates a single game: builds lineups, runs `gameSimulator`, applies injuries, updates standings/fan base, persists results |
-| `reputationService.js` | `clampReputation()` to [`REPUTATION_MIN`, `REPUTATION_MAX`] = [1, 10 000]. Reputation is cumulative and only changes on season results: +5 playoff qualify / +10 semis / +15 final / +20 champion (`playoffService.js`), −`REPUTATION_MISSED_PLAYOFFS_PENALTY` (25) for missing playoffs, −15 on loan default (`bankService.js`). No per-game change |
+| `reputationService.js` | `clampReputation()` to [`REPUTATION_MIN`, `REPUTATION_MAX`] = [1, 10 000]. Reputation is cumulative and only changes on season results: +5 playoff qualify / +10 semis / +15 final / +20 champion (`playoffService.js`), −`REPUTATION_MISSED_PLAYOFFS_PENALTY` (25) for missing playoffs, −15 on loan default (`bankService.js`), +`HOF_INDUCTION_REPUTATION_BONUS` (5) to the primary team of a Hall of Fame inductee (`legacyService.js`). No per-game change |
 | `cpuTeamManagement.js` | End-of-season CPU revenue distribution (flat $100–300/fan payout) and CPU roster upkeep: on `ROSTER_CHECK_DAY` every empty MAJOR position is filled — a fresh player is generated if the roster is under `MAX_ROSTER_SIZE`, otherwise the weakest player from a surplus position is released to make room (first-year rookie only as a last resort), with a *forced* release that charges at most the team's available budget and never lets budget go negative. `previewFillMissingPositions()` is the read-only planner behind `scripts/runRosterCheck.js` |
 | `playerService.js` | End-of-season skill fluctuation (growth/decline vs. `growth_age`) and annual contract-years decrement |
 | `playerInvestmentService.js` | CPU teams spend a budget-derived pool to buy up `current_skill` points on their weakest players, at skill-tiered marginal cost |
@@ -115,6 +115,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `derbyService.js` | Home Run Derby: swing-by-swing HR probability from batter skill, CPU entrant selection, bracket/tiebreak simulation |
 | `contractService.js` | `Contract` table (current + historical). Mirrors `Player.salary`/`contract_years_remaining`/`rookie_contract` — every signing/renewal/trade/release/expiry/retirement calls it. Achievement bonus = 0–3% of annual by `demand_factor` (CPU capped at 1%), paid on no-hitters/perfect games/cycles/multi-HR/season awards with a per-season cap (`ACHIEVEMENT_BONUS_*` in `config.js`). `backfillContracts()` (behind `npm run contracts:backfill`) reconstructs past contracts from `PlayerSeasonRecord`. The player CV (`getPlayerCareerHistory`) shows every contracted season, with zeros when he didn't play |
 | `mapService.js` | `cityName()` + `getMapState()` behind `GET /api/map`; travel location is derived from the schedule, nothing persisted |
+| `legacyService.js` | Hall of Fame, run at season end after `retireOldPlayers()`: every retiree gets a `HallOfFameCandidate` row with a frozen `legacy_score` (from `PlayerSeasonRecord`, CPU stints ÷ `HISTORICAL_CPU_STAT_DIVISOR`, + award points). Ranked by percentile within role (batter/pitcher) among retirees with `HOF_MIN_SEASONS`+ — no absolute thresholds; top 10% go on the ballot, voted from the next season: ≥75% inducted, <5% or 10 years dropped (`HOF_*` in `config.js`). First run evaluates all historical retirees |
 | `newsService.js` | Thin wrapper that creates `NewsItem` rows, used by other services to log league events |
 | `newsDetection.js` | Scans a simulated game's play-by-play for feats (no-hitters/perfect games, cycles, multi-HR games, extra-innings, win/loss streaks) to feed the news feed |
 

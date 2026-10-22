@@ -45,6 +45,8 @@ const prismaMock = {
   rivalry: createModel(),
   contract: createModel(),
   playerSeasonRecord: createModel(),
+  seasonAward: createModel(),
+  hallOfFameCandidate: createModel(),
   $queryRaw: jest.fn(),
   $transaction: jest.fn(),
 };

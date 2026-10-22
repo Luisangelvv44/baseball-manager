@@ -43,6 +43,25 @@ module.exports = {
                                   // que no son del equipo del usuario se ponderan por 1/este valor
                                   // (compensa que la CPU no rota pitchers: 90+ jgs vs ~25 del usuario)
 
+  // ----- Salon de la Fama (ver services/legacyService.js) -----
+  // Las temporadas son cortas, asi que no hay umbrales absolutos ("500 HR"): cada retirado se
+  // ubica por percentil de legacy_score contra los demas retirados de su rol con carrera suficiente.
+  HOF_MIN_SEASONS: 5, // temporadas jugadas minimas para ser elegible
+  HOF_BALLOT_MIN_PERCENTILE: 0.9, // percentil minimo (0-1) para entrar a la papeleta
+  HOF_INDUCTION_PCT: 75, // % de votos para entrar
+  HOF_DROP_PCT: 5, // por debajo de este % sale de la papeleta
+  HOF_MAX_BALLOT_YEARS: 10,
+  HOF_VOTE_MIN_PCT: 5, // voto base en el percentil HOF_BALLOT_MIN_PERCENTILE...
+  HOF_VOTE_MAX_PCT: 95, // ...y en el percentil 1.0 (lineal entre ambos)
+  HOF_BALLOT_YEAR_MOMENTUM: 3, // +% por cada anio previo en la papeleta (los votantes "se convencen")
+  HOF_VOTE_NOISE: 6, // ruido uniforme ±% en cada votacion
+  HOF_INDUCTION_REPUTATION_BONUS: 5, // reputacion para el equipo principal del exaltado
+  // Pesos del legacy_score. Los conteos de stints CPU se ponderan por 1/HISTORICAL_CPU_STAT_DIVISOR
+  // igual que el ranking historico; los premios suman puntos fijos.
+  HOF_BATTER_WEIGHTS: { hits: 1, home_runs: 3, rbi: 1, walks: 0.3 },
+  HOF_PITCHER_WEIGHTS: { wins: 5, strikeouts: 0.6, innings: 0.6, earned_runs: -0.8 },
+  HOF_AWARD_POINTS: { MVP: 40, CY_YOUNG: 40, ROOKIE_OF_YEAR: 8, SEASON_HR_RECORD: 15, SEASON_ERA_RECORD: 15 },
+
   // ----- Programa de Toddlers (ver services/toddlerProgramService.js) -----
   TODDLER_PROGRAM_SEASONS: 10, // temporadas que dura un ciclo antes de la eleccion
   TODDLER_PROGRAM_SIZE: 32, // DEBE ser 16 equipos x TODDLER_PROGRAM_PICKS_PER_TEAM (todos los toddler se reparten)
