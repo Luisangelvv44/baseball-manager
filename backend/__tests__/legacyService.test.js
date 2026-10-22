@@ -1,6 +1,11 @@
 const request = require('supertest');
 
 jest.mock('../db/prisma');
+jest.mock('../services/jerseyService', () => ({
+  syncJerseyNumbers: jest.fn().mockResolvedValue({ assigned: 0 }),
+  retireNumber: jest.fn().mockResolvedValue({}),
+  getRetiredNumbersOverview: jest.fn().mockResolvedValue({ retired: [], candidates: [], min_seasons: 5 }),
+}));
 jest.mock('../services/newsService', () => ({ createNews: jest.fn().mockResolvedValue({}) }));
 
 const prisma = require('../db/prisma');
@@ -150,6 +155,19 @@ describe('runHallOfFameSeason', () => {
       20,
       { teamId: USER_TEAM_ID, alert: true },
     );
+  });
+
+  it("retires a CPU legend's number automatically on induction", async () => {
+    const { retireNumber } = require('../services/jerseyService');
+    const pool = Array.from({ length: 49 }, (_, i) => ({ role: 'BATTER', legacy_score: i }));
+    prisma.hallOfFameCandidate.findMany
+      .mockResolvedValueOnce([...pool, { role: 'BATTER', legacy_score: 500 }])
+      .mockResolvedValueOnce([candidate({ primary_team_id: 7 })]);
+    prisma.team.findUnique.mockResolvedValue({ reputation: 100 });
+
+    await runHallOfFameSeason(season, noNoise);
+
+    expect(retireNumber).toHaveBeenCalledWith(7, 100, { seasonId: 20, seasonDay: 99, auto: true });
   });
 
   it('only votes candidates registered in earlier seasons', async () => {

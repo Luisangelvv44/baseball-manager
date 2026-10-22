@@ -193,6 +193,7 @@ export default function Roster() {
     <table className="w-full text-sm">
       <thead className="bg-gray-50 text-gray-500 text-left">
         <tr>
+          <th className="p-2">#</th>
           <th className="p-2">Nombre</th>
           <th className="p-2">Pos</th>
           <th className="p-2">Edad</th>
@@ -212,6 +213,7 @@ export default function Roster() {
             className="border-t hover:bg-gray-50 cursor-pointer"
             onClick={() => setSelectedPlayer(p)}
           >
+            <td className="p-2 font-mono text-gray-500">{p.jersey_number ?? '—'}</td>
             <td className="p-2 font-medium text-blue-700 hover:underline">{p.first_name} {p.last_name}</td>
             <td className="p-2">{p.position}</td>
             <td className="p-2">{p.age}</td>

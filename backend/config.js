@@ -75,6 +75,12 @@ module.exports = {
   HEIR_POTENTIAL_BONUS: 5,
   HEIR_FACE_INHERIT_CHANCE: 0.5, // el tono de piel se hereda siempre; la cara, a veces
 
+  // ----- Dorsales y numeros retirados (Legado fase 3, ver services/jerseyService.js) -----
+  JERSEY_PITCHER_RANGE: [30, 69], // rango preferido al sortear dorsal nuevo (si no hay libres, cualquiera 0-99)
+  JERSEY_FIELDER_RANGE: [1, 39],
+  RETIRED_NUMBER_MIN_SEASONS: 5, // temporadas con el equipo para que el usuario pueda retirarle el numero
+  RETIRED_NUMBER_HOF_FAN_BONUS_PCT: 0.02, // +fan_base al retirar el numero de un miembro del Salon de la Fama
+
   // ----- Programa de Toddlers (ver services/toddlerProgramService.js) -----
   TODDLER_PROGRAM_SEASONS: 10, // temporadas que dura un ciclo antes de la eleccion
   TODDLER_PROGRAM_SIZE: 32, // DEBE ser 16 equipos x TODDLER_PROGRAM_PICKS_PER_TEAM (todos los toddler se reparten)

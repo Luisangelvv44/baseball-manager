@@ -1,6 +1,11 @@
 const request = require('supertest');
 
 jest.mock('../db/prisma');
+jest.mock('../services/jerseyService', () => ({
+  syncJerseyNumbers: jest.fn().mockResolvedValue({ assigned: 0 }),
+  retireNumber: jest.fn().mockResolvedValue({}),
+  getRetiredNumbersOverview: jest.fn().mockResolvedValue({ retired: [], candidates: [], min_seasons: 5 }),
+}));
 
 const prisma = require('../db/prisma');
 const { mockTeam, mockCpuTeam, mockPlayer } = require('./mockData');

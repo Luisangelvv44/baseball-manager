@@ -49,6 +49,7 @@ const prismaMock = {
   hallOfFameCandidate: createModel(),
   toddlerProgram: createModel(),
   toddlerContribution: createModel(),
+  retiredNumber: createModel(),
   $queryRaw: jest.fn(),
   $transaction: jest.fn(),
 };

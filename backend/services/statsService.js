@@ -260,7 +260,7 @@ async function getPlayerCareerHistory(playerId) {
   const player = await prisma.player.findUnique({
     where: { id: playerId },
     select: {
-      id: true, first_name: true, last_name: true, position: true,
+      id: true, first_name: true, last_name: true, position: true, jersey_number: true,
       // Linaje (herederos de leyendas, ver legacyService.js)
       parent: { select: { id: true, first_name: true, last_name: true } },
       children: {
@@ -512,6 +512,7 @@ async function getPlayerCareerHistory(playerId) {
       achievement_bonus: Number(c.achievement_bonus),
       bonus_paid_total: Number(c.bonus_paid_total),
       status: c.status,
+      jersey_number: c.jersey_number,
       is_reconstructed: c.is_reconstructed,
     }));
 

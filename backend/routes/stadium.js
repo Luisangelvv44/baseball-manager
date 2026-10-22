@@ -21,12 +21,18 @@ const {
 // GET /api/stadium -> grid NxN de secciones del estadio del usuario
 router.get('/', async (req, res) => {
   try {
-    const [sections, team] = await Promise.all([
+    const [sections, team, retiredNumbers] = await Promise.all([
       prisma.stadiumSection.findMany({
         where: { team_id: USER_TEAM_ID },
         orderBy: [{ row_pos: 'asc' }, { col_pos: 'asc' }],
       }),
       prisma.team.findUnique({ where: { id: USER_TEAM_ID } }),
+      // Banderolas de numeros retirados en la fachada (ver jerseyService.js)
+      prisma.retiredNumber.findMany({
+        where: { team_id: USER_TEAM_ID },
+        orderBy: { number: 'asc' },
+        select: { number: true, player: { select: { last_name: true } } },
+      }),
     ]);
     const fairPrice = getFairTicketPrice(team.reputation, getFacilityBonuses(team).fairPriceBonus);
     res.json({
@@ -35,6 +41,7 @@ router.get('/', async (req, res) => {
       budget: Number(team.budget),
       max_grandstand_level: GRANDSTAND_MAX_LEVEL,
       facilities: describeFacilities(team),
+      retired_numbers: (retiredNumbers ?? []).map((r) => ({ number: r.number, last_name: r.player.last_name })),
       fair_price: fairPrice,
       sections: sections.map((s) => {
         const ring = ringOf(s.row_pos, s.col_pos, team.stadium_floors);

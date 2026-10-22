@@ -28,6 +28,7 @@ const {
 const { createNews } = require('./newsService');
 const { clampReputation } = require('./reputationService');
 const { randomAppearanceData } = require('./playerAppearanceService');
+const { retireNumber } = require('./jerseyService');
 const { generatePotentialCoefficient, calculateGrowthAge, POSITIONS } = require('../seeders/generators/playerGenerator');
 const { FIRST_NAMES } = require('../seeders/data/names');
 
@@ -190,6 +191,22 @@ async function voteBallot(season, pools, rng) {
         season.id,
         { teamId: c.primary_team_id, alert: isUserLegend },
       );
+      // Su numero: los CPU lo retiran solos; el usuario decide desde History
+      if (c.primary_team_id != null && !isUserLegend) {
+        try {
+          await retireNumber(c.primary_team_id, c.player_id, { seasonId: season.id, seasonDay: season.current_day, auto: true });
+        } catch {
+          // sin dorsal registrado con ese equipo (carreras anteriores a los dorsales) o ya retirado
+        }
+      } else if (isUserLegend) {
+        await createNews(
+          'hall_of_fame',
+          `Los aficionados piden retirar el número de ${fullName(c.player)}: puedes hacerlo desde History → Salón de la Fama`,
+          season.current_day,
+          season.id,
+          { teamId: USER_TEAM_ID },
+        );
+      }
       if (c.primary_team_id != null && HOF_INDUCTION_REPUTATION_BONUS > 0) {
         const team = await prisma.team.findUnique({ where: { id: c.primary_team_id }, select: { reputation: true } });
         if (team) {

@@ -380,6 +380,11 @@ function HallOfFamePlaque({ entry }) {
           🧬 Heredero: {entry.heirs.map((h) => h.name).join(', ')}
         </div>
       )}
+      {entry.retired_numbers?.map((r) => (
+        <div key={r.team_name} className="text-xs text-gray-600 text-center">
+          🎽 #{r.number} retirado por {r.team_name}
+        </div>
+      ))}
     </div>
   );
 }
@@ -393,6 +398,150 @@ function VoteBar({ pct, inductionPct }) {
       />
       <div className="absolute top-[-3px] h-[14px] w-px bg-red-500" style={{ left: `${inductionPct}%` }} />
     </div>
+  );
+}
+
+function JerseyChip({ number, highlight }) {
+  return (
+    <span
+      className={`inline-flex items-center justify-center w-10 h-12 rounded-b-lg font-black text-lg ${
+        highlight ? 'bg-amber-500 text-white' : 'bg-gray-800 text-white'
+      }`}
+    >
+      {number}
+    </span>
+  );
+}
+
+function RetiredNumbersSection() {
+  const [data, setData] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+  const [message, setMessage] = useState(null);
+
+  const load = () => api.getRetiredNumbers().then(setData).catch(console.error);
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function handleRetire(c) {
+    if (busyId) return;
+    if (!window.confirm(`¿Retirar el #${c.number} de ${c.player_name}? Nadie más del equipo podrá usarlo.`)) return;
+    setBusyId(c.player_id);
+    setMessage(null);
+    try {
+      await api.retireNumber(c.player_id);
+      setMessage({ ok: true, text: `🎽 El #${c.number} de ${c.player_name} queda retirado para siempre.` });
+      await load();
+    } catch (err) {
+      setMessage({ ok: false, text: err.message });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (!data) return null;
+  const mine = data.retired.filter((r) => r.is_user_team);
+  const league = data.retired.filter((r) => !r.is_user_team);
+
+  return (
+    <section className="flex flex-col gap-4">
+      <div>
+        <h3 className="text-lg font-bold text-gray-800 mb-1">Números retirados</h3>
+        <p className="text-sm text-gray-500">
+          Puedes retirar el número de un jugador retirado que haya jugado al menos {data.min_seasons} temporadas en tu equipo.
+          Si es miembro del Salón de la Fama, la afición crece. Solo un hijo suyo podría volver a usarlo.
+        </p>
+      </div>
+
+      {message && (
+        <div className={`text-sm rounded p-2 border ${message.ok ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-700'}`}>
+          {message.text}
+        </div>
+      )}
+
+      <div className="bg-white rounded-lg shadow p-4">
+        <h4 className="font-semibold text-sm text-gray-700 mb-3">Tu equipo</h4>
+        {mine.length === 0 ? (
+          <p className="text-sm text-gray-500">Todavía no has retirado ningún número.</p>
+        ) : (
+          <div className="flex flex-wrap gap-4">
+            {mine.map((r) => (
+              <div key={r.number} className="flex flex-col items-center gap-1 w-20 text-center">
+                <JerseyChip number={r.number} highlight={r.hall_of_famer} />
+                <span className="text-xs font-semibold text-gray-700 leading-tight">{r.player_name}</span>
+                {r.edition != null && <span className="text-[10px] text-gray-400">{seasonLabel(r.edition)}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {data.candidates.length > 0 && (
+        <div className="bg-white rounded-lg shadow overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+              <tr>
+                <th className="text-left px-3 py-2">#</th>
+                <th className="text-left px-3 py-2">Jugador</th>
+                <th className="text-center px-3 py-2">Temporadas contigo</th>
+                <th className="text-left px-3 py-2">Salón de la Fama</th>
+                <th className="px-3 py-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.candidates.map((c) => (
+                <tr key={c.player_id} className="border-t">
+                  <td className="px-3 py-2 font-mono font-bold">{c.number}</td>
+                  <td className="px-3 py-2">
+                    <span className="font-semibold text-gray-800">{c.player_name}</span>
+                    <span className="ml-1 text-xs text-gray-400">{c.position}</span>
+                  </td>
+                  <td className="px-3 py-2 text-center">{c.seasons_with_team}</td>
+                  <td className="px-3 py-2 text-xs">
+                    {c.hall_of_fame_status === 'inducted' ? '🏛️ Exaltado' : c.hall_of_fame_status === 'candidate' ? 'En la papeleta' : '—'}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    {c.number_taken ? (
+                      <span className="text-xs text-gray-400">#{c.number} ya retirado</span>
+                    ) : (
+                      <button
+                        onClick={() => handleRetire(c)}
+                        disabled={busyId != null}
+                        className="px-3 py-1 bg-gray-800 text-white text-xs rounded hover:bg-gray-700 disabled:opacity-50"
+                      >
+                        Retirar #{c.number}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {league.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4">
+          <h4 className="font-semibold text-sm text-gray-700 mb-3">Resto de la liga</h4>
+          <div className="flex flex-col gap-2">
+            {[...new Set(league.map((r) => r.team_name))].map((teamName) => (
+              <div key={teamName} className="flex items-center gap-3 text-sm">
+                <span className="w-40 shrink-0"><TeamBadge name={teamName} /></span>
+                <span className="flex flex-wrap gap-2 text-gray-600">
+                  {league
+                    .filter((r) => r.team_name === teamName)
+                    .map((r) => (
+                      <span key={r.number}>
+                        <span className="font-mono font-bold text-gray-800">#{r.number}</span> {r.player_name}
+                      </span>
+                    ))}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -431,6 +580,8 @@ function HallOfFameTab() {
           </div>
         )}
       </section>
+
+      <RetiredNumbersSection />
 
       <section>
         <h3 className="text-lg font-bold text-gray-800 mb-3">Papeleta actual</h3>

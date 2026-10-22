@@ -73,6 +73,7 @@ model Team {
   rivalries_as_b        Rivalry[]             @relation("RivalryTeamB")
   contracts             Contract[]
   hall_of_fame_members  HallOfFameCandidate[]
+  retired_numbers       RetiredNumber[]
 }
 
 model Rivalry {
@@ -116,6 +117,8 @@ model Player {
   level                    String    @default("MAJOR") @db.VarChar(10)
   toddler_program_id       Int?
   parent_id                Int? // padre leyenda (herederos, ver legacyService.js)
+  jersey_number            Int? // dorsal 0-99 (ver jerseyService.js)
+  jersey_team_id           Int? // equipo para el que se asigno el dorsal; != team_id -> hay que reasignar
   career_home_runs         Int       @default(0)
   career_hits              Int       @default(0)
   career_rbi               Int       @default(0)
@@ -142,6 +145,7 @@ model Player {
   hall_of_fame           HallOfFameCandidate?
   parent                 Player?              @relation("Lineage", fields: [parent_id], references: [id])
   children               Player[]             @relation("Lineage")
+  retired_numbers        RetiredNumber[]
 
   @@index([team_id])
   @@index([last_team_id])
@@ -777,6 +781,7 @@ model Contract {
   bonus_paid_total  Decimal   @default(0) @db.Decimal(14, 2)
   status            String    @default("active") @db.VarChar(20) // active | expired | replaced | released | traded | retired
   is_reconstructed  Boolean   @default(false) // creado por el backfill historico (datos aproximados)
+  jersey_number     Int? // dorsal que uso con este equipo (lo escribe jerseyService.js)
   signed_at         DateTime  @default(now())
   ended_at          DateTime?
 
@@ -817,4 +822,23 @@ model HallOfFameCandidate {
   @@index([status])
   @@index([role])
   @@map("hall_of_fame_candidates")
+}
+
+// Numero retirado por un equipo en honor a un jugador: nadie mas del equipo puede usarlo,
+// salvo un hijo del homenajeado (heredero). Lo decide el usuario para su equipo; los CPU lo
+// retiran solos al exaltar a una leyenda propia al Salon de la Fama. Ver jerseyService.js.
+model RetiredNumber {
+  id         Int      @id @default(autoincrement())
+  team_id    Int
+  player_id  Int
+  number     Int
+  season_id  Int?
+  created_at DateTime @default(now())
+
+  team   Team   @relation(fields: [team_id], references: [id])
+  player Player @relation(fields: [player_id], references: [id])
+
+  @@unique([team_id, number])
+  @@unique([team_id, player_id])
+  @@map("retired_numbers")
 }

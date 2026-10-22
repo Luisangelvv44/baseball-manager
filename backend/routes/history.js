@@ -4,6 +4,7 @@ const prisma = require('../db/prisma');
 const { SEASON_AWARD_MIN_IP, USER_TEAM_ID, HOF_INDUCTION_PCT, HOF_DROP_PCT, HOF_MAX_BALLOT_YEARS } = require('../config');
 const { recalculateCareerStats } = require('../services/allTimeStatsService');
 const { getSeasonEditionMap } = require('../services/seasonEdition');
+const { getRetiredNumbersOverview, retireNumber } = require('../services/jerseyService');
 
 // GET /api/history/champions -> cantidad de campeonatos ganados por cada equipo
 router.get('/champions', async (req, res) => {
@@ -273,6 +274,7 @@ router.get('/hall-of-fame', async (req, res) => {
             select: {
               first_name: true, last_name: true, position: true,
               children: { select: { id: true, first_name: true, last_name: true }, orderBy: { id: 'asc' } },
+              retired_numbers: { select: { number: true, team: { select: { name: true } } } },
             },
           },
           primary_team: { select: { name: true } },
@@ -286,6 +288,7 @@ router.get('/hall-of-fame', async (req, res) => {
       player_name: `${c.player.first_name} ${c.player.last_name}`,
       position: c.player.position,
       heirs: (c.player.children || []).map((h) => ({ id: h.id, name: `${h.first_name} ${h.last_name}` })),
+      retired_numbers: (c.player.retired_numbers || []).map((r) => ({ number: r.number, team_name: r.team.name })),
       role: c.role,
       team_name: c.primary_team?.name ?? null,
       is_user_team: c.primary_team_id === USER_TEAM_ID,
@@ -319,6 +322,33 @@ router.get('/hall-of-fame', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener el Salón de la Fama' });
+  }
+});
+
+// GET /api/history/retired-numbers -> numeros retirados de la liga + candidatos del usuario
+router.get('/retired-numbers', async (req, res) => {
+  try {
+    const [overview, editions] = await Promise.all([getRetiredNumbersOverview(), getSeasonEditionMap()]);
+    res.json({
+      ...overview,
+      retired: overview.retired.map((r) => ({ ...r, edition: r.season_id != null ? editions.get(r.season_id) ?? null : null })),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener los números retirados' });
+  }
+});
+
+// POST /api/history/retired-numbers { player_id } -> el usuario retira el numero de una leyenda propia
+router.post('/retired-numbers', async (req, res) => {
+  const playerId = Number(req.body?.player_id);
+  if (!Number.isInteger(playerId)) return res.status(400).json({ error: 'player_id invalido' });
+  try {
+    const season = await prisma.season.findFirst({ orderBy: { id: 'desc' }, select: { id: true, current_day: true } });
+    const row = await retireNumber(USER_TEAM_ID, playerId, { seasonId: season?.id ?? null, seasonDay: season?.current_day ?? null });
+    res.json({ success: true, retired: row });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 

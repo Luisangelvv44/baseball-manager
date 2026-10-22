@@ -63,7 +63,10 @@ export default function PlayerCareerModal({ playerId, onClose }) {
               <PlayerSpriteLoader playerId={data.player.id} width={110} />
               <div>
                 <h3 className="font-bold text-lg mb-1">{data.player.first_name} {data.player.last_name}</h3>
-                <p className="text-sm text-gray-500">{data.player.position}</p>
+                <p className="text-sm text-gray-500">
+                  {data.player.jersey_number != null && <span className="font-mono mr-1">#{data.player.jersey_number}</span>}
+                  {data.player.position}
+                </p>
                 <Lineage player={data.player} />
               </div>
             </div>
@@ -163,6 +166,7 @@ export default function PlayerCareerModal({ playerId, onClose }) {
                       <tr className="text-xs text-gray-500 border-b">
                         <th className="py-1 px-2 text-left">Temporadas</th>
                         <th className="py-1 px-2 text-left">Equipo</th>
+                        <th className="py-1 px-2">#</th>
                         <th className="py-1 px-2">Anual</th>
                         <th className="py-1 px-2">Años</th>
                         <th className="py-1 px-2">Restan</th>
@@ -184,6 +188,7 @@ export default function PlayerCareerModal({ playerId, onClose }) {
                             <TeamBadge name={c.team_name} />
                             {c.is_rookie && <span className="ml-1 text-[10px] text-blue-600">Rookie</span>}
                           </td>
+                          <td className="py-1 px-2 font-mono">{c.jersey_number ?? '-'}</td>
                           <td className="py-1 px-2">{formatCompactMoney(c.annual_salary)}</td>
                           <td className="py-1 px-2">{c.total_years}</td>
                           <td className="py-1 px-2">{c.status === 'active' ? c.years_remaining : '-'}</td>

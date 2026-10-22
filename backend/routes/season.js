@@ -20,6 +20,7 @@ const {
 const { generatePlayoffBracket, advancePlayoffRound } = require('../services/playoffService');
 const { retireOldPlayers } = require('../services/retiredPlayer');
 const { runHallOfFameSeason } = require('../services/legacyService');
+const { syncJerseyNumbers } = require('../services/jerseyService');
 const { fluctuatePlayerSkills, updatePlayersContracts } = require('../services/playerService');
 const { giveCpuTeamsRevenue, fillMissingPositions } = require('../services/cpuTeamManagement');
 const { resetFanBaseRange } = require('../services/fanBaseTracker');
@@ -148,6 +149,9 @@ router.post('/start', async (req, res) => {
 
     // Ofertas iniciales de las transmisoras; las pujas siguen dia a dia hasta BROADCAST_OFFER_WINDOW_END_DAY
     await generateOffersForSeason(season);
+
+    // Dorsales para los que llegaron en el offseason (draft, Toddlers, traspasos...)
+    await syncJerseyNumbers({ season });
 
     res.json({ success: true, season, totalGames: games.length, totalDays, totalSeasonSalary, auctionsCreated });
   } catch (err) {
@@ -297,6 +301,9 @@ async function endOfSeasonCleanup(season) {
 
   await clearAllInjuries();
 
+  // Dorsales tras los movimientos del cierre (cortes, Toddlers, retiros de numero)
+  await syncJerseyNumbers({ season });
+
   await prisma.season.update({ where: { id: season.id }, data: { status: 'draft' } });
 
   return expired.count;
@@ -423,6 +430,9 @@ router.post('/advance-day', async (req, res) => {
     if (day === LUXURY_TAX_PROJECTION_DAY) {
       await recordLuxuryTaxProjection(season);
     }
+
+    // Dorsales para fichajes del dia (subastas, traspasos, relleno de posiciones CPU)
+    await syncJerseyNumbers({ season });
 
     const newDay = day + 1;
     const finished = newDay > season.total_days;

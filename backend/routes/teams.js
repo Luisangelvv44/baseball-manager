@@ -3,6 +3,7 @@ const router = express.Router();
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID, CPU_REVENUE_PER_FAN_MIN, CPU_REVENUE_PER_FAN_MAX } = require('../config');
 const { seasonAverageFanBase } = require('../services/fanBaseTracker');
+const { syncJerseyNumbers } = require('../services/jerseyService');
 
 // GET /api/teams -> todos los equipos con info de division (para leaderboard)
 router.get('/', async (req, res) => {
@@ -21,6 +22,8 @@ router.get('/', async (req, res) => {
 // GET /api/teams/user -> equipo del usuario + su roster
 router.get('/user', async (req, res) => {
   try {
+    // Asignacion perezosa: fichajes recientes del usuario ven su dorsal sin esperar a avanzar el dia
+    await syncJerseyNumbers();
     const team = await prisma.team.findUnique({ where: { id: USER_TEAM_ID } });
     const players = await prisma.player.findMany({
       where: { team_id: USER_TEAM_ID },

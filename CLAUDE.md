@@ -61,7 +61,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
   - Personnel: `Scout`, `Coach`, `Draft`, `DraftProspect`, `Trade`, `TradeItem`, `Contract`
   - Market: `FreeAgentAuction`, `AuctionBid`
   - Broadcast: `BroadcastCompany`, `BroadcastOffer`, `BroadcastContract`
-  - Misc: `NewsItem`, `HomeRunDerbyEvent`, `DerbyEntry`, `DerbySwing`, `HallOfFameCandidate`
+  - Misc: `NewsItem`, `HomeRunDerbyEvent`, `DerbyEntry`, `DerbySwing`, `HallOfFameCandidate`, `RetiredNumber`
 
 **Routes** (`routes/`) handle HTTP concerns only; business logic lives in **Services** (`services/`). Each route file is mounted at `/api/<name>`:
 
@@ -82,7 +82,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `coaches.js` | Hire/fire coaches, assign to a player |
 | `draft.js` | Current draft pool, advance CPU picks, user pick |
 | `news.js` | League news feed |
-| `history.js` | Champions, past seasons, all-time stats/recalculation, Hall of Fame (`/hall-of-fame`: inducted + current ballot) |
+| `history.js` | Champions, past seasons, all-time stats/recalculation, Hall of Fame (`/hall-of-fame`: inducted + current ballot), retired numbers (`GET/POST /retired-numbers`) |
 | `trades.js` | Sent/received offers, history, create/accept/reject/cancel |
 | `derby.js` | Home run derby: list/detail, create entry, simulate |
 | `map.js` | League map: cities (team name minus mascot), user team's current city (host of its last finished game this season, else home) and next game (`?gameId=` pins it) |
@@ -116,6 +116,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `contractService.js` | `Contract` table (current + historical). Mirrors `Player.salary`/`contract_years_remaining`/`rookie_contract` — every signing/renewal/trade/release/expiry/retirement calls it. Achievement bonus = 0–3% of annual by `demand_factor` (CPU capped at 1%), paid on no-hitters/perfect games/cycles/multi-HR/season awards with a per-season cap (`ACHIEVEMENT_BONUS_*` in `config.js`). `backfillContracts()` (behind `npm run contracts:backfill`) reconstructs past contracts from `PlayerSeasonRecord`. The player CV (`getPlayerCareerHistory`) shows every contracted season, with zeros when he didn't play |
 | `mapService.js` | `cityName()` + `getMapState()` behind `GET /api/map`; travel location is derived from the schedule, nothing persisted |
 | `legacyService.js` | Hall of Fame, run at season end after `retireOldPlayers()`: every retiree gets a `HallOfFameCandidate` row with a frozen `legacy_score` (from `PlayerSeasonRecord`, CPU stints ÷ `HISTORICAL_CPU_STAT_DIVISOR`, + award points). Ranked by percentile within role (batter/pitcher) among retirees with `HOF_MIN_SEASONS`+ — no absolute thresholds; top 10% go on the ballot, voted from the next season: ≥75% inducted, <5% or 10 years dropped (`HOF_*` in `config.js`). First run evaluates all historical retirees. Heirs: a new ballot entrant may spawn a son (`Player.parent_id`, `status: 'heir_pending'`, inherited last name/position/potential/skin tone, `HEIR_*`) that `generateToddlerCycle()` injects into the next Toddler cycle (≤ `HEIR_MAX_PER_CYCLE`); CPU teams pick their own legend's heir first |
+| `jerseyService.js` | Jersey numbers 0–99 unique per team (`Player.jersey_number` + `jersey_team_id`, copied to the active `Contract.jersey_number`). No hooks on every signing/trade: `syncJerseyNumbers()` (season start, every advance-day, season end, lazily on `GET /teams/user`) reassigns anyone without a number or carrying one from another team — keeps his own if free, heirs prefer their father's, else random from `JERSEY_*_RANGE`. `RetiredNumber`: user retires a retired player's number after `RETIRED_NUMBER_MIN_SEASONS` with the team (fan boost if Hall of Famer); CPU teams auto-retire their own inductee's number (`legacyService`); only the honoree's son may wear it. Shown as banners on the stadium facade |
 | `newsService.js` | Thin wrapper that creates `NewsItem` rows, used by other services to log league events |
 | `newsDetection.js` | Scans a simulated game's play-by-play for feats (no-hitters/perfect games, cycles, multi-HR games, extra-innings, win/loss streaks) to feed the news feed |
 

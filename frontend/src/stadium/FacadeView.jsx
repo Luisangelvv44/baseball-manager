@@ -326,6 +326,47 @@ function Plaza({ level }) {
 }
 
 // Nombres de mas de 24 letras se recortan a las dos ultimas palabras para que quepan en el letrero
+// Banderolas de numeros retirados colgadas del muro, a ambos lados del letrero (hasta 6;
+// el resto se resume en una placa "+N").
+const BANNER_SLOTS = [62, 738, 102, 698, 142, 658];
+
+function RetiredBanners({ numbers }) {
+  if (!numbers || numbers.length === 0) return null;
+  const shown = numbers.slice(0, BANNER_SLOTS.length);
+  const extra = numbers.length - shown.length;
+  const top = WALL_TOP + 14;
+  return (
+    <g>
+      {shown.map((r, i) => {
+        const x = BANNER_SLOTS[i];
+        const name = (r.last_name || '').toUpperCase().slice(0, 9);
+        return (
+          <g key={r.number}>
+            <rect x={x - 18} y={top - 3} width="36" height="3" fill="#374151" />
+            <path
+              d={`M${x - 15} ${top} H${x + 15} V${top + 40} L${x} ${top + 50} L${x - 15} ${top + 40} Z`}
+              fill="#1e3a8a"
+              stroke="#fbbf24"
+              strokeWidth="1.5"
+            />
+            <text x={x} y={top + 24} textAnchor="middle" fontSize="17" fontWeight="900" fill="#ffffff" fontFamily="Arial, sans-serif">
+              {r.number}
+            </text>
+            <text x={x} y={top + 35} textAnchor="middle" fontSize="5.5" fill="#fde68a" fontFamily="Arial, sans-serif" letterSpacing="0.5">
+              {name}
+            </text>
+          </g>
+        );
+      })}
+      {extra > 0 && (
+        <text x={W / 2} y={GROUND - 14} textAnchor="middle" fontSize="11" fill="#fde68a" fontWeight="700">
+          +{extra} números retirados
+        </text>
+      )}
+    </g>
+  );
+}
+
 function signText(name) {
   const up = (name || 'ESTADIO').toUpperCase();
   if (up.length <= 24) return up;
@@ -360,6 +401,7 @@ export default function FacadeView({ data, onUpgradeFacility }) {
           <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto block" role="img" aria-label="Fachada principal del estadio">
             <Sky />
             <Building />
+            <RetiredBanners numbers={data.retired_numbers} />
             <Plaza level={lv('facade_plaza')} />
             <Entrance level={lv('facade_entrance')} />
             <Sign level={lv('facade_sign')} text={signText(data.team_name)} />

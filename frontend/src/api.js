@@ -135,6 +135,8 @@ export const api = {
   getSeasonAwards: (seasonId) => request(seasonId != null ? `/history/awards?season_id=${seasonId}` : '/history/awards'),
   getRecords: () => request('/history/records'),
   getHallOfFame: () => request('/history/hall-of-fame'),
+  getRetiredNumbers: () => request('/history/retired-numbers'),
+  retireNumber: (playerId) => request('/history/retired-numbers', { method: 'POST', body: JSON.stringify({ player_id: playerId }) }),
 
   // Rivalidades
   getRivalries: () => request('/rivalries'),
