@@ -26,6 +26,33 @@ function longestWinStreak(gamesAsc, teamId) {
   return best;
 }
 
+// Bateadores/lanzadores calificados, ordenados con el mismo criterio que MVP / Cy Young.
+function qualifyStats(stats, minAB, minIP) {
+  const qualifiedBatters = stats
+    .filter((p) => p.batting.ab >= minAB)
+    .sort((a, b) => battingScore(b.batting) - battingScore(a.batting));
+
+  const qualifiedPitchers = stats
+    .filter((p) => p.pitching && p.pitching.ip >= minIP)
+    .sort((a, b) => (a.pitching.era - b.pitching.era) || (b.pitching.w - a.pitching.w) || (b.pitching.so - a.pitching.so));
+
+  return { qualifiedBatters, qualifiedPitchers };
+}
+
+// Rookies calificados ordenados por percentil dentro de su categoria (mayor primero; en empate,
+// el bateador va antes). El primero es el Novato del Año.
+function rankRookies(qualifiedBatters, qualifiedPitchers) {
+  const percentile = (list, idx) => (list.length - idx) / list.length;
+  const candidates = [
+    ...qualifiedBatters.map((p, i) => ({ player: p, kind: 'batter', percentile: percentile(qualifiedBatters, i) })),
+    ...qualifiedPitchers.map((p, i) => ({ player: p, kind: 'pitcher', percentile: percentile(qualifiedPitchers, i) })),
+  ].filter((c) => c.player.rookie_contract);
+  candidates.sort((a, b) => b.percentile - a.percentile);
+  // Un pitcher que tambien califica como bateador cuenta una sola vez (su mejor categoria)
+  const seen = new Set();
+  return candidates.filter((c) => !seen.has(c.player.player_id) && seen.add(c.player.player_id));
+}
+
 async function computeSeasonAwards(season) {
   const { stats } = await computeSeasonStats(season.id);
   if (stats.length === 0) return [];
@@ -33,13 +60,7 @@ async function computeSeasonAwards(season) {
   const teams = await prisma.team.findMany({ select: { id: true, name: true } });
   const teamName = (id) => teams.find((t) => t.id === id)?.name ?? 'Agente libre';
 
-  const qualifiedBatters = stats
-    .filter((p) => p.batting.ab >= SEASON_AWARD_MIN_AB)
-    .sort((a, b) => battingScore(b.batting) - battingScore(a.batting));
-
-  const qualifiedPitchers = stats
-    .filter((p) => p.pitching && p.pitching.ip >= SEASON_AWARD_MIN_IP)
-    .sort((a, b) => (a.pitching.era - b.pitching.era) || (b.pitching.w - a.pitching.w) || (b.pitching.so - a.pitching.so));
+  const { qualifiedBatters, qualifiedPitchers } = qualifyStats(stats, SEASON_AWARD_MIN_AB, SEASON_AWARD_MIN_IP);
 
   const awards = [];
   const pushAward = (category, player, value) => {
@@ -65,19 +86,8 @@ async function computeSeasonAwards(season) {
   }
 
   // Novato del Año: mejor rookie relativo a su propia categoria (percentil dentro de bateadores/lanzadores calificados)
-  const rookieBatterRank = qualifiedBatters.findIndex((p) => p.rookie_contract);
-  const rookiePitcherRank = qualifiedPitchers.findIndex((p) => p.rookie_contract);
-  const batterPercentile = rookieBatterRank >= 0 ? (qualifiedBatters.length - rookieBatterRank) / qualifiedBatters.length : -1;
-  const pitcherPercentile = rookiePitcherRank >= 0 ? (qualifiedPitchers.length - rookiePitcherRank) / qualifiedPitchers.length : -1;
-  if (batterPercentile >= 0 || pitcherPercentile >= 0) {
-    if (batterPercentile >= pitcherPercentile) {
-      const roy = qualifiedBatters[rookieBatterRank];
-      pushAward('ROOKIE_OF_YEAR', roy, battingScore(roy.batting));
-    } else {
-      const roy = qualifiedPitchers[rookiePitcherRank];
-      pushAward('ROOKIE_OF_YEAR', roy, roy.pitching.era);
-    }
-  }
+  const [roy] = rankRookies(qualifiedBatters, qualifiedPitchers);
+  if (roy) pushAward('ROOKIE_OF_YEAR', roy.player, roy.kind === 'batter' ? battingScore(roy.player.batting) : roy.player.pitching.era);
 
   // Record de HR en una temporada (sin minimo de AB: es un conteo, no un promedio)
   const hrLeader = [...stats].filter((p) => p.batting.hr > 0).sort((a, b) => b.batting.hr - a.batting.hr)[0];
@@ -136,4 +146,4 @@ function nameOf(stats, playerId) {
   return p ? `${p.first_name} ${p.last_name}` : 'Jugador desconocido';
 }
 
-module.exports = { computeSeasonAwards };
+module.exports = { computeSeasonAwards, battingScore, qualifyStats, rankRookies };

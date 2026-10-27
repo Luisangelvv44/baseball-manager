@@ -21,7 +21,7 @@ export default function Leaderboard({ teams, userTeamId }) {
   return (
     <div className="grid md:grid-cols-2 gap-4">
       {Object.entries(divisions).map(([divName, list]) => (
-        <div key={divName} className="bg-white rounded-lg shadow p-4">
+        <div key={divName} className="bg-white rounded-xl shadow p-4">
           <h3 className="font-bold mb-2">{divName}</h3>
           <table className="w-full text-sm">
             <thead>
