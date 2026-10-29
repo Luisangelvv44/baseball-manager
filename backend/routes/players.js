@@ -7,7 +7,7 @@ const { createNews } = require('../services/newsService');
 const { computeSeasonStats, getPlayerCareerHistory } = require('../services/statsService');
 const { assignAppearance } = require('../services/playerAppearanceService');
 const { replaceActiveContract } = require('../services/contractService');
-const { getLeagueLeaders } = require('../services/leagueLeadersService');
+const { getCachedLeagueLeaders } = require('../services/leagueLeadersService');
 
 const SEARCH_RESULT_LIMIT = 20;
 
@@ -145,12 +145,13 @@ router.get('/team-stats', async (req, res) => {
 });
 
 // GET /api/players/league-leaders -> lideres de la temporada actual (liga + equipo del usuario),
-// top por categoria y carrera por MVP / Cy Young / Novato del Año
+// top por categoria y carrera por MVP / Cy Young / Novato del Año. Cacheado: se refresca en segundo
+// plano cada LEAGUE_LEADERS_CACHE_GAMES juegos por equipo
 router.get('/league-leaders', async (req, res) => {
   try {
     const season = await prisma.season.findFirst({ orderBy: { id: 'desc' } });
     if (!season) return res.json(null);
-    res.json(await getLeagueLeaders(season.id));
+    res.json(await getCachedLeagueLeaders(season.id));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener los líderes de la liga' });

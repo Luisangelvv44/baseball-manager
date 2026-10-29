@@ -27,12 +27,51 @@ function divisionStanding(teams, team) {
   return { rank: idx + 1, division: team.division_name, gamesBehind };
 }
 
-function SectionTitle({ title, subtitle }) {
+const COLLAPSED_KEY = 'dashboard.collapsedSections';
+
+function readCollapsed() {
+  try {
+    return JSON.parse(localStorage.getItem(COLLAPSED_KEY)) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+// Secciones colapsadas del Dashboard, recordadas en localStorage entre visitas
+function useCollapsedSections() {
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  function toggle(id) {
+    setCollapsed((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      try {
+        localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next));
+      } catch {
+        // sin almacenamiento: el estado vive solo en esta visita
+      }
+      return next;
+    });
+  }
+  return [collapsed, toggle];
+}
+
+function CollapsibleSection({ id, title, subtitle, collapsed, onToggle, children }) {
+  const isCollapsed = !!collapsed[id];
   return (
-    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 mb-3">
-      <h3 className="font-bold text-lg text-gray-900">{title}</h3>
-      {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
-    </div>
+    <section>
+      <div className={`flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 ${isCollapsed ? '' : 'mb-3'}`}>
+        <button
+          type="button"
+          onClick={() => onToggle(id)}
+          aria-expanded={!isCollapsed}
+          className="flex items-center gap-2 font-bold text-lg text-gray-900 hover:text-blue-700"
+        >
+          <span className={`text-sm text-gray-400 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} aria-hidden>▼</span>
+          {title}
+        </button>
+        {subtitle && !isCollapsed && <p className="text-xs text-gray-500">{subtitle}</p>}
+      </div>
+      {!isCollapsed && children}
+    </section>
   );
 }
 
@@ -166,6 +205,7 @@ export default function Dashboard() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [leaders, setLeaders] = useState(null);
+  const [collapsed, toggleSection] = useCollapsedSections();
   const navigate = useNavigate();
 
   async function loadAll() {
@@ -346,11 +386,13 @@ export default function Dashboard() {
       )}
 
       {hasStats && (
-        <section>
-          <SectionTitle
-            title="Líderes de temporada"
-            subtitle={`Califican con ${leaders.qualification.minAB}+ AB / ${leaders.qualification.minIP}+ IP (proporcional a lo jugado)`}
-          />
+        <CollapsibleSection
+          id="leaders"
+          title="Líderes de temporada"
+          subtitle={`Califican con ${leaders.qualification.minAB}+ AB / ${leaders.qualification.minIP}+ IP (proporcional a lo jugado)`}
+          collapsed={collapsed}
+          onToggle={toggleSection}
+        >
           <div className="grid lg:grid-cols-2 gap-4">
             <LeadersPanel
               title={<TeamBadge name={myTeam.name} />}
@@ -368,12 +410,17 @@ export default function Dashboard() {
               userTeamId={myTeam.id}
             />
           </div>
-        </section>
+        </CollapsibleSection>
       )}
 
       {hasStats && (
-        <section>
-          <SectionTitle title="Carrera por los premios" subtitle="Top 3 si la temporada terminara hoy" />
+        <CollapsibleSection
+          id="awards"
+          title="Carrera por los premios"
+          subtitle="Top 3 si la temporada terminara hoy"
+          collapsed={collapsed}
+          onToggle={toggleSection}
+        >
           <div className="grid md:grid-cols-3 gap-4">
             <RaceCard
               title="MVP"
@@ -422,23 +469,27 @@ export default function Dashboard() {
               )}
             />
           </div>
-        </section>
+        </CollapsibleSection>
       )}
 
-      <section>
-        <SectionTitle title="Tabla de posiciones" />
+      <CollapsibleSection id="standings" title="Tabla de posiciones" collapsed={collapsed} onToggle={toggleSection}>
         <Leaderboard teams={teams} userTeamId={myTeam.id} />
-      </section>
+      </CollapsibleSection>
 
       {hasStats && (
-        <section>
-          <SectionTitle title="Líderes por categoría" subtitle="Toda la liga · tus jugadores resaltados en azul" />
+        <CollapsibleSection
+          id="categories"
+          title="Líderes por categoría"
+          subtitle="Toda la liga · tus jugadores resaltados en azul"
+          collapsed={collapsed}
+          onToggle={toggleSection}
+        >
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {CATEGORIES.map((c) => (
               <CategoryTable key={c.key} category={c} players={leaders.categories[c.key]} userTeamId={myTeam.id} />
             ))}
           </div>
-        </section>
+        </CollapsibleSection>
       )}
     </div>
   );

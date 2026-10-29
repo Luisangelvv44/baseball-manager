@@ -5,7 +5,9 @@ jest.mock('../services/contractService', () => ({ payAchievementBonus: jest.fn()
 
 const prisma = require('../db/prisma');
 const { computeSeasonStats } = require('../services/statsService');
-const { getLeagueLeaders, seasonProgress } = require('../services/leagueLeadersService');
+const {
+  getLeagueLeaders, getCachedLeagueLeaders, resetLeagueLeadersCache, seasonProgress,
+} = require('../services/leagueLeadersService');
 const { rankRookies } = require('../services/seasonAwardsService');
 
 function batter(id, teamId, { ab, h, hr = 0, rbi = 0, rookie = false }) {
@@ -75,5 +77,58 @@ describe('getLeagueLeaders', () => {
     expect(result.races.mvp.map((p) => p.player_id)).toEqual([1, 2]); // 90 vs 80 de battingScore
     expect(result.races.cy_young.map((p) => p.player_id)).toEqual([5, 4]);
     expect(result.races.rookie.map((p) => [p.player_id, p.kind])).toEqual([[5, 'pitcher'], [2, 'batter']]);
+  });
+});
+
+describe('getCachedLeagueLeaders', () => {
+  const flush = () => new Promise((r) => setImmediate(r));
+  // 2 equipos: cada juego terminado suma 1 juego por equipo
+  const setFinished = (n) => prisma.gameSchedule.count.mockResolvedValue(n);
+
+  beforeEach(() => {
+    resetLeagueLeadersCache();
+    prisma.team.count.mockResolvedValue(2);
+    computeSeasonStats.mockResolvedValue({ stats: [batter(1, 1, { ab: 10, h: 5 })] });
+  });
+
+  it('computes inline only when nothing is cached, then serves the cache', async () => {
+    setFinished(10);
+    await getCachedLeagueLeaders(7);
+    await getCachedLeagueLeaders(7);
+    expect(computeSeasonStats).toHaveBeenCalledTimes(1);
+  });
+
+  it('serves the stale cache and refreshes in background after 5 games per team', async () => {
+    setFinished(10);
+    const first = await getCachedLeagueLeaders(7);
+
+    setFinished(14); // 4 juegos: sigue fresco
+    expect(await getCachedLeagueLeaders(7)).toBe(first);
+    expect(computeSeasonStats).toHaveBeenCalledTimes(1);
+
+    setFinished(15); // 5 juegos: devuelve lo cacheado y recalcula de fondo
+    expect(await getCachedLeagueLeaders(7)).toBe(first);
+    await flush();
+    expect(computeSeasonStats).toHaveBeenCalledTimes(2);
+    const next = await getCachedLeagueLeaders(7);
+    expect(next).not.toBe(first);
+    expect(computeSeasonStats).toHaveBeenCalledTimes(2);
+  });
+
+  it('refreshes as soon as games start when the cache was built with none', async () => {
+    setFinished(0);
+    await getCachedLeagueLeaders(7);
+    setFinished(1);
+    await getCachedLeagueLeaders(7);
+    await flush();
+    expect(computeSeasonStats).toHaveBeenCalledTimes(2);
+  });
+
+  it('computes inline for a new season', async () => {
+    setFinished(10);
+    await getCachedLeagueLeaders(7);
+    await getCachedLeagueLeaders(8);
+    expect(computeSeasonStats).toHaveBeenCalledTimes(2);
+    expect(computeSeasonStats).toHaveBeenLastCalledWith(8);
   });
 });

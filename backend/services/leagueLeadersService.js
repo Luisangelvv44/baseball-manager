@@ -1,7 +1,9 @@
 const prisma = require('../db/prisma');
 const { computeSeasonStats } = require('./statsService');
 const { battingScore, qualifyStats, rankRookies } = require('./seasonAwardsService');
-const { GAMES_PER_SEASON, SEASON_AWARD_MIN_AB, SEASON_AWARD_MIN_IP, USER_TEAM_ID } = require('../config');
+const {
+  GAMES_PER_SEASON, SEASON_AWARD_MIN_AB, SEASON_AWARD_MIN_IP, USER_TEAM_ID, LEAGUE_LEADERS_CACHE_GAMES,
+} = require('../config');
 
 const CATEGORY_LIMIT = 5;
 const RACE_LIMIT = 3;
@@ -82,4 +84,52 @@ async function getLeagueLeaders(seasonId) {
   };
 }
 
-module.exports = { getLeagueLeaders, seasonProgress };
+// Cache en memoria (stale-while-revalidate): se sirve siempre lo cacheado y, cuando la liga avanzo
+// LEAGUE_LEADERS_CACHE_GAMES juegos por equipo desde el ultimo calculo, se recalcula en segundo plano
+// para que la siguiente consulta ya traiga lo nuevo. Solo se calcula en linea si no hay nada cacheado
+// para la temporada.
+let cache = null; // { seasonId, gamesPerTeam, data }
+let refreshing = null; // { seasonId, promise } del recalculo en curso (evita duplicados)
+
+async function gamesPlayedPerTeam(seasonId) {
+  const [finished, teamCount] = await Promise.all([
+    prisma.gameSchedule.count({ where: { season_id: seasonId, status: 'finished' } }),
+    prisma.team.count(),
+  ]);
+  return teamCount === 0 ? 0 : (finished * 2) / teamCount;
+}
+
+function refreshLeagueLeaders(seasonId, gamesPerTeam) {
+  if (refreshing && refreshing.seasonId === seasonId) return refreshing.promise;
+  const current = { seasonId };
+  current.promise = getLeagueLeaders(seasonId)
+    .then((data) => {
+      cache = { seasonId, gamesPerTeam, data };
+      return data;
+    })
+    .finally(() => {
+      if (refreshing === current) refreshing = null;
+    });
+  refreshing = current;
+  return current.promise;
+}
+
+async function getCachedLeagueLeaders(seasonId) {
+  const gamesPerTeam = await gamesPlayedPerTeam(seasonId);
+  if (!cache || cache.seasonId !== seasonId) return refreshLeagueLeaders(seasonId, gamesPerTeam);
+
+  const advanced = gamesPerTeam - cache.gamesPerTeam;
+  // Cache sin juegos (pre-temporada) se refresca apenas haya alguno, para no esperar 5 dias vacio
+  const stale = advanced >= LEAGUE_LEADERS_CACHE_GAMES || advanced < 0 || (cache.gamesPerTeam === 0 && advanced > 0);
+  if (stale) {
+    refreshLeagueLeaders(seasonId, gamesPerTeam).catch((err) => console.error('Error refrescando líderes:', err));
+  }
+  return cache.data;
+}
+
+function resetLeagueLeadersCache() {
+  cache = null;
+  refreshing = null;
+}
+
+module.exports = { getLeagueLeaders, getCachedLeagueLeaders, resetLeagueLeadersCache, seasonProgress };
