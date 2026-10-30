@@ -97,6 +97,11 @@ export const api = {
   simulatePlayoffRound: () => request('/playoffs/simulate-round', { method: 'POST' }),
   advancePlayoffRound: () => request('/playoffs/advance-round', { method: 'POST' }),
 
+  // Mercado de playoffs (refuerzos cedidos solo para los playoffs)
+  getPlayoffMarket: () => request('/playoff-market'),
+  placePlayoffLoanBid: (loanId, pct) =>
+    request(`/playoff-market/${loanId}/bid`, { method: 'POST', body: JSON.stringify({ pct }) }),
+
   // Coaches
   getCoaches: () => request('/coaches'),
   hireCoach: () => request('/coaches/hire', { method: 'POST' }),

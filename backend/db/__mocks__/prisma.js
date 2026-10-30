@@ -50,6 +50,9 @@ const prismaMock = {
   toddlerProgram: createModel(),
   toddlerContribution: createModel(),
   retiredNumber: createModel(),
+  playoffMarket: createModel(),
+  playoffLoan: createModel(),
+  playoffLoanBid: createModel(),
   $queryRaw: jest.fn(),
   $transaction: jest.fn(),
 };

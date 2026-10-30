@@ -27,6 +27,7 @@ import Jerseys from './pages/Jerseys.jsx';
 import Toddlers from './pages/Toddlers.jsx';
 import Bank from './pages/Bank.jsx';
 import MapPage from './pages/MapPage.jsx';
+import PlayoffMarket from './pages/PlayoffMarket.jsx';
 
 export default function App() {
   return (
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="/lineup" element={<Lineup />} />
           <Route path="/broadcast" element={<Broadcast />} />
           <Route path="/playoffs" element={<Playoffs />} />
+          <Route path="/playoff-market" element={<PlayoffMarket />} />
           <Route path="/coaches" element={<Coaches />} />
           <Route path="/draft" element={<Draft />} />
           <Route path="/stars" element={<Stars />} />

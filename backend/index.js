@@ -28,6 +28,7 @@ app.use('/api/toddlers', require('./routes/toddlers'));
 app.use('/api/bank', require('./routes/bank'));
 app.use('/api/rivalries', require('./routes/rivalries'));
 app.use('/api/map', require('./routes/map'));
+app.use('/api/playoff-market', require('./routes/playoffMarket'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

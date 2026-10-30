@@ -21,6 +21,10 @@ export async function advanceDayAndRoute({ navigate, refreshTeam, refreshAlerts,
     setMessage?.('¡La temporada ha terminado! Toca hacer el Draft anual.');
     return navigate('/draft');
   }
+  if (result.playoffMarket?.open) {
+    setMessage?.(`Mercado de playoffs abierto: quedan ${result.playoffMarket.daysLeft} dia(s) para pujar.`);
+    return navigate('/playoff-market');
+  }
   if (result.playoffs) {
     setMessage?.('¡La temporada regular terminó! Los playoffs han comenzado.');
     return navigate('/playoffs');

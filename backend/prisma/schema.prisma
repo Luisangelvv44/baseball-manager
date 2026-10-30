@@ -74,6 +74,9 @@ model Team {
   contracts             Contract[]
   hall_of_fame_members  HallOfFameCandidate[]
   retired_numbers       RetiredNumber[]
+  playoff_loans_out     PlayoffLoan[]         @relation("PlayoffLoanFrom")
+  playoff_loans_in      PlayoffLoan[]         @relation("PlayoffLoanTo")
+  playoff_loan_bids     PlayoffLoanBid[]
 }
 
 model Rivalry {
@@ -119,6 +122,7 @@ model Player {
   parent_id                Int? // padre leyenda (herederos, ver legacyService.js)
   jersey_number            Int? // dorsal 0-99 (ver jerseyService.js)
   jersey_team_id           Int? // equipo para el que se asigno el dorsal; != team_id -> hay que reasignar
+  on_loan_from_team_id     Int? // cedido solo para playoffs (ver playoffMarketService.js): equipo al que vuelve
   career_home_runs         Int       @default(0)
   career_hits              Int       @default(0)
   career_rbi               Int       @default(0)
@@ -146,6 +150,7 @@ model Player {
   parent                 Player?              @relation("Lineage", fields: [parent_id], references: [id])
   children               Player[]             @relation("Lineage")
   retired_numbers        RetiredNumber[]
+  playoff_loans          PlayoffLoan[]
 
   @@index([team_id])
   @@index([last_team_id])
@@ -192,6 +197,7 @@ model Season {
   loans                 Loan[]
   contracts_started     Contract[]           @relation("ContractStartSeason")
   contracts_ended       Contract[]           @relation("ContractEndSeason")
+  playoff_market        PlayoffMarket?
 }
 
 model SeasonRecord {
@@ -841,4 +847,63 @@ model RetiredNumber {
   @@unique([team_id, number])
   @@unique([team_id, player_id])
   @@map("retired_numbers")
+}
+
+// Mercado de playoffs (ver services/playoffMarketService.js): al terminar la temporada regular,
+// los jugadores de los equipos eliminados se subastan durante PLAYOFF_MARKET_DAYS dias como
+// refuerzos solo para los playoffs. Al terminar los playoffs vuelven a su equipo.
+model PlayoffMarket {
+  id                 Int      @id @default(autoincrement())
+  season_id          Int      @unique
+  status             String   @default("open") @db.VarChar(20) // open | closed
+  opened_day         Int
+  closes_on_day      Int
+  qualified_team_ids Int[]
+  created_at         DateTime @default(now())
+
+  season   Season        @relation(fields: [season_id], references: [id])
+  listings PlayoffLoan[]
+
+  @@map("playoff_markets")
+}
+
+model PlayoffLoan {
+  id                      Int       @id @default(autoincrement())
+  market_id               Int
+  player_id               Int
+  from_team_id            Int
+  to_team_id              Int?
+  status                  String    @default("open") @db.VarChar(20) // open | signed | unsold | returned
+  pct                     Decimal?  @db.Decimal(4, 2) // fraccion del salario pagada (0.50-1.50)
+  amount                  Decimal?  @db.Decimal(14, 2)
+  signed_day              Int?
+  original_jersey_number  Int?
+  original_jersey_team_id Int?
+  returned_at             DateTime?
+
+  market    PlayoffMarket    @relation(fields: [market_id], references: [id])
+  player    Player           @relation(fields: [player_id], references: [id])
+  from_team Team             @relation("PlayoffLoanFrom", fields: [from_team_id], references: [id])
+  to_team   Team?            @relation("PlayoffLoanTo", fields: [to_team_id], references: [id])
+  bids      PlayoffLoanBid[]
+
+  @@index([market_id, status])
+  @@index([player_id])
+  @@map("playoff_loans")
+}
+
+model PlayoffLoanBid {
+  id         Int      @id @default(autoincrement())
+  loan_id    Int
+  team_id    Int
+  pct        Decimal  @db.Decimal(4, 2)
+  amount     Decimal  @db.Decimal(14, 2)
+  season_day Int
+  created_at DateTime @default(now())
+
+  loan PlayoffLoan @relation(fields: [loan_id], references: [id])
+  team Team        @relation(fields: [team_id], references: [id])
+
+  @@index([loan_id])
+  @@map("playoff_loan_bids")
 }

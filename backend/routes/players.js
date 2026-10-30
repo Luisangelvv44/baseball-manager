@@ -230,6 +230,9 @@ router.post('/:id/demote', async (req, res) => {
     if (player.team_id !== USER_TEAM_ID || player.level !== 'MAJOR' || player.status !== 'active') {
       return res.status(400).json({ error: 'Este jugador no está en tu roster de Mayores' });
     }
+    if (player.on_loan_from_team_id != null) {
+      return res.status(400).json({ error: 'Es un refuerzo cedido solo para los playoffs' });
+    }
 
     const minorRosterCount = await prisma.player.count({
       where: { team_id: USER_TEAM_ID, level: 'MINOR' },
@@ -259,6 +262,7 @@ router.post('/:id/renew', async (req, res) => {
     const player = await prisma.player.findUnique({ where: { id: Number(id) } });
     if (!player) return res.status(404).json({ error: 'Jugador no encontrado' });
     if (player.team_id !== USER_TEAM_ID) return res.status(400).json({ error: 'Este jugador no pertenece a tu equipo' });
+    if (player.on_loan_from_team_id != null) return res.status(400).json({ error: 'Es un refuerzo cedido solo para los playoffs' });
     if (player.contract_years_remaining > 2) return res.status(400).json({ error: 'El jugador debe tener 2 años o menos restantes para renovar' });
     if (!years || years < 1) return res.status(400).json({ error: 'Años de contrato inválidos' });
 

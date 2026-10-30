@@ -26,6 +26,12 @@ jest.mock('../services/playoffService', () => ({
   updateSeriesAfterGame: jest.fn().mockResolvedValue(undefined),
   advancePlayoffRound: jest.fn().mockResolvedValue({ champion: false }),
 }));
+jest.mock('../services/playoffMarketService', () => ({
+  getOpenPlayoffMarket: jest.fn().mockResolvedValue(null),
+  openPlayoffMarket: jest.fn().mockResolvedValue(null),
+  runPlayoffMarketDay: jest.fn().mockResolvedValue({ closed: false, signed: 0, daysLeft: 4 }),
+  returnPlayoffLoans: jest.fn().mockResolvedValue(0),
+}));
 jest.mock('../services/retiredPlayer', () => ({ retireOldPlayers: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../services/legacyService', () => ({ runHallOfFameSeason: jest.fn().mockResolvedValue({ votes: [], registered: [] }) }));
 jest.mock('../services/playerService', () => ({
@@ -155,6 +161,41 @@ describe('POST /api/season/advance-day', () => {
     expect(res.body.advanced).toBe(true);
     expect(res.body.simulated).toBe(1);
     expect(res.body.day).toBe(6);
+  });
+
+  it('opens the playoff market instead of the bracket when the regular season ends', async () => {
+    const { openPlayoffMarket } = require('../services/playoffMarketService');
+    const { generatePlayoffBracket } = require('../services/playoffService');
+    const lastDay = { ...mockSeason, current_day: 180 };
+    prisma.season.findFirst.mockResolvedValue(lastDay);
+    prisma.gameSchedule.findMany.mockResolvedValue([]);
+    prisma.season.update.mockResolvedValue({ ...lastDay, status: 'playoffs' });
+    openPlayoffMarket.mockResolvedValueOnce({ id: 3, status: 'open' });
+
+    const res = await request(app).post('/api/season/advance-day');
+    expect(res.status).toBe(200);
+    expect(prisma.season.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: { current_day: 180, status: 'playoffs' },
+    }));
+    expect(openPlayoffMarket).toHaveBeenCalled();
+    expect(generatePlayoffBracket).not.toHaveBeenCalled();
+    expect(res.body.playoffs).toBe(false);
+    expect(res.body.playoffMarket).toEqual({ open: true, daysLeft: 5, signed: 0 });
+  });
+
+  it('builds the bracket on the day the playoff market closes', async () => {
+    const { getOpenPlayoffMarket, runPlayoffMarketDay } = require('../services/playoffMarketService');
+    const { generatePlayoffBracket, advancePlayoffRound } = require('../services/playoffService');
+    prisma.season.findFirst.mockResolvedValue({ ...mockSeason, current_day: 184, status: 'playoffs' });
+    getOpenPlayoffMarket.mockResolvedValueOnce({ id: 3, status: 'open', closes_on_day: 185 });
+    runPlayoffMarketDay.mockResolvedValueOnce({ closed: true, signed: 4, daysLeft: 0 });
+    prisma.gameSchedule.findFirst.mockResolvedValue({ id: 900 });
+
+    const res = await request(app).post('/api/season/advance-day');
+    expect(res.status).toBe(200);
+    expect(generatePlayoffBracket).toHaveBeenCalledWith(1);
+    expect(advancePlayoffRound).not.toHaveBeenCalled();
+    expect(res.body).toMatchObject({ day: 185, playoffs: true, userGameId: 900, playoffMarket: { open: false, signed: 4 } });
   });
 });
 

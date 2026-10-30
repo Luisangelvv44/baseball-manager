@@ -255,4 +255,16 @@ module.exports = {
       levels: ['Puesto ambulante', 'Kiosco', 'Tienda pequeña', 'Tienda oficial', 'Megastore del club'],
     },
   },
+
+  // ----- Mercado de playoffs (ver services/playoffMarketService.js) -----
+  // Al terminar la temporada regular, los equipos clasificados pujan durante N dias por
+  // jugadores de los eliminados, cedidos solo para los playoffs. La puja es un % del salario
+  // anual del jugador (pago unico al jugador); vuelve a su equipo al terminar los playoffs.
+  PLAYOFF_MARKET_DAYS: 5,
+  PLAYOFF_MARKET_MIN_PCT: 0.5,
+  PLAYOFF_MARKET_MAX_PCT: 1.5,
+  PLAYOFF_MARKET_MIN_RAISE_PCT: 0.05, // superar la mejor puja exige al menos +5 puntos de %
+  PLAYOFF_MARKET_MAX_SIGNINGS_PER_TEAM: 3, // refuerzos (y pujas ganando a la vez) por equipo
+  PLAYOFF_MARKET_CPU_MIN_UPGRADE: 5, // la CPU solo puja si mejora a su titular por >= N de skill
+  PLAYOFF_MARKET_CPU_BID_PROB: 0.6, // prob. diaria de que la CPU puje por cada candidato
 };

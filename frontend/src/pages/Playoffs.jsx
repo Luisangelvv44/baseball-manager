@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useTeam } from '../context/TeamContext.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
@@ -80,13 +80,15 @@ export default function Playoffs() {
   const [seasonStatus, setSeasonStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [market, setMarket] = useState(null);
   const navigate = useNavigate();
 
   async function load() {
     try {
-      const data = await api.getPlayoffs();
+      const [data, marketData] = await Promise.all([api.getPlayoffs(), api.getPlayoffMarket()]);
       setSeries(data.series ?? []);
       setSeasonStatus(data.season_status);
+      setMarket(marketData.market);
     } catch (err) {
       setMessage(err.message);
     }
@@ -120,6 +122,13 @@ export default function Playoffs() {
       }
       if (result.userGameId) {
         navigate(`/game/${result.userGameId}`);
+        return;
+      }
+      if (result.playoffMarket) {
+        setMessage(result.playoffMarket.open
+          ? `Mercado de playoffs: quedan ${result.playoffMarket.daysLeft} dia(s) para pujar.`
+          : `Mercado de playoffs cerrado: ${result.playoffMarket.signed} refuerzo(s) firmados. ¡Arrancan los playoffs!`);
+        await load();
         return;
       }
       const msg = result.simulated > 0
@@ -161,6 +170,15 @@ export default function Playoffs() {
       {message && (
         <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded p-3 text-sm">
           {message}
+        </div>
+      )}
+
+      {market?.status === 'open' && (
+        <div className="bg-amber-50 border border-amber-300 text-amber-900 rounded p-3 text-sm flex items-center justify-between gap-3 flex-wrap">
+          <span>
+            El mercado de playoffs está abierto ({market.days_left} día(s) restantes). El bracket se arma cuando cierre.
+          </span>
+          <Link to="/playoff-market" className="font-semibold underline">Ir al mercado</Link>
         </div>
       )}
 

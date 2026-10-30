@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, AUCTION_DEADLINE_DAY, ROSTER_CHECK_DAY, LUXURY_TAX_PROJECTION_DAY, PLAYER_INVESTMENT_DAY, LOAN_WINDOW_END_DAY, RIVALRY_BADGE_THRESHOLD, BROADCAST_OFFER_WINDOW_END_DAY } = require('../config');
+const { USER_TEAM_ID, PRE_SEASON_DAYS, MAX_ROSTER_SIZE, TRADE_DEADLINE_DAY, AUCTION_DEADLINE_DAY, ROSTER_CHECK_DAY, LUXURY_TAX_PROJECTION_DAY, PLAYER_INVESTMENT_DAY, LOAN_WINDOW_END_DAY, RIVALRY_BADGE_THRESHOLD, BROADCAST_OFFER_WINDOW_END_DAY, PLAYOFF_MARKET_DAYS } = require('../config');
 const { generateSchedule } = require('../services/scheduleGenerator');
 const { simulateScheduledGamesForDay, simulateOtherActivePlayoffSeries } = require('../services/dayGamesSimulator');
 const {
@@ -18,6 +18,7 @@ const {
   decrementContractSeasons,
 } = require('../services/broadcastService');
 const { generatePlayoffBracket, advancePlayoffRound } = require('../services/playoffService');
+const { getOpenPlayoffMarket, openPlayoffMarket, runPlayoffMarketDay, returnPlayoffLoans } = require('../services/playoffMarketService');
 const { retireOldPlayers } = require('../services/retiredPlayer');
 const { runHallOfFameSeason } = require('../services/legacyService');
 const { syncJerseyNumbers } = require('../services/jerseyService');
@@ -162,6 +163,10 @@ router.post('/start', async (req, res) => {
 
 // All end-of-season mutations — runs only after the playoff champion is crowned
 async function endOfSeasonCleanup(season) {
+  // Los refuerzos de playoffs vuelven a su equipo antes de todo lo que lee Player.team_id
+  // (contratos, recortes CPU, impuesto al lujo, dorsales)
+  await returnPlayoffLoans(season);
+
   // Save season record before standings are reset
   const allTeams = await prisma.team.findMany({
     select: { id: true, name: true, wins: true, losses: true, division: { select: { name: true } } },
@@ -321,6 +326,36 @@ router.post('/advance-day', async (req, res) => {
     await processInjuryRecovery(season.current_day, season.id);
 
     // ---- RAMA PLAYOFFS ----
+    // Mercado de playoffs: entre la temporada regular y el bracket no hay partidos, solo
+    // pujas de la CPU dia a dia; al cerrar se reparten los refuerzos y se arma el bracket.
+    const market = season.status === 'playoffs' ? await getOpenPlayoffMarket(season.id) : null;
+    if (market) {
+      const marketDay = await runPlayoffMarketDay(season, market);
+      await prisma.season.update({ where: { id: season.id }, data: { current_day: day + 1 } });
+
+      let userGameId = null;
+      if (marketDay.closed) {
+        await generatePlayoffBracket(season.id);
+        await syncJerseyNumbers({ season });
+        const nextUserGame = await prisma.gameSchedule.findFirst({
+          where: { season_id: season.id, is_user_game: true, status: 'scheduled' },
+          orderBy: { id: 'asc' },
+        });
+        userGameId = nextUserGame?.id ?? null;
+      }
+
+      return res.json({
+        advanced: true,
+        simulated: 0,
+        day: day + 1,
+        seasonFinished: false,
+        inPlayoffs: true,
+        playoffs: marketDay.closed,
+        playoffMarket: { open: !marketDay.closed, daysLeft: marketDay.daysLeft, signed: marketDay.signed },
+        userGameId,
+      });
+    }
+
     if (season.status === 'playoffs') {
       const pendingUserGame = await prisma.gameSchedule.findFirst({
         where: { season_id: season.id, is_user_game: true, status: 'scheduled' },
@@ -445,8 +480,12 @@ router.post('/advance-day', async (req, res) => {
       },
     });
 
+    // Al terminar la temporada regular se abre primero el mercado de playoffs; si no hay
+    // nada que subastar, el bracket se arma de inmediato como antes.
+    let marketOpened = false;
     if (finished) {
-      await generatePlayoffBracket(season.id);
+      marketOpened = !!(await openPlayoffMarket({ ...season, current_day: season.total_days, status: 'playoffs' }));
+      if (!marketOpened) await generatePlayoffBracket(season.id);
     }
 
     let userGameToday = null;
@@ -461,7 +500,8 @@ router.post('/advance-day', async (req, res) => {
       simulated,
       day: finished ? season.total_days : newDay,
       seasonFinished: false,
-      playoffs: finished,
+      playoffs: finished && !marketOpened,
+      playoffMarket: marketOpened ? { open: true, daysLeft: PLAYOFF_MARKET_DAYS, signed: 0 } : null,
       auctionsClosed,
       userGameId: userGameToday ? userGameToday.id : null,
     });

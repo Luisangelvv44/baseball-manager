@@ -15,6 +15,7 @@ const TYPE_LABELS = {
   broadcast_revenue: 'Ingresos Transmisión',
   luxury_tax: 'Impuesto al lujo',
   player_upgrade: 'Inversión en jugadores',
+  playoff_loan: 'Refuerzos de playoffs',
 };
 
 export default function Finances() {

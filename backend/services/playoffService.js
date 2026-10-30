@@ -21,6 +21,29 @@ async function applyPlayoffBonus(teamId, fanPct, repPoints) {
   await trackFanBase(updated);
 }
 
+// Top 4 por division (wins desc, losses asc, id como desempate estable). Lo usan el bracket y
+// el mercado de playoffs, que se abre antes con la clasificacion ya cerrada.
+function groupQualifiedByDivision(teams) {
+  const divGroups = {};
+  for (const team of teams) {
+    const d = team.division_id;
+    if (!divGroups[d]) divGroups[d] = [];
+    if (divGroups[d].length < 4) divGroups[d].push(team);
+  }
+  return divGroups;
+}
+
+const STANDINGS_ORDER = [{ wins: 'desc' }, { losses: 'asc' }, { id: 'asc' }];
+
+async function getQualifiedTeamIds() {
+  const teams = await prisma.team.findMany({
+    where: { division_id: { not: null } },
+    orderBy: STANDINGS_ORDER,
+    select: { id: true, division_id: true },
+  });
+  return Object.values(groupQualifiedByDivision(teams)).flat().map((t) => t.id);
+}
+
 async function generatePlayoffBracket(seasonId) {
   const existing = await prisma.playoffSeries.findFirst({ where: { season_id: seasonId } });
   if (existing) return;
@@ -28,16 +51,11 @@ async function generatePlayoffBracket(seasonId) {
   // Top 4 per division ordered by wins desc, losses asc
   const teams = await prisma.team.findMany({
     where: { division_id: { not: null } },
-    orderBy: [{ wins: 'desc' }, { losses: 'asc' }],
+    orderBy: STANDINGS_ORDER,
     select: { id: true, division_id: true, wins: true, losses: true, desperation_index: true, fan_base: true, reputation: true },
   });
 
-  const divGroups = {};
-  for (const team of teams) {
-    const d = team.division_id;
-    if (!divGroups[d]) divGroups[d] = [];
-    if (divGroups[d].length < 4) divGroups[d].push(team);
-  }
+  const divGroups = groupQualifiedByDivision(teams);
 
   // Indice de desesperacion: se acumula temporada a temporada segun clasificacion a playoffs.
   // Quedar fuera del top 4 de la division sube el indice; clasificar lo baja. Clamped [0, 2].
@@ -308,6 +326,7 @@ async function handleChampion(winnerId, seasonId) {
 }
 
 module.exports = {
+  getQualifiedTeamIds,
   generatePlayoffBracket,
   getPlayoffBracket,
   simulatePlayoffGame,
