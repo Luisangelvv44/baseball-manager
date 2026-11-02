@@ -40,10 +40,10 @@ Do not run Playwright, take screenshots, or launch browsers to verify frontend c
 
 ## Database Caution
 
-Never touch the database directly — mutating calls (simulating a game, advancing a season day,
-anything that persists state) or even ad-hoc read-only inspection scripts (`node -e` Prisma
-queries) — without asking the user first. There is no throwaway test DB; the dev database is the
-user's real, persistent save. Verify changes through the Jest suite or code review instead.
+Never mutate the database — simulating a game, advancing a season day, anything that persists
+state — without asking the user first. Read-only queries (e.g. Prisma `find*`/`groupBy`/`count`
+scripts) are fine without asking. There is no throwaway test DB; the dev database is the user's
+real, persistent save. Verify code changes through the Jest suite or code review instead.
 
 ## Architecture
 
