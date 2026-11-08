@@ -3,6 +3,7 @@ const router = express.Router();
 const prisma = require('../db/prisma');
 const {
   getPlayoffBracket,
+  buildGroupStandings,
   simulatePlayoffGame,
   simulateRound,
   advancePlayoffRound,
@@ -19,10 +20,10 @@ async function getActiveSeason() {
 router.get('/', async (req, res) => {
   try {
     const season = await getActiveSeason();
-    if (!season) return res.json({ series: [], season_status: null });
+    if (!season) return res.json({ series: [], groups: [], season_status: null });
 
     const series = await getPlayoffBracket(season.id);
-    res.json({ series, season_status: season.status });
+    res.json({ series, groups: buildGroupStandings(series), season_status: season.status });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener el bracket' });

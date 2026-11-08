@@ -67,7 +67,7 @@ export default function Derby() {
       <h2 className="text-xl font-bold">Derby de Jonrones</h2>
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
-        Cada uno de los 16 equipos envia un jugador de posicion. Entre mas destreza tenga, mas probable es que
+        Cada uno de los 24 equipos envia un jugador de posicion. Entre mas destreza tenga, mas probable es que
         conecte jonron en cada swing. Si tu jugador gana, tu equipo le paga la recompensa que definas abajo;
         los equipos CPU pagan entre 50% y 100% de lo maximo que estarian dispuestos a ofrecer.
       </div>

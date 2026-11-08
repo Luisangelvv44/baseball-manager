@@ -23,7 +23,7 @@ describe('clampReputation', () => {
 });
 
 describe('generatePlayoffBracket - reputation', () => {
-  // Division 1: equipos 1-5, division 2: equipos 6-10 (ya ordenados por wins desc). Quedan fuera el 5 y el 10.
+  // Division 1: equipos 1-5, division 2: equipos 6-10 (ya ordenados por wins desc). Quedan fuera 4, 5, 9 y 10.
   function team(id, division_id, reputation) {
     return { id, division_id, wins: 20 - id, losses: id, desperation_index: 0, fan_base: 50000, reputation };
   }
@@ -46,7 +46,7 @@ describe('generatePlayoffBracket - reputation', () => {
   it('gives +5 to qualified teams and takes REPUTATION_MISSED_PLAYOFFS_PENALTY from the rest', async () => {
     await generatePlayoffBracket(1);
     expect(repUpdateFor(2)).toBe(55);
-    expect(repUpdateFor(9)).toBe(55);
+    expect(repUpdateFor(8)).toBe(55);
     expect(repUpdateFor(5)).toBe(60 - REPUTATION_MISSED_PLAYOFFS_PENALTY);
   });
 

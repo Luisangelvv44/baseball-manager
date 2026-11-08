@@ -1,11 +1,17 @@
 const prisma = require('../db/prisma');
-const { USER_TEAM_ID, REPUTATION_MISSED_PLAYOFFS_PENALTY } = require('../config');
+const { USER_TEAM_ID, REPUTATION_MISSED_PLAYOFFS_PENALTY, PLAYOFF_TEAMS_PER_DIVISION, PLAYOFF_GROUP_ADVANCE } = require('../config');
 const { playGame, applyRandomFanChange } = require('./gamePlay');
 const { FAN_RANGE_SELECT, trackFanBase } = require('./fanBaseTracker');
 const { clampReputation } = require('./reputationService');
 
 const FAN_MIN_PLAYOFF = 2000;
 const FAN_MAX_PLAYOFF = 20000;
+
+// Mini liguilla previa a cuartos: los 3 clasificados de cada division juegan estos 6 partidos, en este
+// orden. [local, visitante] como posicion de la temporada regular (1 = primero de la division).
+// Cada partido es una PlayoffSeries de round 0 a un juego; solo uno por division esta 'active' a la vez.
+const GROUP_ROUND = 0;
+const GROUP_GAME_ORDER = [[3, 2], [3, 1], [2, 3], [2, 1], [1, 2], [1, 3]];
 
 // Bono de reputacion + fan_base por avanzar de ronda en playoffs.
 // fanPct se calcula sobre el fan_base actual del equipo (snapshot al momento del avance).
@@ -21,14 +27,14 @@ async function applyPlayoffBonus(teamId, fanPct, repPoints) {
   await trackFanBase(updated);
 }
 
-// Top 4 por division (wins desc, losses asc, id como desempate estable). Lo usan el bracket y
+// Top N por division (wins desc, losses asc, id como desempate estable). Lo usan el bracket y
 // el mercado de playoffs, que se abre antes con la clasificacion ya cerrada.
 function groupQualifiedByDivision(teams) {
   const divGroups = {};
   for (const team of teams) {
     const d = team.division_id;
     if (!divGroups[d]) divGroups[d] = [];
-    if (divGroups[d].length < 4) divGroups[d].push(team);
+    if (divGroups[d].length < PLAYOFF_TEAMS_PER_DIVISION) divGroups[d].push(team);
   }
   return divGroups;
 }
@@ -48,7 +54,7 @@ async function generatePlayoffBracket(seasonId) {
   const existing = await prisma.playoffSeries.findFirst({ where: { season_id: seasonId } });
   if (existing) return;
 
-  // Top 4 per division ordered by wins desc, losses asc
+  // Top N per division ordered by wins desc, losses asc
   const teams = await prisma.team.findMany({
     where: { division_id: { not: null } },
     orderBy: STANDINGS_ORDER,
@@ -58,7 +64,7 @@ async function generatePlayoffBracket(seasonId) {
   const divGroups = groupQualifiedByDivision(teams);
 
   // Indice de desesperacion: se acumula temporada a temporada segun clasificacion a playoffs.
-  // Quedar fuera del top 4 de la division sube el indice; clasificar lo baja. Clamped [0, 2].
+  // Quedar fuera de los clasificados de la division sube el indice; clasificar lo baja. Clamped [0, 2].
   const qualifiedIds = new Set();
   for (const list of Object.values(divGroups)) {
     for (const t of list) qualifiedIds.add(t.id);
@@ -78,33 +84,25 @@ async function generatePlayoffBracket(seasonId) {
     return prisma.team.update({ where: { id: t.id }, data, select: FAN_RANGE_SELECT }).then(trackFanBase);
   }));
 
-  let order = 0;
-  for (const [, divTeams] of Object.entries(divGroups)) {
-    // 1st vs 3rd — higher seed (1st) is home_team
-    const s1 = await prisma.playoffSeries.create({
-      data: {
-        season_id: seasonId,
-        round: 1,
-        series_order: order++,
-        home_team_id: divTeams[0].id,
-        away_team_id: divTeams[2].id,
-        wins_needed: 2,
-      },
-    });
-    await createNextGame(s1);
-
-    // 2nd vs 4th
-    const s2 = await prisma.playoffSeries.create({
-      data: {
-        season_id: seasonId,
-        round: 1,
-        series_order: order++,
-        home_team_id: divTeams[1].id,
-        away_team_id: divTeams[3].id,
-        wins_needed: 2,
-      },
-    });
-    await createNextGame(s2);
+  // Las divisiones van por id ascendente (orden de creacion: NO, SO, NE, SE); de eso dependen los cruces.
+  let divisionIndex = 0;
+  for (const divTeams of Object.values(divGroups)) {
+    for (let g = 0; g < GROUP_GAME_ORDER.length; g++) {
+      const [homeSeed, awaySeed] = GROUP_GAME_ORDER[g];
+      const series = await prisma.playoffSeries.create({
+        data: {
+          season_id: seasonId,
+          round: GROUP_ROUND,
+          series_order: divisionIndex * GROUP_GAME_ORDER.length + g,
+          home_team_id: divTeams[homeSeed - 1].id,
+          away_team_id: divTeams[awaySeed - 1].id,
+          wins_needed: 1,
+          status: g === 0 ? 'active' : 'pending',
+        },
+      });
+      if (g === 0) await createNextGame(series);
+    }
+    divisionIndex++;
   }
 }
 
@@ -117,7 +115,8 @@ async function createNextGame(series) {
   await prisma.gameSchedule.create({
     data: {
       season_id: series.season_id,
-      day_number: 1000 + series.round * 10 + gameNumber,
+      // en la liguilla cada partido es una serie: el dia sale de su orden (1001-1006)
+      day_number: 1000 + series.round * 10 + gameNumber + (series.round === GROUP_ROUND ? series.series_order % GROUP_GAME_ORDER.length : 0),
       home_team_id: homeId,
       away_team_id: awayId,
       status: 'scheduled',
@@ -131,7 +130,7 @@ async function getPlayoffBracket(seasonId) {
   return prisma.playoffSeries.findMany({
     where: { season_id: seasonId },
     include: {
-      home_team: { select: { id: true, name: true } },
+      home_team: { select: { id: true, name: true, division: { select: { name: true } } } },
       away_team: { select: { id: true, name: true } },
       winner:    { select: { id: true, name: true } },
       games: {
@@ -173,8 +172,85 @@ async function updateSeriesAfterGame(game, result) {
       where: { id: series.id },
       data: { status: 'completed', winner_id: winnerId },
     });
+    if (series.round === GROUP_ROUND) await startNextGroupGame(series);
   } else {
     await createNextGame(updated);
+  }
+}
+
+// Al terminar un partido de la liguilla se activa el siguiente de esa misma division.
+async function startNextGroupGame(series) {
+  const nextOrder = series.series_order + 1;
+  if (nextOrder % GROUP_GAME_ORDER.length === 0) return;
+  const next = await prisma.playoffSeries.findFirst({
+    where: { season_id: series.season_id, round: GROUP_ROUND, series_order: nextOrder },
+  });
+  if (!next) return;
+  const activated = await prisma.playoffSeries.update({ where: { id: next.id }, data: { status: 'active' } });
+  await createNextGame(activated);
+}
+
+// Tabla de cada liguilla a partir de las series del bracket (con sus juegos). Desempates: diferencia
+// de carreras y luego la posicion de la temporada regular.
+function buildGroupStandings(series) {
+  const groups = new Map();
+  for (const s of series.filter((x) => x.round === GROUP_ROUND).sort((a, b) => a.series_order - b.series_order)) {
+    const index = Math.floor(s.series_order / GROUP_GAME_ORDER.length);
+    if (!groups.has(index)) {
+      groups.set(index, { index, division: s.home_team?.division?.name ?? null, teams: new Map(), series: [] });
+    }
+    const group = groups.get(index);
+    group.series.push(s);
+
+    const [homeSeed, awaySeed] = GROUP_GAME_ORDER[s.series_order % GROUP_GAME_ORDER.length];
+    const row = (teamId, seed, name) => {
+      if (!group.teams.has(teamId)) group.teams.set(teamId, { team_id: teamId, name, seed, wins: 0, losses: 0, run_diff: 0 });
+      return group.teams.get(teamId);
+    };
+    const home = row(s.home_team_id, homeSeed, s.home_team?.name);
+    const away = row(s.away_team_id, awaySeed, s.away_team?.name);
+
+    if (s.status !== 'completed') continue;
+    const homeWon = s.winner_id === s.home_team_id;
+    (homeWon ? home : away).wins += 1;
+    (homeWon ? away : home).losses += 1;
+    const game = s.games?.find((g) => g.status === 'finished');
+    if (game) {
+      const diff = game.home_score - game.away_score;
+      home.run_diff += diff;
+      away.run_diff -= diff;
+    }
+  }
+
+  return [...groups.values()]
+    .sort((a, b) => a.index - b.index)
+    .map((g) => ({
+      ...g,
+      teams: [...g.teams.values()].sort((a, b) => b.wins - a.wins || b.run_diff - a.run_diff || a.seed - b.seed),
+    }));
+}
+
+// Cuartos: cruces entre las dos divisiones de cada conferencia (1o de una contra 2o de la otra). Las
+// series quedan en pares por conferencia, asi que semis y final se arman igual: la final es Oeste-Este.
+async function createQuarterFinals(seasonId) {
+  const groups = buildGroupStandings(await getPlayoffBracket(seasonId));
+  let order = 0;
+  for (let i = 0; i < groups.length; i += 2) {
+    const a = groups[i].teams.slice(0, PLAYOFF_GROUP_ADVANCE);
+    const b = groups[i + 1].teams.slice(0, PLAYOFF_GROUP_ADVANCE);
+    for (const [high, low] of [[a[0], b[1]], [b[0], a[1]]]) {
+      const s = await prisma.playoffSeries.create({
+        data: {
+          season_id: seasonId,
+          round: 1,
+          series_order: order++,
+          home_team_id: high.team_id,
+          away_team_id: low.team_id,
+          wins_needed: 2,
+        },
+      });
+      await createNextGame(s);
+    }
   }
 }
 
@@ -206,21 +282,30 @@ async function simulateRound(seasonId) {
   if (!allSeries.length) return;
 
   const currentRound = Math.max(...allSeries.map((s) => s.round));
-  const roundSeries = allSeries.filter((s) => s.round === currentRound && s.status === 'active');
 
-  for (const series of roundSeries) {
-    if (series.home_team_id === USER_TEAM_ID || series.away_team_id === USER_TEAM_ID) continue;
-    // Simulate until series ends
-    let active = series;
-    while (active.status === 'active') {
-      const nextGame = await prisma.gameSchedule.findFirst({
-        where: { playoff_series_id: active.id, status: 'scheduled' },
-        orderBy: { id: 'asc' },
-      });
-      if (!nextGame) break;
-      const result = await playGame(nextGame, true, true);
-      await updateSeriesAfterGame(nextGame, result);
-      active = await prisma.playoffSeries.findUnique({ where: { id: active.id } });
+  // La liguilla activa un partido a la vez: se repite mientras terminar uno active otro de la CPU.
+  let played = true;
+  while (played) {
+    played = false;
+    const roundSeries = await prisma.playoffSeries.findMany({
+      where: { season_id: seasonId, round: currentRound, status: 'active' },
+      orderBy: { series_order: 'asc' },
+    });
+    for (const series of roundSeries) {
+      if (series.home_team_id === USER_TEAM_ID || series.away_team_id === USER_TEAM_ID) continue;
+      // Simulate until series ends
+      let active = series;
+      while (active.status === 'active') {
+        const nextGame = await prisma.gameSchedule.findFirst({
+          where: { playoff_series_id: active.id, status: 'scheduled' },
+          orderBy: { id: 'asc' },
+        });
+        if (!nextGame) break;
+        const result = await playGame(nextGame, true, true);
+        await updateSeriesAfterGame(nextGame, result);
+        played = true;
+        active = await prisma.playoffSeries.findUnique({ where: { id: active.id } });
+      }
     }
   }
 }
@@ -246,13 +331,16 @@ async function advancePlayoffRound(seasonId) {
     return { advanced: true, champion: true, winnerId: champion.winner_id };
   }
 
+  if (currentRound === GROUP_ROUND) {
+    await createQuarterFinals(seasonId);
+    return { advanced: true, nextRound: 1 };
+  }
+
   const nextRound = currentRound + 1;
   const winsNeeded = nextRound === 3 ? 3 : 2;
 
   if (nextRound === 2) {
-    // Semis: pairs within each division bracket
-    // Round 1 order: [divA_1v3=0, divA_2v4=1, divB_1v3=2, divB_2v4=3]
-    // Round 2: winner of 0 vs winner of 1 (DivA semi), winner of 2 vs winner of 3 (DivB semi)
+    // Semis: una por conferencia. Cuartos 0-1 = Oeste, 2-3 = Este.
     for (let i = 0; i < currentRoundSeries.length; i += 2) {
       const w1 = currentRoundSeries[i].winner_id;
       const w2 = currentRoundSeries[i + 1].winner_id;
@@ -272,7 +360,7 @@ async function advancePlayoffRound(seasonId) {
       await applyPlayoffBonus(w2, 0.08, 10);
     }
   } else if (nextRound === 3) {
-    // Final: DivA champ (series_order 0) vs DivB champ (series_order 1)
+    // Final: campeon del Oeste (series_order 0) vs campeon del Este (series_order 1)
     const divAChamp = currentRoundSeries[0].winner_id;
     const divBChamp = currentRoundSeries[1].winner_id;
     const s = await prisma.playoffSeries.create({
@@ -329,6 +417,7 @@ module.exports = {
   getQualifiedTeamIds,
   generatePlayoffBracket,
   getPlayoffBracket,
+  buildGroupStandings,
   simulatePlayoffGame,
   updateSeriesAfterGame,
   simulateRound,

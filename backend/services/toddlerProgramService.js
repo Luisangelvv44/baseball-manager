@@ -191,7 +191,9 @@ async function buildPickOrder(client, programId) {
   for (const teamId of ranked) {
     for (let i = 0; i < TODDLER_PROGRAM_PICKS_PER_TEAM; i++) pickOrder.push(teamId);
   }
-  return pickOrder;
+  // Un ciclo creado cuando la liga era menor tiene menos toddlers que picks: los ultimos se quedan sin turno.
+  const available = await client.player.count({ where: { toddler_program_id: programId, status: 'toddler_program' } });
+  return pickOrder.slice(0, available);
 }
 
 // Gasta dinero del pool en rondas de mejora hasta quedar en (o por debajo de) la mitad

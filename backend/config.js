@@ -6,7 +6,16 @@ module.exports = {
   ROSTER_CHECK_DAY: 15, // mismo valor que PRE_SEASON_DAYS por diseno: ultimo dia de pre-temporada
   PLAYER_INVESTMENT_DAY: 14, // 2 dias antes del inicio de temporada regular (dia 16 = PRE_SEASON_DAYS + 1)
   GAMES_PER_MATCHUP: 3, // cada enfrentamiento del calendario base se juega esta cantidad de veces (dias consecutivos)
-  GAMES_PER_SEASON: 90, // 30 dias del doble round-robin base x GAMES_PER_MATCHUP
+  GAMES_PER_SEASON: 90, // 30 series (15 x 2 vueltas, solo dentro de la conferencia) x GAMES_PER_MATCHUP
+  // Conferencia de cada division: en temporada regular cada equipo solo juega con los de la suya.
+  DIVISION_CONFERENCES: {
+    'Division Noroeste': 'Oeste',
+    'Division Suroeste': 'Oeste',
+    'Division Noreste': 'Este',
+    'Division Sureste': 'Este',
+  },
+  PLAYOFF_TEAMS_PER_DIVISION: 3, // clasifican a la mini liguilla de su division
+  PLAYOFF_GROUP_ADVANCE: 2, // de cada liguilla pasan estos a cuartos
   MAX_ROSTER_SIZE: 25,
   MAX_MINOR_ROSTER_SIZE: 15,
   AUCTION_DEADLINE_DAY: 60, // mitad de la temporada regular (15 pre-temporada + 45 de 90 dias de juego)
@@ -84,7 +93,7 @@ module.exports = {
 
   // ----- Programa de Toddlers (ver services/toddlerProgramService.js) -----
   TODDLER_PROGRAM_SEASONS: 10, // temporadas que dura un ciclo antes de la eleccion
-  TODDLER_PROGRAM_SIZE: 32, // DEBE ser 16 equipos x TODDLER_PROGRAM_PICKS_PER_TEAM (todos los toddler se reparten)
+  TODDLER_PROGRAM_SIZE: 48, // DEBE ser 24 equipos x TODDLER_PROGRAM_PICKS_PER_TEAM (todos los toddler se reparten)
   TODDLER_PROGRAM_PICKS_PER_TEAM: 2,
   TODDLER_PROGRAM_START_AGE: 8,
   TODDLER_PROGRAM_START_SKILL: -15,
@@ -139,7 +148,7 @@ module.exports = {
   BROADCAST_MAX_CONTRACT_YEARS: 10,
   // Estandares por reputacion: la empresa en la posicion i (por precio base, dentro de su tipo) solo ofrece
   // al top N de reputacion de la liga. Posiciones fuera de la lista usan el ultimo valor.
-  BROADCAST_RANK_TIERS: [3, 3, 6, 6, 10, 10, 10, 16, 16, 16],
+  BROADCAST_RANK_TIERS: [3, 3, 6, 6, 10, 10, 10, 24, 24, 24],
 
   // ----- Rivalidades (ver services/rivalryService.js) -----
   RIVALRY_DIVISION_SEED: 15, // intensidad inicial si comparten division, al crear el primer registro

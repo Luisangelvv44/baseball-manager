@@ -1,13 +1,13 @@
 const prisma = require('../db/prisma');
 const { generateRoster, generatePlayer, POSITIONS } = require('./generators/playerGenerator');
 const { generateTeamNames } = require('./generators/teamGenerator');
+const { TEAM_DIVISIONS } = require('./data/names');
 const { generateStadiumSections } = require('./generators/stadiumGenerator');
 const { generateToddlerCycle } = require('../services/toddlerProgramService');
 const { syncMissingAppearances } = require('../services/playerAppearanceService');
 const { backfillContracts } = require('../services/contractService');
 const { BANK_INITIAL_CAPITAL, BANK_BASE_INTEREST_RATE, BROADCAST_TV_STARTING_MONEY, BROADCAST_RADIO_STARTING_MONEY } = require('../config');
 
-const TEAMS_PER_DIVISION = 8;
 const USER_STARTING_BUDGET = 10000000;
 
 function randomInt(min, max) {
@@ -30,20 +30,22 @@ async function seed() {
 
       // ---------- Divisiones ----------
       console.log('Creando divisiones...');
-      const divNorth = await tx.division.create({ data: { name: 'Division Norte' } });
-      const divSouth = await tx.division.create({ data: { name: 'Division Sur' } });
+      const divisionIdByTeam = {};
+      for (const div of TEAM_DIVISIONS) {
+        const { id } = await tx.division.create({ data: { name: div.name } });
+        for (const teamName of div.teams) divisionIdByTeam[teamName] = id;
+      }
 
       // ---------- Equipos ----------
       console.log('Creando equipos...');
-      const totalTeams = TEAMS_PER_DIVISION * 2;
       const teamNames = generateTeamNames();
 
       const teamIds = [];
 
-      for (let i = 0; i < totalTeams; i++) {
+      for (let i = 0; i < teamNames.length; i++) {
         const isUser = i === 0;
-        const divisionId = i < TEAMS_PER_DIVISION ? divNorth.id : divSouth.id;
         const name = teamNames[i];
+        const divisionId = divisionIdByTeam[name]; // la division depende de la ciudad (mapa), no del orden
         const budget = isUser ? USER_STARTING_BUDGET : randomInt(8000000, 20000000);
         const reputation = isUser ? 50 : randomInt(40, 60);
 
