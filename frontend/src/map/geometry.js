@@ -1,7 +1,7 @@
 // Geografia ficticia de la liga: una isla grande con forma inspirada en la Republica Dominicana (no
-// exacta, y a una escala mucho mayor para que los viajes sean en avion). Algunas ciudades tienen un
-// sitio fijo (ANCHORS); las demas se colocan a partir de un hash de su nombre (deterministico: la
-// misma ciudad cae siempre en el mismo sitio).
+// exacta, y a una escala mucho mayor para que los viajes sean en avion). Cada ciudad de la liga tiene
+// un sitio fijo (ANCHORS), acorde a su division y a lo que sugiere su nombre; una ciudad desconocida
+// se coloca a partir de un hash de su nombre (deterministico: cae siempre en el mismo sitio).
 import { clamp, mulberry32 } from '../stadium/geometry.js';
 import { hueFromName } from '../utils/teamColor.js';
 
@@ -90,6 +90,8 @@ function distToCoast(x, y) {
 
 const onLand = (x, y, margin) => insideIsland(x, y) && distToCoast(x, y) >= margin;
 
+const COAST_OFFSET = 24; // las ciudades costeras quedan a esta distancia del mar
+
 // y de la costa norte en la columna x (primer punto de tierra bajando desde arriba)
 function northCoastY(x) {
   for (let y = ISLAND_BOX.y - 40; y < ISLAND_BOX.y + ISLAND_BOX.h; y += 1) {
@@ -98,21 +100,55 @@ function northCoastY(x) {
   return WORLD.cy;
 }
 
-// Ciudades con sitio fijo: Brisko y Hallowmere en la costa norte, vecinas; Thalgrove tierra adentro,
-// cerca de ambas.
+// x de la costa oeste en la fila y (primer punto de tierra entrando desde el oeste)
+function westCoastX(y) {
+  for (let x = ISLAND_BOX.x - 40; x < ISLAND_BOX.x + ISLAND_BOX.w; x += 1) {
+    if (insideIsland(x, y)) return x;
+  }
+  return WORLD.cx;
+}
+
+const at = (u, v) => () => toWorld([u, v]);
+const onNorthCoast = (u) => () => {
+  const { x } = toWorld([u, 0]);
+  return { x, y: northCoastY(x) + COAST_OFFSET };
+};
+const onWestCoast = (v) => () => {
+  const { y } = toWorld([0, v]);
+  return { x: westCoastX(y) + COAST_OFFSET, y };
+};
+
+// Sitio de cada ciudad de la liga, por division. Los cuadrantes de la isla son las divisiones: la
+// frontera este-oeste va por u = 0.44 y la norte-sur por v = 0.54.
 const ANCHORS = {
-  brisko: () => {
-    const x = ISLAND_BOX.x + 0.3 * ISLAND_BOX.w;
-    return { x, y: northCoastY(x) + 24 };
-  },
-  hallowmere: () => {
-    const x = ISLAND_BOX.x + 0.41 * ISLAND_BOX.w;
-    return { x, y: northCoastY(x) + 24 };
-  },
-  thalgrove: () => {
-    const x = ISLAND_BOX.x + 0.36 * ISLAND_BOX.w;
-    return { x, y: northCoastY(x) + 175 };
-  },
+  // Noroeste. Brisko, Thalgrove y Hallowmere en fila sobre la costa oeste, tipo California.
+  brisko: onWestCoast(0.16),
+  thalgrove: onWestCoast(0.32),
+  hallowmere: onWestCoast(0.48),
+  norhaven: onNorthCoast(0.24), // puerto de la costa norte
+  ravenholt: at(0.2, 0.3), // bosques del interior
+  crownridge: at(0.33, 0.43), // crestas de la cordillera central
+  // Suroeste
+  westvane: at(0.11, 0.6), // extremo oeste, tierra adentro
+  sundermere: at(0.19, 0.69), // junto a los lagos del sur
+  calderex: at(0.2, 0.83), // la caldera, en los montes de la peninsula
+  highcairn: at(0.26, 0.56), // estribaciones sur de la cordillera
+  'port sorrel': at(0.325, 0.665), // orilla de la bahia del sur
+  southpoint: at(0.15, 0.945), // punta de la peninsula
+  // Noreste
+  'tern harbor': onNorthCoast(0.54), // puerto de la costa norte
+  druvask: at(0.62, 0.24),
+  esterfall: at(0.5, 0.36), // cascadas al pie de la cordillera
+  'ostrava bay': at(0.665, 0.365), // fondo de la bahia del noreste
+  'cape varnholt': at(0.825, 0.265), // cabo de la peninsula del noreste
+  eastgate: at(0.8, 0.46), // puerta del este
+  // Sureste
+  pellanor: at(0.5, 0.6), // llanuras centrales
+  drommel: at(0.58, 0.68),
+  veltmoor: at(0.66, 0.6), // paramos del interior
+  dunmarsh: at(0.74, 0.67), // marismas de la costa sur
+  adalveer: at(0.82, 0.6),
+  'cape orrin': at(0.93, 0.58), // cabo del extremo este
 };
 
 // Montes (cordillera central), lagos y bosques decorativos, fijos para todas las partidas
@@ -136,8 +172,8 @@ export function scenery() {
   return items;
 }
 
-// [{ id, city }] -> Map(id -> { x, y }). Las ciudades de ANCHORS van fijas; el resto sale de un hash
-// del nombre (dentro de la isla) y luego unas pasadas de separacion para que nada quede encimado.
+// [{ id, city }] -> Map(id -> { x, y }). Las ciudades de ANCHORS van fijas; cualquier otra sale de un
+// hash del nombre (dentro de la isla) y luego unas pasadas de separacion para que nada quede encimado.
 export function layoutCities(teams) {
   const center = toWorld([0.45, 0.45]);
   const pts = [...teams]

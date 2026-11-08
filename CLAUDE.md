@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 npm run dev      # Start Express server on port 4000 (uses nodemon)
 npm run start    # Production start
-npm run seed     # Seed DB: 16 teams, stadiums, free agents, season
+npm run seed     # Seed DB: 24 teams, stadiums, free agents, season
 ```
 
 ### Frontend (run from `frontend/`)
@@ -94,7 +94,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 |---|---|
 | `gameSimulator.js` | Full game engine: 9+ innings, up to 15 max, lineup cycling |
 | `atBatSimulator.js` | At-bat outcomes weighted by batter vs. pitcher skill |
-| `scheduleGenerator.js` | Double round-robin for 16 teams (30 days, 240 games) using circle rotation |
+| `scheduleGenerator.js` | Conference-only schedule (`DIVISION_CONFERENCES`, Oeste/Este, 12 teams each): 15 rounds per leg (11 of the round-robin + 4 against the own division), two legs with home/away flipped, 3 games per series = 90 games per team |
 | `auctionService.js` | Free agent auctions; CPU teams bid with randomized aggressiveness (0.05–0.25) |
 | `economy.js` | Home game revenue: demand (4–14% of fan_base regular season, 14–25% playoffs) split across grandstands by capacity × ring premium (`TICKET_RING_PREMIUM`, ring 1 = next to the field, via `ringOf()` in `stadiumGenerator.js`), each scaled by `priceDemandFactor(price, sectionFairPrice)` (team fair price = `TICKET_FAIR_PRICE_*` + reputation (linear to 100, sqrt above) + facility `fair_price_per_level`, × ring premium; up to +30% below it, exponential drop above it) and capped at section capacity, overflow buyers spilling to sections with room, × that section's ticket price + merch (1–5% of fan_base × $20–50/fan) − operating cost (per attendee, $0.5 → $10 on an accelerated curve that caps at 1M attendance; `STADIUM_MAINTENANCE_*` in `config.js`); away games earn merch only. Optional `facilityBonuses` arg (user team) adds attendance rate, scales merch and adds facility upkeep |
 | `lineup.js` | Converts DB roster to ordered lineup array |
@@ -111,7 +111,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `draftService.js` | Draft pool generation (prospects + market rookies/young free agents), CPU auto-picks, and user pick handling |
 | `tradeService.js` | Trade offer evaluation/valuation (skill + upside − salary − age risk) and CPU accept/reject logic, deadline-aware |
 | `luxuryTaxService.js` | Progressive luxury tax on payroll above the league 75th-percentile threshold, with an inefficiency surcharge based on cost-per-skill vs. league median |
-| `playoffService.js` | Builds the playoff bracket (top 4 per division), tracks/updates each team's "desperation index", simulates series/rounds |
+| `playoffService.js` | Playoffs: top 3 per division play a 6-game mini round robin (`round` 0, one 1-game `PlayoffSeries` per game, played in `GROUP_GAME_ORDER`); the top 2 of each go to quarters (cross-division within the conference), then semis and the Oeste vs Este final. Tracks each team's "desperation index" |
 | `broadcastService.js` | TV/radio broadcast price war (`BROADCAST_*` in `config.js`). Companies hold `money` (TV $1B, radio $500M) and earn per game `fan_base × ($2–$10 mixed by reputation rank + random)` per contracted team (radio ½, `creditBroadcastEarnings` from `gamePlay`). Opening offers at season start, gated by reputation rank tiers (most expensive companies only offer to the top 3); days 1–10 outbid companies raise their price/fan/game up to 10% of expected earnings, total ≤ 40% of their money. User signs any offer instantly; CPU teams sign the best affordable one on day 10. 1 TV + 1 radio contract per team, up to 10 years, total paid in equal annual parts (company → team) |
 | `derbyService.js` | Home Run Derby: swing-by-swing HR probability from batter skill, CPU entrant selection, bracket/tiebreak simulation |
 | `contractService.js` | `Contract` table (current + historical). Mirrors `Player.salary`/`contract_years_remaining`/`rookie_contract` — every signing/renewal/trade/release/expiry/retirement calls it. Achievement bonus = 0–3% of annual by `demand_factor` (CPU capped at 1%), paid on no-hitters/perfect games/cycles/multi-HR/season awards with a per-season cap (`ACHIEVEMENT_BONUS_*` in `config.js`). `backfillContracts()` (behind `npm run contracts:backfill`) reconstructs past contracts from `PlayerSeasonRecord`. The player CV (`getPlayerCareerHistory`) shows every contracted season, with zeros when he didn't play |
@@ -128,7 +128,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 - **`App.jsx`** — React Router v6 route definitions; 22 top-level routes plus `/game/:id` and `/derby/:id`
 - **`api.js`** — Thin fetch wrapper used by all pages (no axios/react-query); one flat `api` object grouped by feature (teams, players, stadium, season, games, finances, scouts, lineup, auctions, playoffs, coaches, draft, news, history, broadcast, trades, derby)
 - **`pages/`** — 23 files: `NewGame`, `Dashboard`, `Roster`, `Rookie`, `Market`, `Stars`, `Trades`, `Stadium`, `Scouts`, `Finances`, `TeamsOverview`, `Schedule`, `Lineup`, `Broadcast`, `Playoffs`, `Coaches`, `Draft`, `News`, `History`, `GameView`, `Derby`, `DerbyView`, and `AllTimePlayers` (rendered as a tab inside `History`, not its own route)
-- **`map/`** — PixiJS 7 league map (`geometry.js` hashes each city name to a spot on a fixed fictional continent, `MapScene.js`, `LeagueMap.jsx` for the `/map` page, `TravelOverlay.jsx`). After "Avanzar Día" lands on a user game, `advanceDayFlow.js` navigates with `state.travel` and `GameView` shows the overlay (flight from the current city, or "Play Ball" if already there) before `GameIntro`
+- **`map/`** — PixiJS 7 league map (`geometry.js` pins each league city in `ANCHORS` by division and name, unknown cities hash to a spot, on a fixed fictional continent, `MapScene.js`, `LeagueMap.jsx` for the `/map` page, `TravelOverlay.jsx`). After "Avanzar Día" lands on a user game, `advanceDayFlow.js` navigates with `state.travel` and `GameView` shows the overlay (flight from the current city, or "Play Ball" if already there) before `GameIntro`
 - **`stadium/`** — PixiJS 7 top-down stadium view (`geometry.js`, `builders.js`, `StadiumScene.js`, `StadiumView.jsx`), lazy-loaded as the "Vista" tab of `Stadium`; every grid section is drawn as a wedge of a bowl around the field (one ring per floor, `layoutSections()` in `geometry.js`) with its own level look; facilities drawn from their levels
 - **`components/`** — Shared UI: `Navbar`, `Leaderboard`, `StadiumGrid`, `SectionModal`, `Pagination`, `TeamBadge`, `SkillTierBadge`, `FavoriteButton`
 

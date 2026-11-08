@@ -248,7 +248,7 @@ export default function Broadcast() {
                       </div>
                       <div className="flex items-center justify-between gap-2 text-xs text-gray-500 mt-0.5">
                         <span>
-                          Base {perFan(c.price_per_fan)}/fan · {c.rank_limit >= 16 ? 'Todos los equipos' : `Solo top ${c.rank_limit} en reputación`}
+                          Base {perFan(c.price_per_fan)}/fan · {c.rank_limit >= 24 ? 'Todos los equipos' : `Solo top ${c.rank_limit} en reputación`}
                         </span>
                         <span className="text-green-700">+{formatCompactMoney(Number(c.season_earnings))} esta temporada</span>
                       </div>

@@ -21,6 +21,14 @@ const TEAMS = {
   "thalgrove-miners": { fill: "#3d2b1f", accent: "#c9a24b", region: "THALGROVE", mascot: "MINERS" },
   "veltmoor-sentinels": { fill: "#1a1a1a", accent: "#c0c0c0", region: "VELTMOOR", mascot: "SENTINELS" },
   "westvane-rebels": { fill: "#3a1414", accent: "#c74b4b", region: "WESTVANE", mascot: "REBELS" },
+  "southpoint-anglers": { fill: "#0d3b4f", accent: "#7fd4c1", region: "SOUTHPOINT", mascot: "ANGLERS" },
+  "port-sorrel-mariners": { fill: "#14305c", accent: "#e8e0c9", region: "PORT SORREL", mascot: "MARINERS" },
+  "highcairn-rams": { fill: "#33373b", accent: "#d4b483", region: "HIGHCAIRN", mascot: "RAMS" },
+  "tern-harbor-gulls": { fill: "#1b4a6b", accent: "#f0f0f0", region: "TERN HARBOR", mascot: "GULLS" },
+  "cape-varnholt-lancers": { fill: "#3f1d4d", accent: "#e6b422", region: "CAPE VARNHOLT", mascot: "LANCERS" },
+  "eastgate-stallions": { fill: "#4a1d0f", accent: "#f0a35e", region: "EASTGATE", mascot: "STALLIONS" },
+  "dunmarsh-herons": { fill: "#21402d", accent: "#a8d8b9", region: "DUNMARSH", mascot: "HERONS" },
+  "cape-orrin-tritons": { fill: "#0b4f4a", accent: "#ffcf5c", region: "CAPE ORRIN", mascot: "TRITONS" },
   // Uniforme neutro blanco/MLB: agentes libres, o cuando no se conoce ningun equipo.
   "free-agent": { fill: "#f4f4f2", accent: "#1c2733", region: "FREE", mascot: "AGENT" },
 };

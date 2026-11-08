@@ -59,6 +59,68 @@ function SeriesCard({ series, onPlay, disabled }) {
   );
 }
 
+const GROUP_NAME = (division) => (division ?? 'Division').replace(/^Division\s+/, '');
+
+function GroupGame({ series, onPlay, disabled }) {
+  const game = series.games[0];
+  const finished = game?.status === 'finished';
+  return (
+    <li className="flex items-center justify-between gap-2 py-1 text-xs">
+      <span className="truncate">
+        <TeamBadge name={series.home_team.name} /> <span className="text-gray-400">vs</span>{' '}
+        <TeamBadge name={series.away_team.name} />
+      </span>
+      {finished ? (
+        <span className="font-bold text-gray-700 shrink-0">{game.home_score}-{game.away_score}</span>
+      ) : game?.is_user_game ? (
+        <button
+          onClick={() => onPlay(game.id)}
+          disabled={disabled}
+          className="bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-700 disabled:opacity-50 shrink-0"
+        >
+          Jugar
+        </button>
+      ) : (
+        <span className="text-gray-300 shrink-0">—</span>
+      )}
+    </li>
+  );
+}
+
+// Mini liguilla de una division: tabla (los 2 primeros pasan a cuartos) y sus 6 partidos
+function GroupCard({ group, onPlay, disabled }) {
+  return (
+    <div className="border rounded-lg p-3 bg-white shadow-sm min-w-0">
+      <h3 className="font-bold text-sm text-gray-700 border-b pb-1 mb-2">{GROUP_NAME(group.division)}</h3>
+      <table className="w-full text-xs mb-2">
+        <thead>
+          <tr className="text-gray-400">
+            <th className="text-left font-normal">Equipo</th>
+            <th className="font-normal w-6">G</th>
+            <th className="font-normal w-6">P</th>
+            <th className="font-normal w-8">DC</th>
+          </tr>
+        </thead>
+        <tbody>
+          {group.teams.map((t, i) => (
+            <tr key={t.team_id} className={i < 2 ? 'font-semibold' : 'text-gray-500'}>
+              <td className="truncate max-w-0 w-full"><TeamBadge name={t.name} /></td>
+              <td className="text-center">{t.wins}</td>
+              <td className="text-center">{t.losses}</td>
+              <td className="text-center">{t.run_diff > 0 ? `+${t.run_diff}` : t.run_diff}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <ul className="divide-y">
+        {group.series.map((s) => (
+          <GroupGame key={s.id} series={s} onPlay={onPlay} disabled={disabled} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function RoundColumn({ round, series, onPlay, disabled }) {
   return (
     <div className="flex flex-col gap-3 min-w-[200px]">
@@ -77,6 +139,7 @@ function RoundColumn({ round, series, onPlay, disabled }) {
 export default function Playoffs() {
   const { refreshTeam, refreshAlerts } = useTeam();
   const [series, setSeries] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [seasonStatus, setSeasonStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -87,6 +150,7 @@ export default function Playoffs() {
     try {
       const [data, marketData] = await Promise.all([api.getPlayoffs(), api.getPlayoffMarket()]);
       setSeries(data.series ?? []);
+      setGroups(data.groups ?? []);
       setSeasonStatus(data.season_status);
       setMarket(marketData.market);
     } catch (err) {
@@ -187,6 +251,17 @@ export default function Playoffs() {
           <p className="text-3xl mb-1">🏆</p>
           <TeamBadge name={champion.name} size="md" className="text-xl font-bold text-yellow-800 justify-center" />
           <p className="text-yellow-700 text-sm mt-1">¡Campeón de la temporada!</p>
+        </div>
+      )}
+
+      {groups.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4">
+          <h3 className="font-bold text-gray-700 text-sm mb-3">Mini round robin por división</h3>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {groups.map((g) => (
+              <GroupCard key={g.index} group={g} onPlay={(id) => navigate(`/game/${id}`)} disabled={loading} />
+            ))}
+          </div>
         </div>
       )}
 

@@ -151,15 +151,20 @@ const LAST_NAMES = [
 // "Pais ficticio": equipos no en espanol, ciudades inventadas.
 // Cada nombre tiene un logo SVG correspondiente en frontend/src/assets/logos/
 // (kebab-case del nombre, ej. "Ostrava Bay Comets" -> ostrava-bay-comets.svg).
-const TEAM_NAMES = [
-  'Brisko Wolves', 'Adalveer Outlaws', 'Norhaven Sailors', 'Calderex Voyagers',
-  'Veltmoor Sentinels', 'Ostrava Bay Comets', 'Sundermere Crushers', 'Ravenholt Hawks',
-  'Thalgrove Miners', 'Esterfall Marauders', 'Drommel Raptors', 'Hallowmere Foxes',
-  'Westvane Rebels', 'Crownridge Pioneers', 'Pellanor Giants', 'Druvask Knights',
+// Liga: 4 divisiones de 6 equipos, en orden Noroeste, Suroeste, Noreste, Sureste. El orden importa:
+// los cuartos cruzan divisiones vecinas y la final enfrenta a la conferencia Oeste con la Este.
+const TEAM_DIVISIONS = [
+  { name: 'Division Noroeste', teams: ['Brisko Wolves', 'Thalgrove Miners', 'Hallowmere Foxes', 'Norhaven Sailors', 'Ravenholt Hawks', 'Crownridge Pioneers'] },
+  { name: 'Division Suroeste', teams: ['Westvane Rebels', 'Sundermere Crushers', 'Calderex Voyagers', 'Southpoint Anglers', 'Port Sorrel Mariners', 'Highcairn Rams'] },
+  { name: 'Division Noreste', teams: ['Ostrava Bay Comets', 'Esterfall Marauders', 'Druvask Knights', 'Tern Harbor Gulls', 'Cape Varnholt Lancers', 'Eastgate Stallions'] },
+  { name: 'Division Sureste', teams: ['Pellanor Giants', 'Veltmoor Sentinels', 'Drommel Raptors', 'Adalveer Outlaws', 'Dunmarsh Herons', 'Cape Orrin Tritons'] },
 ];
+
+const TEAM_NAMES = TEAM_DIVISIONS.flatMap((d) => d.teams);
 
 module.exports = {
   FIRST_NAMES,
   LAST_NAMES,
   TEAM_NAMES,
+  TEAM_DIVISIONS,
 };

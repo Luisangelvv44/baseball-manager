@@ -27,7 +27,7 @@ export default function NewGame() {
     <div className="max-w-xl mx-auto bg-white rounded-lg shadow p-6 text-center space-y-4">
       <h2 className="text-2xl font-bold">Nueva Partida</h2>
       <p className="text-gray-600">
-        Se crearan 2 divisiones de 8 equipos cada una (16 equipos en total). Los otros 15 equipos
+        Se crearan 4 divisiones de 6 equipos cada una (24 equipos en total). Los otros 23 equipos
         tendran sus propios rosters y finanzas. Tu equipo arrancara desde cero: $10,000,000,
         sin jugadores ni scouts, y con un estadio inicial de 1 grada a cada lado del campo.
       </p>

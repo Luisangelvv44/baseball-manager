@@ -73,7 +73,7 @@ router.post('/start', async (req, res) => {
 
     const teams = await prisma.team.findMany({
       orderBy: { id: 'asc' },
-      select: { id: true, division_id: true },
+      select: { id: true, division_id: true, division: { select: { name: true } } },
     });
 
     const games = generateSchedule(teams);

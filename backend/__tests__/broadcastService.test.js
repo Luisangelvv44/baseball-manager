@@ -70,8 +70,8 @@ describe('pure helpers', () => {
   it('rank tiers: the two most expensive companies only reach the top 3', () => {
     expect(rankLimitFor(0)).toBe(3);
     expect(rankLimitFor(1)).toBe(3);
-    expect(rankLimitFor(9)).toBe(16);
-    expect(rankLimitFor(50)).toBe(16);
+    expect(rankLimitFor(9)).toBe(24);
+    expect(rankLimitFor(50)).toBe(24);
   });
 });
 
