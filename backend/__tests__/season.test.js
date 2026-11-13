@@ -32,6 +32,10 @@ jest.mock('../services/playoffMarketService', () => ({
   runPlayoffMarketDay: jest.fn().mockResolvedValue({ closed: false, signed: 0, daysLeft: 4 }),
   returnPlayoffLoans: jest.fn().mockResolvedValue(0),
 }));
+jest.mock('../services/pressConferenceService', () => ({
+  maybeCreateAfterGroupStage: jest.fn().mockResolvedValue(null),
+  settlePressSeason: jest.fn().mockResolvedValue({ audience: 50, bonuses: [] }),
+}));
 jest.mock('../services/retiredPlayer', () => ({ retireOldPlayers: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../services/legacyService', () => ({ runHallOfFameSeason: jest.fn().mockResolvedValue({ votes: [], registered: [] }) }));
 jest.mock('../services/playerService', () => ({

@@ -13,12 +13,16 @@ jest.mock('../services/playoffService', () => ({
 jest.mock('../services/rivalryService', () => ({
   getRivalryIntensity: jest.fn().mockResolvedValue(0),
 }));
+jest.mock('../services/pressConferenceService', () => ({
+  maybeCreateAfterUserGame: jest.fn().mockResolvedValue(null),
+}));
 
 const prisma = require('../db/prisma');
 const { playGame } = require('../services/gamePlay');
 const { getLineup } = require('../services/lineup');
 const { computeHomeGameRevenue, computeAwayGameRevenue } = require('../services/economy');
 const { getRivalryIntensity } = require('../services/rivalryService');
+const { maybeCreateAfterUserGame } = require('../services/pressConferenceService');
 const { mockGame, mockFinishedGame, mockTeam, mockCpuTeam, mockGameEvent, mockSeason } = require('./mockData');
 
 const app = require('../index');
@@ -103,6 +107,42 @@ describe('POST /api/games/:id/simulate', () => {
     expect(res.body.awayScore).toBe(3);
     expect(res.body.isUserHome).toBe(true);
     expect(res.body.economy).toBeDefined();
+    expect(maybeCreateAfterUserGame).toHaveBeenCalledWith(mockGame);
+    expect(res.body.pressConferenceId).toBeNull();
+  });
+
+  it('returns the press conference id when the game closes a press series', async () => {
+    prisma.gameSchedule.findUnique.mockResolvedValue(mockGame);
+    playGame.mockResolvedValue({ homeScore: 2, awayScore: 1, events: [], homeTeam: mockTeam, awayTeam: mockCpuTeam });
+    prisma.team.findUnique.mockResolvedValue(mockTeam);
+    prisma.stadiumSection.findMany.mockResolvedValue([]);
+    prisma.gameSchedule.findMany.mockResolvedValue([]);
+    computeHomeGameRevenue.mockReturnValue({ ticketRevenue: 0, merchRevenue: 0, operatingCost: 0, attendance: 0, total: 0 });
+    prisma.team.update.mockResolvedValue(mockTeam);
+    prisma.season.findFirst.mockResolvedValue(mockSeason);
+    maybeCreateAfterUserGame.mockResolvedValueOnce({ id: 42 });
+
+    const res = await request(app).post('/api/games/100/simulate');
+    expect(res.status).toBe(200);
+    expect(res.body.pressConferenceId).toBe(42);
+  });
+
+  it('still returns the game when the press conference fails', async () => {
+    prisma.gameSchedule.findUnique.mockResolvedValue(mockGame);
+    playGame.mockResolvedValue({ homeScore: 2, awayScore: 1, events: [], homeTeam: mockTeam, awayTeam: mockCpuTeam });
+    prisma.team.findUnique.mockResolvedValue(mockTeam);
+    prisma.stadiumSection.findMany.mockResolvedValue([]);
+    prisma.gameSchedule.findMany.mockResolvedValue([]);
+    computeHomeGameRevenue.mockReturnValue({ ticketRevenue: 0, merchRevenue: 0, operatingCost: 0, attendance: 0, total: 0 });
+    prisma.team.update.mockResolvedValue(mockTeam);
+    prisma.season.findFirst.mockResolvedValue(mockSeason);
+    maybeCreateAfterUserGame.mockRejectedValueOnce(new Error('boom'));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const res = await request(app).post('/api/games/100/simulate');
+    expect(res.status).toBe(200);
+    expect(res.body.pressConferenceId).toBeNull();
+    console.error.mockRestore();
   });
 
   it('returns 400 when roster is incomplete', async () => {

@@ -395,6 +395,7 @@ export default function GameView() {
   const [awayLineup, setAwayLineup] = useState(null);
   const [score, setScore] = useState({ home: 0, away: 0 });
   const [economy, setEconomy] = useState(null);
+  const [pressConferenceId, setPressConferenceId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showIntro, setShowIntro] = useState(false);
@@ -421,6 +422,7 @@ export default function GameView() {
       setHomeLineup(info.homeLineup);
       setAwayLineup(info.awayLineup);
       setEconomy(null);
+      setPressConferenceId(null);
 
       if (info.game.status === 'finished') {
         setShowIntro(false);
@@ -465,6 +467,7 @@ export default function GameView() {
       setAwayLineup(result.awayLineup);
       setEvents(result.events);
       setEconomy({ ...result.economy, isUserHome: result.isUserHome });
+      setPressConferenceId(result.pressConferenceId ?? null);
       setVisibleEvents([]);
       setScore({ home: 0, away: 0 });
       setLoading(false);
@@ -644,6 +647,14 @@ export default function GameView() {
           >
             ← Volver al Dashboard
           </button>
+          {pressConferenceId && (
+            <button
+              onClick={() => navigate('/press')}
+              className="bg-amber-600 text-white px-6 py-2 rounded font-semibold hover:bg-amber-700"
+            >
+              🎤 Rueda de prensa
+            </button>
+          )}
           <button
             onClick={handleAdvanceDay}
             disabled={loading}

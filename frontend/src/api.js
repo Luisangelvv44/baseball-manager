@@ -158,6 +158,13 @@ export const api = {
   getBroadcastContracts: () => request('/broadcast/contracts'),
   getBroadcastCompanies: () => request('/broadcast/companies'),
 
+  // Sala de prensa
+  getPress: () => request('/press'),
+  getPressConference: (id) => request(`/press/${id}`),
+  answerPress: (id, answers) =>
+    request(`/press/${id}/answer`, { method: 'POST', body: JSON.stringify({ answers }) }),
+  skipPress: (id) => request(`/press/${id}/skip`, { method: 'POST' }),
+
   // Traspasos
   getSentTrades: () => request('/trades/sent'),
   getReceivedTrades: () => request('/trades/received'),

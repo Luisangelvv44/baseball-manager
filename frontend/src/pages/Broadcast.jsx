@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useTeam } from '../context/TeamContext.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
@@ -25,6 +26,7 @@ export default function Broadcast() {
   const [offers, setOffers] = useState([]);
   const [windowEndDay, setWindowEndDay] = useState(10);
   const [companies, setCompanies] = useState([]);
+  const [press, setPress] = useState(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -42,6 +44,7 @@ export default function Broadcast() {
       setOffers(o.offers);
       setWindowEndDay(o.windowEndDay);
       setCompanies(comp);
+      api.getPress().then(setPress).catch(() => setPress(null));
     } catch (e) {
       setError('Error al cargar los datos de transmisión.');
     } finally {
@@ -78,6 +81,7 @@ export default function Broadcast() {
   const inNegotiationWindow = season && season.status === 'active' && season.current_day <= windowEndDay;
   const daysLeft = season ? Math.max(0, windowEndDay - season.current_day + 1) : 0;
   const contractByType = Object.fromEntries(contracts.map((c) => [c.company.type, c]));
+  const pressInfo = (companyId) => press?.broadcasters.find((b) => b.company.id === companyId) ?? null;
 
   if (loading) {
     return <div className="p-6 text-gray-500">Cargando...</div>;
@@ -96,7 +100,14 @@ export default function Broadcast() {
 
       {/* Contratos activos: uno de TV y uno de radio */}
       <section>
-        <h2 className="text-lg font-semibold text-gray-700 mb-3">Tus contratos</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h2 className="text-lg font-semibold text-gray-700">Tus contratos</h2>
+          {press && (
+            <Link to="/press" className="text-sm text-gray-600 hover:underline">
+              🎤 Audiencia de las ruedas de prensa: <span className="font-semibold">{press.audience}/100</span>
+            </Link>
+          )}
+        </div>
         <div className="grid md:grid-cols-2 gap-4">
           {TYPES.map(({ key, label }) => {
             const contract = contractByType[key];
@@ -133,6 +144,21 @@ export default function Broadcast() {
                     <p className="font-semibold">{contract.total_value != null ? money(contract.total_value) : '—'}</p>
                   </div>
                 </div>
+                {pressInfo(contract.company.id) && (
+                  <div className="mt-3 pt-3 border-t text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Satisfacción con tu club</span>
+                      <span className="font-semibold">{pressInfo(contract.company.id).satisfaction}/100</span>
+                    </div>
+                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden mt-1">
+                      <div className="h-full bg-amber-500" style={{ width: `${pressInfo(contract.company.id).satisfaction}%` }} />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Bono de audiencia estimado: {money(pressInfo(contract.company.id).estimated_bonus)}. Al renovar, una
+                      satisfacción alta mejora el precio (y suma un año desde 75); por debajo de 20 no te ofrecerá contrato.
+                    </p>
+                  </div>
+                )}
               </div>
             );
           })}

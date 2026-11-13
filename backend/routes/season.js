@@ -44,6 +44,7 @@ const {
 } = require('../services/contractService');
 const { applySeasonDecay } = require('../services/rivalryService');
 const { getSeasonEdition } = require('../services/seasonEdition');
+const { maybeCreateAfterGroupStage, settlePressSeason } = require('../services/pressConferenceService');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
@@ -166,6 +167,10 @@ async function endOfSeasonCleanup(season) {
   // Los refuerzos de playoffs vuelven a su equipo antes de todo lo que lee Player.team_id
   // (contratos, recortes CPU, impuesto al lujo, dorsales)
   await returnPlayoffLoans(season);
+
+  // Ruedas de prensa: cierra las pendientes y paga el bono de audiencia antes de que se
+  // descuenten los años de los contratos de transmision
+  await settlePressSeason(season);
 
   // Save season record before standings are reset
   const allTeams = await prisma.team.findMany({
@@ -390,6 +395,12 @@ router.post('/advance-day', async (req, res) => {
       const playoffAdvance = await advancePlayoffRound(season.id);
       const isSeasonOver = playoffAdvance.champion === true;
 
+      // Al cerrar la liguilla, rueda de prensa de "clasificado" o "eliminado" si el usuario la jugo
+      let pressConferenceId = null;
+      if (playoffAdvance.nextRound === 1) {
+        pressConferenceId = (await maybeCreateAfterGroupStage(season.id))?.id ?? null;
+      }
+
       let expiredContracts = 0;
       if (isSeasonOver) {
         expiredContracts = await endOfSeasonCleanup(season);
@@ -414,6 +425,7 @@ router.post('/advance-day', async (req, res) => {
         inPlayoffs: true,
         expiredContracts,
         userGameId: nextUserGameId,
+        pressConferenceId,
       });
     }
 

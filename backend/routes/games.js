@@ -3,6 +3,7 @@ const router = express.Router();
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID } = require('../config');
 const { playGame } = require('../services/gamePlay');
+const { maybeCreateAfterUserGame } = require('../services/pressConferenceService');
 const { getLineup } = require('../services/lineup');
 const { computeHomeGameRevenue, computeAwayGameRevenue } = require('../services/economy');
 const { getFacilityBonuses } = require('../services/stadiumFacilityService');
@@ -210,6 +211,18 @@ router.post('/:id/simulate', async (req, res) => {
       await updateSeriesAfterGame(game, result);
     }
 
+    // Rueda de prensa: cada PRESS_SERIES_INTERVAL series o al cerrar una serie de playoffs.
+    // Un fallo aqui no debe tumbar la respuesta del partido, que ya esta guardado.
+    let pressConferenceId = null;
+    if (game.is_user_game) {
+      try {
+        const conference = await maybeCreateAfterUserGame(game);
+        pressConferenceId = conference?.id ?? null;
+      } catch (err) {
+        console.error('Error al crear la rueda de prensa', err);
+      }
+    }
+
     // Simular el resto de la jornada para que los marcadores de los demas equipos
     // esten listos al volver al Dashboard, sin tener que avanzar el dia primero.
     let othersSimulated = 0;
@@ -233,6 +246,7 @@ router.post('/:id/simulate', async (req, res) => {
       isUserHome,
       economy,
       isPlayoff,
+      pressConferenceId,
     });
   } catch (err) {
     console.error(err);

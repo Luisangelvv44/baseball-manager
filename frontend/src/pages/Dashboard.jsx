@@ -205,6 +205,7 @@ export default function Dashboard() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [leaders, setLeaders] = useState(null);
+  const [pressPending, setPressPending] = useState(null);
   const [collapsed, toggleSection] = useCollapsedSections();
   const navigate = useNavigate();
 
@@ -225,6 +226,11 @@ export default function Dashboard() {
       setLeaders(await api.getLeagueLeaders());
     } catch {
       // stats opcionales, no bloquear el resto del Dashboard
+    }
+    try {
+      setPressPending((await api.getPress()).pending);
+    } catch {
+      // sala de prensa opcional, no bloquear el resto del Dashboard
     }
   }
 
@@ -281,6 +287,19 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {pressPending && (
+        <button
+          type="button"
+          onClick={() => navigate('/press')}
+          className="w-full flex items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-left hover:bg-amber-100"
+        >
+          <span className="text-sm text-amber-900">
+            🎤 <span className="font-semibold">Tienes una rueda de prensa pendiente</span>
+            {pressPending.host ? ` con ${pressPending.host.name}` : ''}. Si juegas tu próximo partido sin presentarte, bajará la audiencia.
+          </span>
+          <span className="text-sm font-semibold text-amber-700 shrink-0">Ir a la sala →</span>
+        </button>
+      )}
       {/* Cabecera del equipo */}
       <div className="rounded-xl shadow-lg bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 text-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">

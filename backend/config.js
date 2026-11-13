@@ -151,6 +151,28 @@ module.exports = {
   // al top N de reputacion de la liga. Posiciones fuera de la lista usan el ultimo valor.
   BROADCAST_RANK_TIERS: [3, 3, 6, 6, 10, 10, 10, 24, 24, 24],
 
+  // ----- Ruedas de prensa (ver services/pressConferenceService.js y pressTemplates.js) -----
+  // Una cada N series de temporada regular (al cerrar la ultima), y al cerrar cada serie de
+  // playoffs del usuario. Opcionales: no comparecer resta audiencia.
+  PRESS_SERIES_INTERVAL: 3,
+  PRESS_QUESTIONS_PER_CONFERENCE: 3,
+  PRESS_SKIP_AUDIENCE_PENALTY: 4,
+  PRESS_SKIP_SATISFACTION_PENALTY: 2,
+  PRESS_AUDIENCE_MIN: 0,
+  PRESS_AUDIENCE_MAX: 100,
+  PRESS_AUDIENCE_BASE: 50, // valor inicial y al que se reinicia cada temporada
+  PRESS_SATISFACTION_MIN: 0,
+  PRESS_SATISFACTION_MAX: 100,
+  PRESS_SATISFACTION_BASE: 50,
+  // Bono de fin de temporada por contrato vigente: annual_payment x MAX_PCT x (audiencia - 50) / 50
+  PRESS_AUDIENCE_BONUS_MAX_PCT: 0.15,
+  // Renovacion: precio x (1 + (satisfaccion - 50) / 50 x SWING); +1 año desde LONGER_YEARS_AT
+  PRESS_SATISFACTION_PRICE_SWING: 0.10,
+  PRESS_SATISFACTION_LONGER_YEARS_AT: 75,
+  PRESS_SATISFACTION_REFUSE_BELOW: 20, // por debajo, esa cadena no le ofrece contrato al usuario
+  PRESS_SATISFACTION_SEASON_DECAY: 0.25, // fraccion de la distancia a 50 que se pierde cada temporada
+  PRESS_RIVALRY_PROVOKE_BONUS: 5,
+
   // ----- Rivalidades (ver services/rivalryService.js) -----
   RIVALRY_DIVISION_SEED: 15, // intensidad inicial si comparten division, al crear el primer registro
   RIVALRY_BASE_GAME_BONUS: 1, // cualquier enfrentamiento suma esto, reñido o no
