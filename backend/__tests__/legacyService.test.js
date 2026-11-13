@@ -7,8 +7,14 @@ jest.mock('../services/jerseyService', () => ({
   getRetiredNumbersOverview: jest.fn().mockResolvedValue({ retired: [], candidates: [], min_seasons: 5 }),
 }));
 jest.mock('../services/newsService', () => ({ createNews: jest.fn().mockResolvedValue({}) }));
+jest.mock('../services/hofBio', () => ({
+  ...jest.requireActual('../services/hofBio'),
+  generateBioForCandidate: jest.fn().mockResolvedValue(null),
+  ensureBiosInBackground: jest.fn(),
+}));
 
 const prisma = require('../db/prisma');
+const { generateBioForCandidate, ensureBiosInBackground } = require('../services/hofBio');
 const { createNews } = require('../services/newsService');
 const {
   runHallOfFameSeason,
@@ -155,6 +161,7 @@ describe('runHallOfFameSeason', () => {
       20,
       { teamId: USER_TEAM_ID, alert: true },
     );
+    expect(generateBioForCandidate).toHaveBeenCalledWith(1, { seasonId: 20 });
   });
 
   it("retires a CPU legend's number automatically on induction", async () => {
@@ -190,6 +197,7 @@ describe('runHallOfFameSeason', () => {
 
     expect(votes.map((v) => v.status)).toEqual(['candidate', 'dropped']);
     expect(prisma.team.update).not.toHaveBeenCalled();
+    expect(generateBioForCandidate).not.toHaveBeenCalled();
   });
 
   it('registers retirees: best one goes to the ballot, short careers are not_qualified', async () => {
@@ -246,6 +254,11 @@ describe('GET /api/history/hall-of-fame', () => {
     expect(res.status).toBe(200);
     expect(res.body.inducted).toHaveLength(1);
     expect(res.body.inducted[0]).toMatchObject({ player_name: 'A B', is_user_team: true, inducted_edition: 3, vote_history: [{ edition: 3, pct: 90 }] });
+    // sin biografia de IA guardada: plantilla + reintento en segundo plano
+    expect(res.body.inducted[0].bio_source).toBe('template');
+    expect(res.body.inducted[0].bio).toMatch(/^A B, campocorto, leyenda de Team X, jugó 12 temporadas/);
+    expect(ensureBiosInBackground).toHaveBeenCalledWith([undefined]);
+    expect(res.body.ballot[0].bio).toBeUndefined();
     expect(res.body.ballot[0]).toMatchObject({ player_name: 'C D', team_name: null, retired_edition: 3, vote_history: [] });
     expect(res.body.rules).toEqual({ induction_pct: 75, drop_pct: 5, max_years: 10 });
   });

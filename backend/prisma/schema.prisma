@@ -860,6 +860,7 @@ model HallOfFameCandidate {
   last_vote_pct       Float?
   vote_history        Json? // [{ season_id, pct }]
   inducted_season_id  Int?
+  bio                 String?  @db.Text // biografia escrita por la IA al ser exaltado (ver hofBio.js); null = se muestra la de plantilla
   created_at          DateTime @default(now())
 
   player       Player @relation(fields: [player_id], references: [id])

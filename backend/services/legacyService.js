@@ -29,6 +29,7 @@ const { createNews } = require('./newsService');
 const { clampReputation } = require('./reputationService');
 const { randomAppearanceData } = require('./playerAppearanceService');
 const { retireNumber } = require('./jerseyService');
+const { generateBioForCandidate } = require('./hofBio');
 const { generatePotentialCoefficient, calculateGrowthAge, POSITIONS } = require('../seeders/generators/playerGenerator');
 const { FIRST_NAMES } = require('../seeders/data/names');
 
@@ -375,6 +376,10 @@ async function registerRetirees(season, pools, rng) {
 async function runHallOfFameSeason(season, rng = Math.random) {
   const pools = await loadScorePools();
   const votes = await voteBallot(season, pools, rng);
+  // Biografia con IA de cada nuevo exaltado (0-3 por temporada). Si falla, el GET reintenta.
+  for (const v of votes) {
+    if (v.status === 'inducted') await generateBioForCandidate(v.id, { seasonId: season.id });
+  }
   const { candidates, heirs } = await registerRetirees(season, pools, rng);
   return { votes, registered: candidates, heirs };
 }
