@@ -25,6 +25,7 @@ export default function NewGame() {
 
   return (
     <div className="max-w-xl mx-auto bg-white rounded-lg shadow p-6 text-center space-y-4">
+      <img src="/logo.svg" alt="Baseball Manager" className="h-28 w-28 mx-auto" />
       <h2 className="text-2xl font-bold">Nueva Partida</h2>
       <p className="text-gray-600">
         Se crearan 4 divisiones de 6 equipos cada una (24 equipos en total). Los otros 23 equipos
