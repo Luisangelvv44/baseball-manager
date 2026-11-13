@@ -1,9 +1,34 @@
 import { useEffect } from 'react';
 import { getTeamLogo } from '../utils/teamLogos.js';
+import BroadcastLogo from './BroadcastLogo.jsx';
 
 const TOTAL_MS = 7500;
 
-function TeamSide({ team, side }) {
+function TeamBroadcasts({ companies }) {
+  if (!companies?.length) return null;
+  // TV primero, radio despues
+  const sorted = [...companies].sort((a, b) => b.type.localeCompare(a.type));
+
+  return (
+    <div className="gi-content-2 mt-4 flex flex-col items-center">
+      <span className="text-[0.6rem] md:text-[0.7rem] font-semibold uppercase tracking-[0.3em] text-white/40">
+        Transmite
+      </span>
+      <div className="mt-2 flex items-start justify-center gap-4">
+        {sorted.map((company) => (
+          <div key={company.id} className="flex w-20 md:w-28 flex-col items-center">
+            <BroadcastLogo name={company.name} size="lg" />
+            <span className="mt-1 text-[0.65rem] md:text-xs font-semibold leading-tight text-white/80">
+              {company.name}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TeamSide({ team, side, broadcasts }) {
   const logo = getTeamLogo(team?.name);
   const isLeft = side === 'left';
 
@@ -57,12 +82,13 @@ function TeamSide({ team, side }) {
             {team?.wins ?? 0}-{team?.losses ?? 0}
           </span>
         </div>
+        <TeamBroadcasts companies={broadcasts} />
       </div>
     </div>
   );
 }
 
-export default function GameIntro({ homeTeam, awayTeam, onFinish }) {
+export default function GameIntro({ homeTeam, awayTeam, broadcasts, onFinish }) {
   useEffect(() => {
     const t = setTimeout(onFinish, TOTAL_MS);
     return () => clearTimeout(t);
@@ -70,8 +96,8 @@ export default function GameIntro({ homeTeam, awayTeam, onFinish }) {
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden select-none">
-      <TeamSide team={awayTeam} side="left" />
-      <TeamSide team={homeTeam} side="right" />
+      <TeamSide team={awayTeam} side="left" broadcasts={broadcasts?.away} />
+      <TeamSide team={homeTeam} side="right" broadcasts={broadcasts?.home} />
 
       {/* Costura diagonal (misma pendiente que los paneles) */}
       <div

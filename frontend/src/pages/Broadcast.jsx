@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useTeam } from '../context/TeamContext.jsx';
 import TeamBadge from '../components/TeamBadge.jsx';
+import BroadcastLogo from '../components/BroadcastLogo.jsx';
 import { formatCompactMoney } from '../utils/formatMoney.js';
 
 const TYPES = [
@@ -110,6 +111,7 @@ export default function Broadcast() {
             return (
               <div key={key} className="bg-white border rounded-lg p-5 shadow-sm">
                 <div className="flex items-center gap-3 mb-3">
+                  <BroadcastLogo name={contract.company.name} size="lg" />
                   <TypeBadge type={key} />
                   <span className="text-lg font-bold text-gray-800">{contract.company.name}</span>
                 </div>
@@ -179,6 +181,7 @@ export default function Broadcast() {
                           className={`bg-white border rounded-lg p-4 shadow-sm space-y-3 ${offer.is_best ? 'border-green-400 ring-1 ring-green-200' : ''}`}
                         >
                           <div className="flex items-center gap-2 flex-wrap">
+                            <BroadcastLogo name={offer.company.name} size="md" />
                             <TypeBadge type={key} />
                             <span className="font-semibold text-gray-800">{offer.company.name}</span>
                             {offer.is_best && (
@@ -243,7 +246,10 @@ export default function Broadcast() {
                   .map((c) => (
                     <div key={c.id} className="bg-white border rounded px-3 py-2 text-sm">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-gray-800">{c.name}</span>
+                        <span className="flex items-center gap-2 font-medium text-gray-800 min-w-0">
+                          <BroadcastLogo name={c.name} />
+                          <span className="truncate">{c.name}</span>
+                        </span>
                         <span className="text-xs font-semibold text-gray-700">{formatCompactMoney(Number(c.money))}</span>
                       </div>
                       <div className="flex items-center justify-between gap-2 text-xs text-gray-500 mt-0.5">

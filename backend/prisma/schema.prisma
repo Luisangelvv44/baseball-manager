@@ -686,7 +686,8 @@ model PlayerSeasonRecord {
 }
 
 // Programa de Toddlers: cada fila es un ciclo de 10 temporadas. Se crea un pool de
-// 32 futuros jugadores (Player.status = 'toddler_program', edad 8, skill -15) que
+// 32 futuros jugadores (Player.status = 'toddler_program', edad 8, current_skill = -15,
+// que en el programa es % de desarrollo del potencial, no skill real) que
 // los equipos mejoran aportando dinero. Al cumplir 10 temporadas el ciclo pasa a
 // 'selecting': cada equipo elige 2 toddlers en orden del total aportado, y arranca
 // automaticamente el siguiente ciclo. Ver services/toddlerProgramService.js.

@@ -45,9 +45,12 @@ describe('GET /api/games/:id', () => {
       pitcher: { id: 10, current_skill: 70, first_name: 'Ray', last_name: 'Ortiz' },
       players: [{ id: 11, current_skill: 65, position: 'OF', first_name: 'Sam', last_name: 'Diaz' }],
     });
+    const espn = { id: 1, name: 'ESPN Baseball', type: 'TV' };
+    prisma.broadcastContract.findMany.mockResolvedValue([{ team_id: 1, company: espn }]);
 
     const res = await request(app).get('/api/games/100');
     expect(res.status).toBe(200);
+    expect(res.body.broadcasts).toEqual({ home: [espn], away: [] });
     expect(res.body.game.id).toBe(100);
     expect(res.body.homeTeam.id).toBe(1);
     expect(res.body.awayTeam.id).toBe(2);

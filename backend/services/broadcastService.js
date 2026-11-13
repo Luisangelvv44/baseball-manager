@@ -362,6 +362,20 @@ async function creditBroadcastEarnings(teamIds) {
   }
 }
 
+// Empresas con contrato vigente para los equipos dados: { [teamId]: [{ id, name, type }] }.
+async function getTeamBroadcasts(teamIds) {
+  const contracts = await prisma.broadcastContract.findMany({
+    where: { team_id: { in: teamIds }, seasons_remaining: { gt: 0 } },
+    select: { team_id: true, company: { select: { id: true, name: true, type: true } } },
+  });
+
+  const byTeam = Object.fromEntries(teamIds.map((id) => [id, []]));
+  for (const contract of contracts) {
+    byTeam[contract.team_id].push(contract.company);
+  }
+  return byTeam;
+}
+
 // Decrementa seasons_remaining de todos los contratos activos al fin de temporada
 async function decrementContractSeasons() {
   await prisma.broadcastContract.updateMany({
@@ -384,5 +398,6 @@ module.exports = {
   finalizeContracts,
   payBroadcastRevenue,
   creditBroadcastEarnings,
+  getTeamBroadcasts,
   decrementContractSeasons,
 };

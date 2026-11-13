@@ -130,7 +130,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 - **`pages/`** — 23 files: `NewGame`, `Dashboard`, `Roster`, `Rookie`, `Market`, `Stars`, `Trades`, `Stadium`, `Scouts`, `Finances`, `TeamsOverview`, `Schedule`, `Lineup`, `Broadcast`, `Playoffs`, `Coaches`, `Draft`, `News`, `History`, `GameView`, `Derby`, `DerbyView`, and `AllTimePlayers` (rendered as a tab inside `History`, not its own route)
 - **`map/`** — PixiJS 7 league map (`geometry.js` pins each league city in `ANCHORS` by division and name, unknown cities hash to a spot, on a fixed fictional continent, `MapScene.js`, `LeagueMap.jsx` for the `/map` page, `TravelOverlay.jsx`). After "Avanzar Día" lands on a user game, `advanceDayFlow.js` navigates with `state.travel` and `GameView` shows the overlay (flight from the current city, or "Play Ball" if already there) before `GameIntro`
 - **`stadium/`** — PixiJS 7 top-down stadium view (`geometry.js`, `builders.js`, `StadiumScene.js`, `StadiumView.jsx`), lazy-loaded as the "Vista" tab of `Stadium`; every grid section is drawn as a wedge of a bowl around the field (one ring per floor, `layoutSections()` in `geometry.js`) with its own level look; facilities drawn from their levels
-- **`components/`** — Shared UI: `Navbar`, `Leaderboard`, `StadiumGrid`, `SectionModal`, `Pagination`, `TeamBadge`, `SkillTierBadge`, `FavoriteButton`
+- **`components/`** — Shared UI: `Navbar`, `Leaderboard`, `StadiumGrid`, `SectionModal`, `Pagination`, `TeamBadge`, `BroadcastLogo` (SVGs in `assets/broadcast/`, matched by slugified company name), `SkillTierBadge`, `FavoriteButton`
 
 Styling is Tailwind CSS v3 with no component library.
 

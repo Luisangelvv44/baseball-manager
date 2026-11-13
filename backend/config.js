@@ -96,9 +96,10 @@ module.exports = {
   TODDLER_PROGRAM_SIZE: 48, // DEBE ser 24 equipos x TODDLER_PROGRAM_PICKS_PER_TEAM (todos los toddler se reparten)
   TODDLER_PROGRAM_PICKS_PER_TEAM: 2,
   TODDLER_PROGRAM_START_AGE: 8,
-  TODDLER_PROGRAM_START_SKILL: -15,
+  TODDLER_PROGRAM_START_SKILL: -15, // % de desarrollo inicial (no es skill real mientras este en el programa)
+  TODDLER_PROGRAM_MAX_DEVELOPMENT_PCT: 100, // skill real al ser elegido = potencial x % de desarrollo
   TODDLER_PROGRAM_CPU_CONTRIBUTION_RATE: 0.05, // solo equipos CPU; el usuario aporta manualmente lo que quiera
-  TODDLER_PROGRAM_SKILL_COST: 1000000, // costo por punto de skill en una ronda de mejora
+  TODDLER_PROGRAM_SKILL_COST: 1000000, // costo por punto de desarrollo en una ronda de mejora
   TODDLER_PROGRAM_IMPROVE_PROB_START: 0.8, // prob. de mejora en la temporada 1
   TODDLER_PROGRAM_IMPROVE_PROB_STEP: 0.05, // temporada k (0-indexado): prob = START - STEP*k  -> 0.35 en k=9
   TODDLER_PROGRAM_IMPROVE_PROB_MIN: 0.05, // piso de seguridad

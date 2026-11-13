@@ -8,6 +8,7 @@ const { computeHomeGameRevenue, computeAwayGameRevenue } = require('../services/
 const { getFacilityBonuses } = require('../services/stadiumFacilityService');
 const { ringOf } = require('../seeders/generators/stadiumGenerator');
 const { getRivalryIntensity } = require('../services/rivalryService');
+const { getTeamBroadcasts } = require('../services/broadcastService');
 const { updateSeriesAfterGame } = require('../services/playoffService');
 const { RIVALRY_BADGE_THRESHOLD } = require('../config');
 const { simulateScheduledGamesForDay, simulateOtherActivePlayoffSeries } = require('../services/dayGamesSimulator');
@@ -95,7 +96,13 @@ router.get('/:id', async (req, res) => {
     const rivalryIntensity = await getRivalryIntensity(game.home_team_id, game.away_team_id);
     const rivalry = { intensity: rivalryIntensity, is_rivalry: rivalryIntensity >= RIVALRY_BADGE_THRESHOLD };
 
-    res.json({ game, homeTeam, awayTeam, events, homeLineup, awayLineup, rivalry });
+    const broadcastsByTeam = await getTeamBroadcasts([game.home_team_id, game.away_team_id]);
+    const broadcasts = {
+      home: broadcastsByTeam[game.home_team_id],
+      away: broadcastsByTeam[game.away_team_id],
+    };
+
+    res.json({ game, homeTeam, awayTeam, events, homeLineup, awayLineup, rivalry, broadcasts });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener el partido' });

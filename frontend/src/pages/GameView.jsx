@@ -388,6 +388,7 @@ export default function GameView() {
   const [homeTeam, setHomeTeam] = useState(null);
   const [awayTeam, setAwayTeam] = useState(null);
   const [rivalry, setRivalry] = useState(null);
+  const [broadcasts, setBroadcasts] = useState(null);
   const [events, setEvents] = useState([]);
   const [visibleEvents, setVisibleEvents] = useState([]);
   const [homeLineup, setHomeLineup] = useState(null);
@@ -416,6 +417,7 @@ export default function GameView() {
       setHomeTeam(info.homeTeam);
       setAwayTeam(info.awayTeam);
       setRivalry(info.rivalry ?? null);
+      setBroadcasts(info.broadcasts ?? null);
       setHomeLineup(info.homeLineup);
       setAwayLineup(info.awayLineup);
       setEconomy(null);
@@ -550,7 +552,7 @@ export default function GameView() {
         </Suspense>
       )}
       {showIntro && homeTeam && awayTeam && (
-        <GameIntro homeTeam={homeTeam} awayTeam={awayTeam} onFinish={() => setShowIntro(false)} />
+        <GameIntro homeTeam={homeTeam} awayTeam={awayTeam} broadcasts={broadcasts} onFinish={() => setShowIntro(false)} />
       )}
 
       <div className="flex items-center justify-between gap-3">

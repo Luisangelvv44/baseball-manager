@@ -11,6 +11,7 @@ const {
   TODDLER_PROGRAM_IMPROVE_PROB_START,
   TODDLER_PROGRAM_IMPROVE_PROB_STEP,
   TODDLER_PROGRAM_IMPROVE_PROB_MIN,
+  TODDLER_PROGRAM_MAX_DEVELOPMENT_PCT,
   HEIR_MAX_PER_CYCLE,
 } = require('../config');
 const { generatePlayer, calculateSalary, randomInt, POSITIONS } = require('../seeders/generators/playerGenerator');
@@ -18,7 +19,7 @@ const { syncMissingAppearances } = require('./playerAppearanceService');
 const { signContractFromPlayer } = require('./contractService');
 
 // Probabilidad de que un intento de mejora (que cuesta TODDLER_PROGRAM_SKILL_COST se
-// acierte o no) suba +1 de skill, para una temporada dada (0-indexada): 0.80 -> 0.35.
+// acierte o no) suba +1 punto de desarrollo, para una temporada dada (0-indexada): 0.80 -> 0.35.
 function improveProbForSeason(seasonsElapsed) {
   return Math.max(
     TODDLER_PROGRAM_IMPROVE_PROB_MIN,
@@ -26,8 +27,15 @@ function improveProbForSeason(seasonsElapsed) {
   );
 }
 
+// Mientras status = 'toddler_program', Player.current_skill NO es skill real: es el
+// porcentaje de su potencial que lleva desarrollado. Se convierte a skill real al
+// ser elegido por un equipo (assignToddlerToTeam), con esta formula.
+function toddlerProjectedSkill(developmentPct, potential) {
+  return Math.round((potential * Math.min(developmentPct, TODDLER_PROGRAM_MAX_DEVELOPMENT_PCT)) / 100);
+}
+
 // Crea un ciclo nuevo del programa: 1 fila ToddlerProgram + TODDLER_PROGRAM_SIZE
-// jugadores (status 'toddler_program', edad 8, skill -15, sin salario ni equipo).
+// jugadores (status 'toddler_program', edad 8, desarrollo -15%, sin salario ni equipo).
 // Hasta HEIR_MAX_PER_CYCLE hijos de leyendas en espera ('heir_pending', ver legacyService.js)
 // ocupan su lugar entre los 32, en orden de llegada; el resto espera al siguiente ciclo.
 // `client` puede ser el prisma singleton o un tx de transaccion (lo usa el seed).
@@ -76,16 +84,19 @@ async function generateToddlerCycle(client, cycleNumber) {
 }
 
 // Materializa un toddler ya elegido como jugador MINOR del equipo (contrato de novato,
-// salario ~1/10 del valor de mercado). Conserva age/position/skill/potential ya crecidos.
+// salario ~1/10 del valor de mercado). Conserva age/position/potential ya crecidos y
+// convierte su % de desarrollo en skill real.
 // toddler_program_id se limpia al completar toda la eleccion (ver finalizeSelection).
 async function assignToddlerToTeam(client, player, teamId) {
+  const realSkill = toddlerProjectedSkill(player.current_skill, player.potential_coefficient);
   const rookieSalary = Math.max(
     5000,
-    Math.round(calculateSalary(player.potential_coefficient, player.current_skill, player.age) / 10 / 100) * 100
+    Math.round(calculateSalary(player.potential_coefficient, realSkill, player.age) / 10 / 100) * 100
   );
   const assigned = await client.player.update({
     where: { id: player.id },
     data: {
+      current_skill: realSkill,
       team_id: teamId,
       status: 'active',
       level: 'MINOR',
@@ -105,15 +116,16 @@ async function finalizeSelection(client, programId) {
 }
 
 // Elige el mejor toddler disponible para `teamId`: el hijo de una leyenda propia si lo hay;
-// si no, mayor skill, con un ligero sesgo a una posicion donde el equipo tenga menos de 2
-// jugadores activos. Lo asigna al equipo.
+// si no, mayor skill proyectada, con un ligero sesgo a una posicion donde el equipo tenga
+// menos de 2 jugadores activos. Lo asigna al equipo.
 async function pickBestForTeam(client, program, teamId) {
-  const available = await client.player.findMany({
+  const rows = await client.player.findMany({
     where: { toddler_program_id: program.id, status: 'toddler_program', team_id: null },
-    orderBy: [{ current_skill: 'desc' }, { id: 'asc' }],
     include: { parent: { select: { hall_of_fame: { select: { primary_team_id: true } } } } },
   });
-  if (available.length === 0) return null;
+  if (rows.length === 0) return null;
+  const projected = (t) => toddlerProjectedSkill(t.current_skill, t.potential_coefficient);
+  const available = rows.sort((a, b) => projected(b) - projected(a) || a.id - b.id);
 
   const roster = await client.player.findMany({
     where: { team_id: teamId, status: 'active' },
@@ -249,13 +261,19 @@ async function runToddlerProgramSeasonEnd() {
   const toddlers = await prisma.player.findMany({
     where: { toddler_program_id: program.id, status: 'toddler_program' },
     orderBy: { id: 'asc' },
-    select: { id: true },
+    select: { id: true, current_skill: true },
   });
   if (toddlers.length > 0 && budget >= TODDLER_PROGRAM_SKILL_COST) {
     const prob = improveProbForSeason(program.seasons_elapsed);
     const { remaining, gains } = runImprovementRounds(budget, toddlers.map((t) => t.id), prob);
+    const developmentById = new Map(toddlers.map((t) => [t.id, t.current_skill]));
     for (const [id, pts] of gains) {
-      await prisma.player.update({ where: { id }, data: { current_skill: { increment: pts } } });
+      const development = developmentById.get(id);
+      if (development >= TODDLER_PROGRAM_MAX_DEVELOPMENT_PCT) continue;
+      await prisma.player.update({
+        where: { id },
+        data: { current_skill: Math.min(TODDLER_PROGRAM_MAX_DEVELOPMENT_PCT, development + pts) },
+      });
     }
     budget = remaining;
   }
@@ -284,6 +302,7 @@ module.exports = {
   advanceOnePick,
   userPickToddler,
   improveProbForSeason,
+  toddlerProjectedSkill,
   runImprovementRounds,
   buildPickOrder,
 };
