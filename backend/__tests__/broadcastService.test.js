@@ -14,6 +14,7 @@ const {
   finalizeContracts,
   payBroadcastRevenue,
   creditBroadcastEarnings,
+  applySatisfactionToOffer,
 } = require('../services/broadcastService');
 const { GAMES_PER_SEASON, BROADCAST_OFFER_WINDOW_END_DAY } = require('../config');
 
@@ -32,6 +33,23 @@ beforeEach(() => {
   prisma.broadcastCompany.updateMany.mockResolvedValue({});
   prisma.team.update.mockResolvedValue({});
   prisma.finance.create.mockResolvedValue({});
+});
+
+describe('applySatisfactionToOffer', () => {
+  it('leaves a neutral offer untouched', () => {
+    expect(applySatisfactionToOffer(0.5, 3, 50)).toEqual({ price: 0.5, years: 3 });
+    expect(applySatisfactionToOffer(0.5, 3, undefined)).toEqual({ price: 0.5, years: 3 });
+  });
+
+  it('raises the price and adds a year for a happy broadcaster', () => {
+    expect(applySatisfactionToOffer(0.5, 3, 100)).toEqual({ price: 0.55, years: 4 });
+    expect(applySatisfactionToOffer(0.5, 10, 80).years).toBe(10);
+  });
+
+  it('lowers the price and refuses below the threshold', () => {
+    expect(applySatisfactionToOffer(0.5, 3, 25).price).toBe(0.475);
+    expect(applySatisfactionToOffer(0.5, 3, 10)).toBeNull();
+  });
 });
 
 describe('pure helpers', () => {
@@ -106,6 +124,28 @@ describe('generateOffersForSeason', () => {
     await generateOffersForSeason(season);
     const targets = prisma.broadcastOffer.create.mock.calls.map((c) => c[0].data.team_id);
     expect(targets).toEqual([1, 3]);
+  });
+
+  it('applies the press satisfaction to the user offer only', async () => {
+    prisma.broadcastCompany.findMany.mockResolvedValue([
+      { id: 1, type: 'TV', price_per_fan: 0.5, money: 1_000_000_000 },
+      { id: 2, type: 'TV', price_per_fan: 0.4, money: 1_000_000_000 },
+    ]);
+    prisma.team.findMany.mockResolvedValue(rankingTeams(16));
+    prisma.broadcastRelation.findMany.mockResolvedValue([
+      { company_id: 1, team_id: 1, satisfaction: 100 },
+      { company_id: 2, team_id: 1, satisfaction: 10 },
+    ]);
+    jest.spyOn(Math, 'random').mockReturnValue(0.5);
+
+    await generateOffersForSeason(season);
+    const offers = prisma.broadcastOffer.create.mock.calls.map((c) => c[0].data);
+    const userOffers = offers.filter((o) => o.team_id === 1);
+    expect(userOffers).toHaveLength(1);
+    expect(userOffers[0].company_id).toBe(1);
+    expect(userOffers[0].price_per_fan).toBe(0.55);
+    expect(offers.find((o) => o.team_id === 2 && o.company_id === 1).price_per_fan).toBe(0.5);
+    prisma.broadcastRelation.findMany.mockResolvedValue([]);
   });
 });
 

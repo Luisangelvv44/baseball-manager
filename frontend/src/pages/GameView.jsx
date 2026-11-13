@@ -388,12 +388,14 @@ export default function GameView() {
   const [homeTeam, setHomeTeam] = useState(null);
   const [awayTeam, setAwayTeam] = useState(null);
   const [rivalry, setRivalry] = useState(null);
+  const [broadcasts, setBroadcasts] = useState(null);
   const [events, setEvents] = useState([]);
   const [visibleEvents, setVisibleEvents] = useState([]);
   const [homeLineup, setHomeLineup] = useState(null);
   const [awayLineup, setAwayLineup] = useState(null);
   const [score, setScore] = useState({ home: 0, away: 0 });
   const [economy, setEconomy] = useState(null);
+  const [pressConferenceId, setPressConferenceId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showIntro, setShowIntro] = useState(false);
@@ -416,9 +418,11 @@ export default function GameView() {
       setHomeTeam(info.homeTeam);
       setAwayTeam(info.awayTeam);
       setRivalry(info.rivalry ?? null);
+      setBroadcasts(info.broadcasts ?? null);
       setHomeLineup(info.homeLineup);
       setAwayLineup(info.awayLineup);
       setEconomy(null);
+      setPressConferenceId(null);
 
       if (info.game.status === 'finished') {
         setShowIntro(false);
@@ -463,6 +467,7 @@ export default function GameView() {
       setAwayLineup(result.awayLineup);
       setEvents(result.events);
       setEconomy({ ...result.economy, isUserHome: result.isUserHome });
+      setPressConferenceId(result.pressConferenceId ?? null);
       setVisibleEvents([]);
       setScore({ home: 0, away: 0 });
       setLoading(false);
@@ -550,7 +555,7 @@ export default function GameView() {
         </Suspense>
       )}
       {showIntro && homeTeam && awayTeam && (
-        <GameIntro homeTeam={homeTeam} awayTeam={awayTeam} onFinish={() => setShowIntro(false)} />
+        <GameIntro homeTeam={homeTeam} awayTeam={awayTeam} broadcasts={broadcasts} onFinish={() => setShowIntro(false)} />
       )}
 
       <div className="flex items-center justify-between gap-3">
@@ -642,6 +647,14 @@ export default function GameView() {
           >
             ← Volver al Dashboard
           </button>
+          {pressConferenceId && (
+            <button
+              onClick={() => navigate('/press')}
+              className="bg-amber-600 text-white px-6 py-2 rounded font-semibold hover:bg-amber-700"
+            >
+              🎤 Rueda de prensa
+            </button>
+          )}
           <button
             onClick={handleAdvanceDay}
             disabled={loading}

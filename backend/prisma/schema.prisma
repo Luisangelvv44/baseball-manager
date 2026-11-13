@@ -41,6 +41,7 @@ model Team {
   facade_plaza_level     Int       @default(1)
   facade_shop_level      Int       @default(1)
   alerts_seen_at         DateTime?
+  press_audience         Int       @default(50)
 
   division              Division?             @relation(fields: [division_id], references: [id])
   players               Player[]
@@ -77,6 +78,7 @@ model Team {
   playoff_loans_out     PlayoffLoan[]         @relation("PlayoffLoanFrom")
   playoff_loans_in      PlayoffLoan[]         @relation("PlayoffLoanTo")
   playoff_loan_bids     PlayoffLoanBid[]
+  broadcast_relations   BroadcastRelation[]
 }
 
 model Rivalry {
@@ -428,6 +430,7 @@ model BroadcastCompany {
 
   offers    BroadcastOffer[]
   contracts BroadcastContract[]
+  relations BroadcastRelation[]
 
   @@map("broadcast_companies")
 }
@@ -473,6 +476,41 @@ model BroadcastContract {
 
   @@index([team_id])
   @@map("broadcast_contracts")
+}
+
+// Satisfaccion persistente de una cadena con un equipo (hoy solo el del usuario), movida por las
+// ruedas de prensa. Ajusta las ofertas de renovacion (ver broadcastService.applySatisfactionToOffer).
+model BroadcastRelation {
+  id           Int @id @default(autoincrement())
+  company_id   Int
+  team_id      Int
+  satisfaction Int @default(50)
+
+  company BroadcastCompany @relation(fields: [company_id], references: [id])
+  team    Team             @relation(fields: [team_id], references: [id])
+
+  @@unique([company_id, team_id])
+  @@map("broadcast_relations")
+}
+
+// Rueda de prensa del usuario (cada PRESS_SERIES_INTERVAL series, o al cerrar una serie de playoffs).
+// Todo el texto sale de plantillas (services/pressTemplates.js).
+model PressConference {
+  id               Int      @id @default(autoincrement())
+  season_id        Int
+  day              Int
+  trigger          String   @db.VarChar(20) // series | playoff_group | playoff_series
+  opponent_team_id Int?
+  host_company_id  Int?
+  reporter_name    String   @db.VarChar(100)
+  status           String   @default("pending") @db.VarChar(20) // pending | answered | skipped
+  questions        Json
+  answers          Json?
+  effects          Json?
+  created_at       DateTime @default(now())
+
+  @@index([season_id, status])
+  @@map("press_conferences")
 }
 
 model Coach {
@@ -686,7 +724,8 @@ model PlayerSeasonRecord {
 }
 
 // Programa de Toddlers: cada fila es un ciclo de 10 temporadas. Se crea un pool de
-// 32 futuros jugadores (Player.status = 'toddler_program', edad 8, skill -15) que
+// 32 futuros jugadores (Player.status = 'toddler_program', edad 8, current_skill = -15,
+// que en el programa es % de desarrollo del potencial, no skill real) que
 // los equipos mejoran aportando dinero. Al cumplir 10 temporadas el ciclo pasa a
 // 'selecting': cada equipo elige 2 toddlers en orden del total aportado, y arranca
 // automaticamente el siguiente ciclo. Ver services/toddlerProgramService.js.

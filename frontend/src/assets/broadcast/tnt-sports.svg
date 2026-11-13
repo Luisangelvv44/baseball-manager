@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+<rect x="4" y="4" width="112" height="112" rx="22" fill="#141414"/>
+<path d="M60 50 Q60 34 76 28" stroke="#dddddd" stroke-width="3" fill="none"/>
+<polygon points="78,12 81,22 92,20 84,27 92,36 81,32 78,42 74,32 64,36 71,27 64,20 75,22" fill="#ffd23f"/>
+<rect x="34" y="50" width="16" height="50" rx="3" fill="#d32f2f"/>
+<rect x="52" y="50" width="16" height="50" rx="3" fill="#b71c1c"/>
+<rect x="70" y="50" width="16" height="50" rx="3" fill="#d32f2f"/>
+<rect x="30" y="66" width="60" height="16" fill="#ffd23f"/>
+<text x="60" y="79" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="13" text-anchor="middle" fill="#141414">TNT</text>
+</svg>

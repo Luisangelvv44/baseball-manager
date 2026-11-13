@@ -96,9 +96,10 @@ module.exports = {
   TODDLER_PROGRAM_SIZE: 48, // DEBE ser 24 equipos x TODDLER_PROGRAM_PICKS_PER_TEAM (todos los toddler se reparten)
   TODDLER_PROGRAM_PICKS_PER_TEAM: 2,
   TODDLER_PROGRAM_START_AGE: 8,
-  TODDLER_PROGRAM_START_SKILL: -15,
+  TODDLER_PROGRAM_START_SKILL: -15, // % de desarrollo inicial (no es skill real mientras este en el programa)
+  TODDLER_PROGRAM_MAX_DEVELOPMENT_PCT: 100, // skill real al ser elegido = potencial x % de desarrollo
   TODDLER_PROGRAM_CPU_CONTRIBUTION_RATE: 0.05, // solo equipos CPU; el usuario aporta manualmente lo que quiera
-  TODDLER_PROGRAM_SKILL_COST: 1000000, // costo por punto de skill en una ronda de mejora
+  TODDLER_PROGRAM_SKILL_COST: 1000000, // costo por punto de desarrollo en una ronda de mejora
   TODDLER_PROGRAM_IMPROVE_PROB_START: 0.8, // prob. de mejora en la temporada 1
   TODDLER_PROGRAM_IMPROVE_PROB_STEP: 0.05, // temporada k (0-indexado): prob = START - STEP*k  -> 0.35 en k=9
   TODDLER_PROGRAM_IMPROVE_PROB_MIN: 0.05, // piso de seguridad
@@ -149,6 +150,28 @@ module.exports = {
   // Estandares por reputacion: la empresa en la posicion i (por precio base, dentro de su tipo) solo ofrece
   // al top N de reputacion de la liga. Posiciones fuera de la lista usan el ultimo valor.
   BROADCAST_RANK_TIERS: [3, 3, 6, 6, 10, 10, 10, 24, 24, 24],
+
+  // ----- Ruedas de prensa (ver services/pressConferenceService.js y pressTemplates.js) -----
+  // Una cada N series de temporada regular (al cerrar la ultima), y al cerrar cada serie de
+  // playoffs del usuario. Opcionales: no comparecer resta audiencia.
+  PRESS_SERIES_INTERVAL: 3,
+  PRESS_QUESTIONS_PER_CONFERENCE: 3,
+  PRESS_SKIP_AUDIENCE_PENALTY: 4,
+  PRESS_SKIP_SATISFACTION_PENALTY: 2,
+  PRESS_AUDIENCE_MIN: 0,
+  PRESS_AUDIENCE_MAX: 100,
+  PRESS_AUDIENCE_BASE: 50, // valor inicial y al que se reinicia cada temporada
+  PRESS_SATISFACTION_MIN: 0,
+  PRESS_SATISFACTION_MAX: 100,
+  PRESS_SATISFACTION_BASE: 50,
+  // Bono de fin de temporada por contrato vigente: annual_payment x MAX_PCT x (audiencia - 50) / 50
+  PRESS_AUDIENCE_BONUS_MAX_PCT: 0.15,
+  // Renovacion: precio x (1 + (satisfaccion - 50) / 50 x SWING); +1 año desde LONGER_YEARS_AT
+  PRESS_SATISFACTION_PRICE_SWING: 0.10,
+  PRESS_SATISFACTION_LONGER_YEARS_AT: 75,
+  PRESS_SATISFACTION_REFUSE_BELOW: 20, // por debajo, esa cadena no le ofrece contrato al usuario
+  PRESS_SATISFACTION_SEASON_DECAY: 0.25, // fraccion de la distancia a 50 que se pierde cada temporada
+  PRESS_RIVALRY_PROVOKE_BONUS: 5,
 
   // ----- Rivalidades (ver services/rivalryService.js) -----
   RIVALRY_DIVISION_SEED: 15, // intensidad inicial si comparten division, al crear el primer registro

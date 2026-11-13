@@ -53,6 +53,8 @@ const prismaMock = {
   playoffMarket: createModel(),
   playoffLoan: createModel(),
   playoffLoanBid: createModel(),
+  broadcastRelation: { ...createModel(), upsert: jest.fn() },
+  pressConference: createModel(),
   $queryRaw: jest.fn(),
   $transaction: jest.fn(),
 };

@@ -14,6 +14,10 @@ const {
   BROADCAST_BID_RAISE_MAX,
   BROADCAST_MAX_CONTRACT_YEARS,
   BROADCAST_RANK_TIERS,
+  PRESS_SATISFACTION_BASE,
+  PRESS_SATISFACTION_PRICE_SWING,
+  PRESS_SATISFACTION_LONGER_YEARS_AT,
+  PRESS_SATISFACTION_REFUSE_BELOW,
 } = require('../config');
 
 // ---------------------------------------------------------------------------------------------
@@ -101,23 +105,40 @@ async function activeContractKeys() {
   return new Set(contracts.map((c) => `${c.team_id}:${c.company.type}`));
 }
 
+// Ajuste de la oferta al usuario por la satisfaccion de la cadena (ruedas de prensa). null = no ofrece.
+function applySatisfactionToOffer(price, years, satisfaction) {
+  const sat = satisfaction ?? PRESS_SATISFACTION_BASE;
+  if (sat < PRESS_SATISFACTION_REFUSE_BELOW) return null;
+  const factor = 1 + ((sat - PRESS_SATISFACTION_BASE) / PRESS_SATISFACTION_BASE) * PRESS_SATISFACTION_PRICE_SWING;
+  const bonusYear = sat >= PRESS_SATISFACTION_LONGER_YEARS_AT ? 1 : 0;
+  return { price: round4(price * factor), years: Math.min(BROADCAST_MAX_CONTRACT_YEARS, years + bonusYear) };
+}
+
 // Ofertas iniciales de la temporada (precio base, limitado al tope de cada equipo).
 async function generateOffersForSeason(season) {
   await prisma.broadcastCompany.updateMany({ data: { season_earnings: 0 } });
 
-  const [companies, ranking, contracted] = await Promise.all([
+  const [companies, ranking, contracted, relations] = await Promise.all([
     getCompaniesWithTiers(),
     getReputationRanking(),
     activeContractKeys(),
+    prisma.broadcastRelation.findMany({ where: { team_id: USER_TEAM_ID } }),
   ]);
+  const satisfactionByCompany = new Map((relations ?? []).map((r) => [r.company_id, r.satisfaction]));
 
   for (const company of companies) {
     for (const team of ranking) {
       if (team.rank > company.rank_limit) break;
       if (contracted.has(`${team.id}:${company.type}`)) continue;
 
-      const price = round4(Math.min(Number(company.price_per_fan), maxBidPerFan(team.repFactor, company.type)));
-      const fit = fitOfferToMoney(price, team.fan_base, proposeYears(team.repFactor, Math.random()), company.money);
+      let price = round4(Math.min(Number(company.price_per_fan), maxBidPerFan(team.repFactor, company.type)));
+      let years = proposeYears(team.repFactor, Math.random());
+      if (team.id === USER_TEAM_ID) {
+        const adjusted = applySatisfactionToOffer(price, years, satisfactionByCompany.get(company.id));
+        if (!adjusted) continue;
+        ({ price, years } = adjusted);
+      }
+      const fit = fitOfferToMoney(price, team.fan_base, years, company.money);
       if (!fit) continue;
 
       await prisma.broadcastOffer.create({
@@ -362,6 +383,20 @@ async function creditBroadcastEarnings(teamIds) {
   }
 }
 
+// Empresas con contrato vigente para los equipos dados: { [teamId]: [{ id, name, type }] }.
+async function getTeamBroadcasts(teamIds) {
+  const contracts = await prisma.broadcastContract.findMany({
+    where: { team_id: { in: teamIds }, seasons_remaining: { gt: 0 } },
+    select: { team_id: true, company: { select: { id: true, name: true, type: true } } },
+  });
+
+  const byTeam = Object.fromEntries(teamIds.map((id) => [id, []]));
+  for (const contract of contracts) {
+    byTeam[contract.team_id].push(contract.company);
+  }
+  return byTeam;
+}
+
 // Decrementa seasons_remaining de todos los contratos activos al fin de temporada
 async function decrementContractSeasons() {
   await prisma.broadcastContract.updateMany({
@@ -371,6 +406,7 @@ async function decrementContractSeasons() {
 }
 
 module.exports = {
+  applySatisfactionToOffer,
   repFactorFromRank,
   earningsRatePerFan,
   maxBidPerFan,
@@ -384,5 +420,6 @@ module.exports = {
   finalizeContracts,
   payBroadcastRevenue,
   creditBroadcastEarnings,
+  getTeamBroadcasts,
   decrementContractSeasons,
 };

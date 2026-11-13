@@ -18,6 +18,12 @@ npm run build    # Production build
 npm run preview  # Preview production build
 ```
 
+### Local domains (optional, run from repo root)
+```
+node tools/dev-proxy.js   # Port 80 proxy: http://baseball.localhost -> Vite 5173 (incl. HMR), http://api.baseball.localhost -> Express 4000
+```
+`frontend/src/api.js` picks `http://api.baseball.localhost/api` when the page is opened on `baseball.localhost` (else `localhost:4000`; `VITE_API_URL` overrides). `localhost:5173` keeps working. `.claude/launch.json` has `backend`, `frontend` and `proxy` entries.
+
 ### Database
 ```
 npx prisma migrate dev    # Apply migrations (from backend/)
@@ -61,6 +67,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
   - Personnel: `Scout`, `Coach`, `Draft`, `DraftProspect`, `Trade`, `TradeItem`, `Contract`
   - Market: `FreeAgentAuction`, `AuctionBid`
   - Broadcast: `BroadcastCompany`, `BroadcastOffer`, `BroadcastContract`
+  - Press: `PressConference`, `BroadcastRelation` (+ `Team.press_audience`)
   - Misc: `NewsItem`, `HomeRunDerbyEvent`, `DerbyEntry`, `DerbySwing`, `HallOfFameCandidate`, `RetiredNumber`
 
 **Routes** (`routes/`) handle HTTP concerns only; business logic lives in **Services** (`services/`). Each route file is mounted at `/api/<name>`:
@@ -87,6 +94,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `derby.js` | Home run derby: list/detail, create entry, simulate |
 | `map.js` | League map: cities (team name minus mascot), user team's current city (host of its last finished game this season, else home) and next game (`?gameId=` pins it) |
 | `playoffMarket.js` | Playoff market (`/api/playoff-market`): listings of eliminated teams' players, top/my bids, user's incoming/outgoing loans; `POST /:loanId/bid { pct }` |
+| `press.js` | Sala de prensa (`/api/press`): overview (audience, satisfaction per broadcaster, pending conference, season history), `GET /:id`, `POST /:id/answer { answers: [{questionId, tone}] }`, `POST /:id/skip` |
 
 **Services** (`services/`):
 
@@ -120,6 +128,8 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `jerseyService.js` | Jersey numbers 0–99 unique per team (`Player.jersey_number` + `jersey_team_id`, copied to the active `Contract.jersey_number`). No hooks on every signing/trade: `syncJerseyNumbers()` (season start, every advance-day, season end, lazily on `GET /teams/user`) reassigns anyone without a number or carrying one from another team — keeps his own if free, heirs prefer their father's, else random from `JERSEY_*_RANGE`. `RetiredNumber`: user retires a retired player's number after `RETIRED_NUMBER_MIN_SEASONS` with the team (fan boost if Hall of Famer); CPU teams auto-retire their own inductee's number (`legacyService`); only the honoree's son may wear it. Shown as banners on the stadium facade |
 | `leagueLeadersService.js` | `GET /api/players/league-leaders` for the Dashboard: best batter (AVG) / pitcher (ERA) for the league and the user team, top-5 per category, and live MVP / Cy Young / Rookie of the Year top-3 races. Reuses `qualifyStats()`/`rankRookies()` from `seasonAwardsService.js`, with `SEASON_AWARD_MIN_AB/IP` prorated by regular-season progress |
 | `playoffMarketService.js` | Playoff market (`PLAYOFF_MARKET_*` in `config.js`): when the regular season ends, `openPlayoffMarket()` lists every MAJOR player of non-qualified teams (`getQualifiedTeamIds()` in `playoffService.js`) and the bracket waits `PLAYOFF_MARKET_DAYS` advance-days (season status is already `playoffs`, no series yet). Qualified teams bid 50–150% of the player's salary (one-off payment, max 3 per team, must beat your weakest at the position); CPU bids daily on upgrades over its starter; the last day closes without a CPU round. Winners move with `Player.on_loan_from_team_id` (Contract untouched); `returnPlayoffLoans()` sends them back (original jersey restored) first thing in `endOfSeasonCleanup` |
+| `pressConferenceService.js` | Template-only press conferences (`PRESS_*` in `config.js`): one every `PRESS_SERIES_INTERVAL` (3) regular-season series, created by `routes/games.js` after the last game of the series (`seriesProgress()` groups the user's games into series), one when each user playoff series (round ≥1) ends, and one when the group stage ends (`maybeCreateAfterGroupStage`, from advance-day / `/playoffs/advance-round`). Hosted by a contracted broadcaster (alternating TV/radio; without contracts only rivalry moves). Answers' tones (`pressTemplates.js`: humilde/confiado/provocador/evasivo) move `Team.press_audience` (season, 0–100), the host's `BroadcastRelation.satisfaction` (persistent) and rivalry (`adjustRivalryIntensity`), and publish a `press` NewsItem. Optional: a pending one is skipped (−audience) when the next user game is played or at season end. `settlePressSeason()` (first in `endOfSeasonCleanup`) pays each active contract `annual_payment × 15% × (audience−50)/50`, resets audience, decays satisfaction toward 50; `broadcastService.applySatisfactionToOffer()` adjusts the user's renewal offers (±10% price, +1 year from 75, no offer below 20) |
+| `pressTemplates.js` | Pure question/answer/headline template bank for press conferences, context-tagged (series result, playoffs, rivalry, streaks, standings, feats, injuries, trade deadline) |
 | `newsService.js` | Thin wrapper that creates `NewsItem` rows, used by other services to log league events |
 | `newsDetection.js` | Scans a simulated game's play-by-play for feats (no-hitters/perfect games, cycles, multi-HR games, extra-innings, win/loss streaks) to feed the news feed |
 
@@ -127,10 +137,10 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 
 - **`App.jsx`** — React Router v6 route definitions; 22 top-level routes plus `/game/:id` and `/derby/:id`
 - **`api.js`** — Thin fetch wrapper used by all pages (no axios/react-query); one flat `api` object grouped by feature (teams, players, stadium, season, games, finances, scouts, lineup, auctions, playoffs, coaches, draft, news, history, broadcast, trades, derby)
-- **`pages/`** — 23 files: `NewGame`, `Dashboard`, `Roster`, `Rookie`, `Market`, `Stars`, `Trades`, `Stadium`, `Scouts`, `Finances`, `TeamsOverview`, `Schedule`, `Lineup`, `Broadcast`, `Playoffs`, `Coaches`, `Draft`, `News`, `History`, `GameView`, `Derby`, `DerbyView`, and `AllTimePlayers` (rendered as a tab inside `History`, not its own route)
+- **`pages/`** — 23 files: `NewGame`, `Dashboard`, `Roster`, `Rookie`, `Market`, `Stars`, `Trades`, `Stadium`, `Scouts`, `Finances`, `TeamsOverview`, `Schedule`, `Lineup`, `Broadcast`, `Playoffs`, `Coaches`, `Draft`, `News`, `History`, `GameView`, `Derby`, `DerbyView`, `PressRoom` (`/press`, Sala de prensa), and `AllTimePlayers` (rendered as a tab inside `History`, not its own route)
 - **`map/`** — PixiJS 7 league map (`geometry.js` pins each league city in `ANCHORS` by division and name, unknown cities hash to a spot, on a fixed fictional continent, `MapScene.js`, `LeagueMap.jsx` for the `/map` page, `TravelOverlay.jsx`). After "Avanzar Día" lands on a user game, `advanceDayFlow.js` navigates with `state.travel` and `GameView` shows the overlay (flight from the current city, or "Play Ball" if already there) before `GameIntro`
 - **`stadium/`** — PixiJS 7 top-down stadium view (`geometry.js`, `builders.js`, `StadiumScene.js`, `StadiumView.jsx`), lazy-loaded as the "Vista" tab of `Stadium`; every grid section is drawn as a wedge of a bowl around the field (one ring per floor, `layoutSections()` in `geometry.js`) with its own level look; facilities drawn from their levels
-- **`components/`** — Shared UI: `Navbar`, `Leaderboard`, `StadiumGrid`, `SectionModal`, `Pagination`, `TeamBadge`, `SkillTierBadge`, `FavoriteButton`
+- **`components/`** — Shared UI: `Navbar`, `Leaderboard`, `StadiumGrid`, `SectionModal`, `Pagination`, `TeamBadge`, `BroadcastLogo` (SVGs in `assets/broadcast/`, matched by slugified company name), `SkillTierBadge`, `FavoriteButton`
 
 Styling is Tailwind CSS v3 with no component library.
 

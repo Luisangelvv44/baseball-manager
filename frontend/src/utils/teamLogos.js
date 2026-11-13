@@ -6,7 +6,7 @@ for (const path in logoModules) {
   logosBySlug[slug] = logoModules[path];
 }
 
-function slugify(name) {
+export function slugify(name) {
   return name.trim().toLowerCase().replace(/\s+/g, '-');
 }
 

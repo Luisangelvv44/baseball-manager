@@ -4,7 +4,7 @@
 
 export const SECTIONS = [
   { id: 'portada', label: 'Portada' },
-  { id: 'partidos', label: 'Partidos', types: ['game', 'walkoff', 'extra_innings', 'streak', 'rivalry'] },
+  { id: 'partidos', label: 'Partidos', types: ['game', 'walkoff', 'extra_innings', 'streak', 'rivalry', 'press'] },
   { id: 'hazanas', label: 'Hazañas', types: ['no_hitter', 'cycle', 'multi_hr', 'derby', 'awards'] },
   { id: 'mercado', label: 'Mercado', types: ['auction', 'signing', 'trade'] },
   { id: 'enfermeria', label: 'Enfermería', types: ['injury'] },
@@ -16,6 +16,7 @@ const KICKER = {
   game: 'Crónica', walkoff: 'Walk-off', extra_innings: 'Innings extra', streak: 'Rachas', rivalry: 'Rivalidad',
   no_hitter: 'Joya monticular', cycle: 'El ciclo', multi_hr: 'Jonrones', derby: 'Home Run Derby', awards: 'Premios',
   auction: 'Subastas', signing: 'Movimientos', trade: 'Traspasos', injury: 'Parte médico', loan: 'El Banco',
+  press: 'Sala de prensa',
 };
 
 const REPORTERS = {
@@ -29,7 +30,7 @@ const REPORTERS = {
 // Peso para decidir qué va a portada. Las notas del equipo del usuario suben.
 const PRIORITY = {
   no_hitter: 100, cycle: 90, awards: 85, derby: 80, walkoff: 70, auction: 60, trade: 55,
-  extra_innings: 50, rivalry: 45, multi_hr: 40, streak: 35, loan: 30, game: 10, signing: 20, injury: 5,
+  extra_innings: 50, press: 48, rivalry: 45, multi_hr: 40, streak: 35, loan: 30, game: 10, signing: 20, injury: 5,
 };
 const MINE_BONUS = { game: 45, injury: 30 };
 
@@ -128,6 +129,10 @@ function deckFor(item, game) {
     case 'signing': return 'Un nuevo nombre en la plantilla de las Mayores.';
     case 'injury': return h.includes('volvió') ? 'Alta médica.' : 'Baja temporal en la plantilla.';
     case 'loan': return 'Movimiento en las cuentas del Banco de la liga.';
+    case 'press':
+      if (h.includes('no se presenta')) return 'La silla del mánager quedó vacía ante los micrófonos.';
+      if (h.includes('premian la audiencia')) return 'Las cadenas de TV y radio pagan por el espectáculo ante la prensa.';
+      return 'Declaraciones del mánager tras la rueda de prensa.';
     default: return '';
   }
 }
@@ -146,7 +151,7 @@ function auctionDetails(item) {
   };
 }
 
-const LINKS = { trade: ['/trades', 'Ver traspasos'], auction: ['/market', 'Ir al mercado'], loan: ['/bank', 'Ir al Banco'], injury: ['/roster', 'Ver plantilla'] };
+const LINKS = { press: ['/press', 'Ir a la sala de prensa'], trade: ['/trades', 'Ver traspasos'], auction: ['/market', 'Ir al mercado'], loan: ['/bank', 'Ir al Banco'], injury: ['/roster', 'Ver plantilla'] };
 
 export function buildStory(item, ctx) {
   const section = sectionOf(item.type);

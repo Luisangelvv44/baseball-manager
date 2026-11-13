@@ -8,6 +8,7 @@ const {
   simulateRound,
   advancePlayoffRound,
 } = require('../services/playoffService');
+const { maybeCreateAfterGroupStage } = require('../services/pressConferenceService');
 
 async function getActiveSeason() {
   return prisma.season.findFirst({
@@ -63,6 +64,7 @@ router.post('/advance-round', async (req, res) => {
     if (!season) return res.status(400).json({ error: 'No hay temporada' });
 
     const result = await advancePlayoffRound(season.id);
+    if (result.nextRound === 1) await maybeCreateAfterGroupStage(season.id);
     const series = await getPlayoffBracket(season.id);
     res.json({ ...result, series });
   } catch (err) {

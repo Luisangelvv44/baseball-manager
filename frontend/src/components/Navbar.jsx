@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Newspaper, Calendar, Users, Sprout, ClipboardList,
   ShoppingCart, ArrowLeftRight, Star, Zap, Landmark, Binoculars,
   UserCog, Wallet, Shield, Radio, Trophy, ListChecks, History,
-  Banknote, Shirt, Baby, Map as MapIcon, Handshake,
+  Banknote, Shirt, Baby, Map as MapIcon, Handshake, Mic,
 } from 'lucide-react';
 import { useTeam } from '../context/TeamContext.jsx';
 import TeamBadge from './TeamBadge.jsx';
@@ -13,6 +13,7 @@ import PlayerSearch from './PlayerSearch.jsx';
 const LINKS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/news', label: 'Noticias', icon: Newspaper },
+  { to: '/press', label: 'Sala de prensa', icon: Mic },
   { to: '/schedule', label: 'Calendario', icon: Calendar },
   { to: '/roster', label: 'Roster', icon: Users },
   { to: '/rookie', label: 'Rookie', icon: Sprout },

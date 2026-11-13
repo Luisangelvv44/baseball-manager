@@ -5,13 +5,32 @@ const {
   USER_TEAM_ID,
   TODDLER_PROGRAM_SEASONS,
   TODDLER_PROGRAM_PICKS_PER_TEAM,
+  TODDLER_PROGRAM_MAX_DEVELOPMENT_PCT,
 } = require('../config');
 const {
   generateToddlerCycle,
   advanceOnePick,
   userPickToddler,
   improveProbForSeason,
+  toddlerProjectedSkill,
 } = require('../services/toddlerProgramService');
+
+// En el programa, current_skill es % de desarrollo; un toddler ya elegido ('active',
+// hasta que termina la ronda) ya tiene skill real, asi que su % se deriva de ella.
+function withDevelopment(row) {
+  const inProgram = row.status === 'toddler_program';
+  return {
+    ...row,
+    development_pct: inProgram
+      ? Math.min(row.current_skill, TODDLER_PROGRAM_MAX_DEVELOPMENT_PCT)
+      : Math.round((row.current_skill / row.potential_coefficient) * 100),
+    projected_skill: inProgram
+      ? toddlerProjectedSkill(row.current_skill, row.potential_coefficient)
+      : row.current_skill,
+  };
+}
+
+const byProjectedSkill = (a, b) => b.projected_skill - a.projected_skill || a.id - b.id;
 
 // GET /api/toddlers -> estado del programa (ciclo activo + eleccion en curso si la hay)
 router.get('/', async (req, res) => {
@@ -34,11 +53,11 @@ router.get('/', async (req, res) => {
     if (active) {
       const toddlers = await prisma.player.findMany({
         where: { toddler_program_id: active.id, status: 'toddler_program' },
-        orderBy: [{ current_skill: 'desc' }, { id: 'asc' }],
         select: {
           id: true, first_name: true, last_name: true, position: true,
           age: true, current_skill: true, potential_coefficient: true,
           parent: { select: { first_name: true, last_name: true } },
+          status: true,
         },
       });
       const contribs = await prisma.toddlerContribution.findMany({ where: { program_id: active.id } });
@@ -62,7 +81,7 @@ router.get('/', async (req, res) => {
         years_remaining: TODDLER_PROGRAM_SEASONS - active.seasons_elapsed,
         budget: Number(active.budget),
         next_improve_prob: improveProbForSeason(active.seasons_elapsed),
-        toddlers,
+        toddlers: toddlers.map(withDevelopment).sort(byProjectedSkill),
         contributions,
         user_total: contribMap.get(USER_TEAM_ID) || 0,
         user_budget: Number(userBudgetRow?.budget ?? 0),
@@ -74,7 +93,6 @@ router.get('/', async (req, res) => {
       const order = selecting.pick_order || [];
       const rows = await prisma.player.findMany({
         where: { toddler_program_id: selecting.id },
-        orderBy: [{ current_skill: 'desc' }, { id: 'asc' }],
         select: {
           id: true, first_name: true, last_name: true, position: true,
           age: true, current_skill: true, potential_coefficient: true,
@@ -100,11 +118,13 @@ router.get('/', async (req, res) => {
           team_name: teamName(id),
           is_user_team: id === USER_TEAM_ID,
         })),
-        toddlers: rows.map((r) => ({
-          ...r,
-          owner_team_id: r.team_id,
-          owner_team_name: r.team_id ? teamName(r.team_id) : null,
-        })),
+        toddlers: rows
+          .map((r) => ({
+            ...withDevelopment(r),
+            owner_team_id: r.team_id,
+            owner_team_name: r.team_id ? teamName(r.team_id) : null,
+          }))
+          .sort(byProjectedSkill),
       };
     }
 

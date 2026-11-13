@@ -122,7 +122,18 @@ async function getTeamRivalries(teamId) {
   return rivalries;
 }
 
+// Suma (o resta) intensidad fuera de un partido, p. ej. por declaraciones en rueda de prensa.
+async function adjustRivalryIntensity(teamAId, teamBId, delta) {
+  const rivalry = await getOrCreateRivalry(teamAId, teamBId);
+  if (!delta) return rivalry;
+  return prisma.rivalry.update({
+    where: { id: rivalry.id },
+    data: { intensity: clamp(rivalry.intensity + delta, RIVALRY_MIN, RIVALRY_MAX) },
+  });
+}
+
 module.exports = {
+  adjustRivalryIntensity,
   canonicalPair,
   getOrCreateRivalry,
   updateRivalryAfterGame,

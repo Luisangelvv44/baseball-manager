@@ -240,8 +240,9 @@ function ToddlerTable({ toddlers, selectable, busy, onPick }) {
             <th className="p-2">Nombre</th>
             <th className="p-2">Pos</th>
             <th className="p-2">Edad</th>
-            <th className="p-2">Destreza</th>
+            <th className="p-2">Desarrollo</th>
             <th className="p-2">Potencial</th>
+            <th className="p-2">Destreza proyectada</th>
             <th className="p-2"></th>
           </tr>
         </thead>
@@ -263,8 +264,8 @@ function ToddlerTable({ toddlers, selectable, busy, onPick }) {
                 </td>
                 <td className="p-2">{t.age}</td>
                 <td className="p-2 font-semibold">
-                  <span className={t.current_skill < 0 ? 'text-red-600' : 'text-gray-800'}>
-                    {t.current_skill}
+                  <span className={t.development_pct < 0 ? 'text-red-600' : 'text-gray-800'}>
+                    {t.development_pct}%
                   </span>
                 </td>
                 <td className="p-2">
@@ -278,6 +279,11 @@ function ToddlerTable({ toddlers, selectable, busy, onPick }) {
                     }`}
                   >
                     {t.potential_coefficient}
+                  </span>
+                </td>
+                <td className="p-2 font-semibold">
+                  <span className={t.projected_skill < 0 ? 'text-red-600' : 'text-gray-800'}>
+                    {t.projected_skill}
                   </span>
                 </td>
                 <td className="p-2 text-right">

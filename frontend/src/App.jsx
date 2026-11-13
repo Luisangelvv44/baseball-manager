@@ -28,6 +28,7 @@ import Toddlers from './pages/Toddlers.jsx';
 import Bank from './pages/Bank.jsx';
 import MapPage from './pages/MapPage.jsx';
 import PlayoffMarket from './pages/PlayoffMarket.jsx';
+import PressRoom from './pages/PressRoom.jsx';
 
 export default function App() {
   return (
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="/draft" element={<Draft />} />
           <Route path="/stars" element={<Stars />} />
           <Route path="/news" element={<News />} />
+          <Route path="/press" element={<PressRoom />} />
           <Route path="/history" element={<History />} />
           <Route path="/game/:id" element={<GameView />} />
           <Route path="/jerseys" element={<Jerseys />} />

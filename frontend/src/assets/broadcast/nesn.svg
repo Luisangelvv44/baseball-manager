@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+<rect x="4" y="4" width="112" height="112" rx="22" fill="#0b2545"/>
+<polygon points="62,35 112,18 112,52" fill="#ffe08a" opacity="0.65"/>
+<polygon points="54,40 66,40 70,92 50,92" fill="#ffffff"/>
+<polygon points="52.8,55 67.2,55 68.2,67 51.8,67" fill="#c8102e"/>
+<rect x="53" y="30" width="14" height="10" fill="#ffe08a"/>
+<polygon points="50,30 70,30 60,20" fill="#c8102e"/>
+<path d="M4 90 Q19 82 34 90 T64 90 T94 90 T116 90 V94 A22 22 0 0 1 94 116 H26 A22 22 0 0 1 4 94 Z" fill="#1b6ca8"/>
+<text x="60" y="110" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="16" text-anchor="middle" fill="#ffffff">NESN</text>
+</svg>

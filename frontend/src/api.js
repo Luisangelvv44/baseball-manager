@@ -1,4 +1,9 @@
-const BASE_URL = 'http://localhost:4000/api';
+// Desde http://baseball.localhost (proxy de tools/dev-proxy.js) la API vive en api.baseball.localhost;
+// en cualquier otro caso, en localhost:4000. VITE_API_URL tiene prioridad si se define.
+const BASE_URL = import.meta.env.VITE_API_URL
+  ?? (window.location.hostname === 'baseball.localhost'
+    ? 'http://api.baseball.localhost/api'
+    : 'http://localhost:4000/api');
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -157,6 +162,13 @@ export const api = {
   rejectOffer: (id) => request(`/broadcast/offers/${id}/reject`, { method: 'POST' }),
   getBroadcastContracts: () => request('/broadcast/contracts'),
   getBroadcastCompanies: () => request('/broadcast/companies'),
+
+  // Sala de prensa
+  getPress: () => request('/press'),
+  getPressConference: (id) => request(`/press/${id}`),
+  answerPress: (id, answers) =>
+    request(`/press/${id}/answer`, { method: 'POST', body: JSON.stringify({ answers }) }),
+  skipPress: (id) => request(`/press/${id}/skip`, { method: 'POST' }),
 
   // Traspasos
   getSentTrades: () => request('/trades/sent'),
