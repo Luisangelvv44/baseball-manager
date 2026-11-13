@@ -385,6 +385,24 @@ function HallOfFamePlaque({ entry }) {
           🎽 #{r.number} retirado por {r.team_name}
         </div>
       ))}
+      {entry.bio && <PlaqueBio text={entry.bio} />}
+    </div>
+  );
+}
+
+// Biografia de la placa: recortada a 3 lineas, se despliega al pulsar.
+function PlaqueBio({ text }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-t border-amber-100 pt-2 mt-1">
+      <p className={`text-xs text-gray-700 italic leading-relaxed ${open ? '' : 'line-clamp-3'}`}>{text}</p>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="text-xs text-amber-700 hover:underline mt-1"
+      >
+        {open ? 'Ver menos' : 'Leer biografía'}
+      </button>
     </div>
   );
 }

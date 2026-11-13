@@ -5,6 +5,7 @@ const { SEASON_AWARD_MIN_IP, USER_TEAM_ID, HOF_INDUCTION_PCT, HOF_DROP_PCT, HOF_
 const { recalculateCareerStats } = require('../services/allTimeStatsService');
 const { getSeasonEditionMap } = require('../services/seasonEdition');
 const { getRetiredNumbersOverview, retireNumber } = require('../services/jerseyService');
+const { gatherBioFacts, templateBio, ensureBiosInBackground } = require('../services/hofBio');
 
 // GET /api/history/champions -> cantidad de campeonatos ganados por cada equipo
 router.get('/champions', async (req, res) => {
@@ -305,10 +306,16 @@ router.get('/hall-of-fame', async (req, res) => {
       retired_edition: editions.get(c.evaluated_season_id) ?? null,
     });
 
-    const inducted = rows
+    const inductedRows = rows
       .filter((c) => c.status === 'inducted')
-      .sort((a, b) => b.inducted_season_id - a.inducted_season_id || b.last_vote_pct - a.last_vote_pct)
-      .map(toEntry);
+      .sort((a, b) => b.inducted_season_id - a.inducted_season_id || b.last_vote_pct - a.last_vote_pct);
+    // Biografia: la de la IA si ya existe; si no, la de plantilla y se reintenta la IA en segundo plano.
+    const inducted = [];
+    for (const c of inductedRows) {
+      const bio = c.bio ?? templateBio(await gatherBioFacts(c));
+      inducted.push({ ...toEntry(c), bio, bio_source: c.bio ? 'ai' : 'template' });
+    }
+    ensureBiosInBackground(inductedRows.filter((c) => !c.bio).map((c) => c.id));
     const ballot = rows
       .filter((c) => c.status === 'candidate')
       .sort((a, b) => (b.last_vote_pct ?? -1) - (a.last_vote_pct ?? -1) || b.legacy_score - a.legacy_score)
