@@ -18,6 +18,12 @@ npm run build    # Production build
 npm run preview  # Preview production build
 ```
 
+### Local domains (optional, run from repo root)
+```
+node tools/dev-proxy.js   # Port 80 proxy: http://baseball.localhost -> Vite 5173 (incl. HMR), http://api.baseball.localhost -> Express 4000
+```
+`frontend/src/api.js` picks `http://api.baseball.localhost/api` when the page is opened on `baseball.localhost` (else `localhost:4000`; `VITE_API_URL` overrides). `localhost:5173` keeps working. `.claude/launch.json` has `backend`, `frontend` and `proxy` entries.
+
 ### Database
 ```
 npx prisma migrate dev    # Apply migrations (from backend/)
