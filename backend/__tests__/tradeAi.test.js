@@ -38,11 +38,30 @@ describe('explainTradeDecision', () => {
   });
 
   it('no dice "cerca" cuando el valor total es negativo y falta mucho', () => {
-    const pricey = { ...vet, age: 35, current_skill: 90, salary: 30_000_000, contract_years_remaining: 3 };
-    const cheap = { ...star, current_skill: 40, salary: 300_000 };
-    const ex = explainTradeDecision(cpuTeam, { ...trade, items: [{ from_team_id: 1, player: pricey }, { from_team_id: 2, player: cheap }] }, roster);
+    // destreza mediocre muy sobrepagada: su valor es negativo
+    const pricey = { ...vet, age: 37, current_skill: 60, salary: 30_000_000, contract_years_remaining: 3 };
+    const ex = explainTradeDecision(cpuTeam, { ...trade, items: [{ from_team_id: 1, player: pricey }, { from_team_id: 2, player: star }] }, roster);
     expect(ex.accepted).toBe(false);
     expect(ex.closeness).toBe('muy_lejos');
+    // aun con brecha grande y valores negativos, el efectivo sugerido voltea la decision
+    const withCash = explainTradeDecision(cpuTeam, {
+      ...trade, cash_offered: ex.cashNeeded,
+      items: [{ from_team_id: 1, player: pricey }, { from_team_id: 2, player: star }],
+    }, roster);
+    expect(withCash.accepted).toBe(true);
+    const short = explainTradeDecision(cpuTeam, {
+      ...trade, cash_offered: ex.cashNeeded - 50_000,
+      items: [{ from_team_id: 1, player: pricey }, { from_team_id: 2, player: star }],
+    }, roster);
+    expect(short.accepted).toBe(false);
+  });
+
+  it('una estrella cara sigue valiendo mas que un suplente barato', () => {
+    const ace = { ...vet, position: 'P', age: 35, current_skill: 140, salary: 70_000_000, contract_years_remaining: 5 };
+    const scrub = { ...star, position: 'P', age: 32, current_skill: 39, salary: 377_000, contract_years_remaining: 4 };
+    const ex = explainTradeDecision(cpuTeam, { ...trade, items: [{ from_team_id: 1, player: ace }, { from_team_id: 2, player: scrub }] }, roster);
+    expect(ex.accepted).toBe(true);
+    expect(ex.cashNeeded).toBe(0);
   });
 
   it('el efectivo sugerido basta para que la CPU acepte', () => {

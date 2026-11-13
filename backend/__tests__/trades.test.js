@@ -188,3 +188,45 @@ describe('POST /api/trades acceptance flow', () => {
     expect(prisma.player.update).not.toHaveBeenCalled();
   });
 });
+
+describe('evaluatePlayerValue / acceptanceMargin (rebalance producción primero)', () => {
+  const { evaluatePlayerValue, acceptanceMargin, shouldCpuAcceptTrade } = require('../services/tradeService');
+  const p = (o) => ({ position: 'RF', age: 28, growth_age: 28, potential_coefficient: 40, contract_years_remaining: 2, salary: 1_000_000, ...o });
+
+  it('a igual contrato, mas destreza vale mas', () => {
+    const values = [40, 70, 90, 120, 140].map((s) => evaluatePlayerValue(p({ current_skill: s })));
+    for (let i = 1; i < values.length; i++) expect(values[i]).toBeGreaterThan(values[i - 1]);
+  });
+
+  it('un buen jugador caro sigue valiendo positivo; solo el muy sobrepagado es negativo', () => {
+    expect(evaluatePlayerValue(p({ current_skill: 90, age: 36, salary: 36_000_000, contract_years_remaining: 3 }))).toBeGreaterThan(0);
+    expect(evaluatePlayerValue(p({ current_skill: 77, age: 37, salary: 68_000_000, contract_years_remaining: 1 }))).toBeLessThan(0);
+  });
+
+  it('los anios de contrato tras el retiro (40) no cuentan', () => {
+    const vet = p({ current_skill: 80, age: 39, growth_age: 30 });
+    expect(evaluatePlayerValue({ ...vet, contract_years_remaining: 5 })).toBe(evaluatePlayerValue({ ...vet, contract_years_remaining: 1 }));
+  });
+
+  it('la CPU no regala a un titular caro (90) por un suplente de 39', () => {
+    const cpuStar = p({ current_skill: 90, age: 36, salary: 36_000_000, contract_years_remaining: 3 });
+    const scrub = p({ current_skill: 39, age: 32, salary: 377_000, contract_years_remaining: 4 });
+    const trade = {
+      proposer_team_id: 1, recipient_team_id: 2, cash_offered: 0, cash_requested: 0,
+      items: [{ from_team_id: 1, player: scrub }, { from_team_id: 2, player: cpuStar }],
+    };
+    expect(shouldCpuAcceptTrade({ id: 2, bid_aggressiveness: 0.06 }, trade)).toBe(false);
+  });
+
+  it('la tolerancia escala con la suma de |valores| (un valor negativo no la encoge)', () => {
+    const overpaid = p({ current_skill: 60, age: 37, salary: 30_000_000, contract_years_remaining: 3 });
+    const cheap = p({ current_skill: 50, salary: 300_000 });
+    const trade = {
+      proposer_team_id: 1, recipient_team_id: 2, cash_offered: 0, cash_requested: 0,
+      items: [{ from_team_id: 1, player: overpaid }, { from_team_id: 2, player: cheap }],
+    };
+    const { scale } = acceptanceMargin({ id: 2, bid_aggressiveness: 0 }, trade);
+    expect(scale).toBeCloseTo(Math.abs(evaluatePlayerValue(overpaid)) + Math.abs(evaluatePlayerValue(cheap)));
+    expect(scale).toBeGreaterThan(0);
+  });
+});
