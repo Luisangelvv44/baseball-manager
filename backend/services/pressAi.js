@@ -1,7 +1,7 @@
 // Capa de IA de las ruedas de prensa. Solo reescribe TEXTO: las preguntas (tema, mood, rival) y
 // los tonos disponibles los eligen las plantillas, y los efectos siguen saliendo de TONE_EFFECTS.
 // Todo lo que no pase la validacion se queda con el texto de plantilla.
-const { generateText } = require('./aiService');
+const { generateText, hasAlteredName } = require('./aiService');
 const { TONE_LABELS } = require('./pressTemplates');
 
 const MAX_QUESTION_CHARS = 260;
@@ -36,24 +36,6 @@ function hostStyle(host, satisfaction) {
 // Nombres propios que la IA debe copiar literalmente (DeepSeek cambio "de" por "del" en la prueba).
 function protectedNames(ctx) {
   return [ctx.teamName, ctx.opponentName, ctx.injured, ctx.feat?.player, ctx.standing?.division].filter(Boolean);
-}
-
-function escapeRegex(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-// true si el texto contiene una variante alterada de algun nombre (misma primera y ultima
-// palabra con algo distinto en medio, p. ej. "Toros del Sur" en vez de "Toros de Sur").
-function hasAlteredName(text, names) {
-  for (const name of names) {
-    const words = name.trim().split(/\s+/);
-    if (words.length < 2) continue;
-    const re = new RegExp(`${escapeRegex(words[0])}(?:\\s+\\S+){0,3}?\\s+${escapeRegex(words[words.length - 1])}`, 'gi');
-    for (const m of text.matchAll(re)) {
-      if (m[0].toLowerCase() !== name.toLowerCase()) return true;
-    }
-  }
-  return false;
 }
 
 function validText(value, max, names) {

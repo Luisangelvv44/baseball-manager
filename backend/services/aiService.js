@@ -61,6 +61,24 @@ function resetSpend() {
   spentBySeason.clear();
 }
 
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// true si el texto contiene una variante alterada de algun nombre propio (misma primera y ultima
+// palabra con algo distinto en medio, p. ej. "Toros del Sur" en vez de "Toros de Sur").
+function hasAlteredName(text, names) {
+  for (const name of names.filter(Boolean)) {
+    const words = name.trim().split(/\s+/);
+    if (words.length < 2) continue;
+    const re = new RegExp(`${escapeRegex(words[0])}(?:\\s+\\S+){0,3}?\\s+${escapeRegex(words[words.length - 1])}`, 'gi');
+    for (const m of text.matchAll(re)) {
+      if (m[0].toLowerCase() !== name.toLowerCase()) return true;
+    }
+  }
+  return false;
+}
+
 // Quita bloques ```json ... ``` que algunos modelos anaden aunque se pida JSON puro.
 function parseJson(text) {
   const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
@@ -154,4 +172,5 @@ module.exports = {
   getSpent,
   resetSpend,
   parseJson,
+  hasAlteredName,
 };

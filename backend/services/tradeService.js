@@ -3,6 +3,9 @@ const { USER_TEAM_ID, TRADE_DEADLINE_DAY, TRADE_OFFER_EXPIRY_DAYS } = require('.
 const { calculateGrowthCoefficient, projectPeakSkill } = require('./auctionService');
 const { createNews } = require('./newsService');
 const { transferContract } = require('./contractService');
+const { isEnabled: aiEnabled } = require('./aiService');
+const { offerPitchMessage } = require('./tradeMessages');
+const { composeOfferMessage } = require('./tradeAi');
 
 const ACCEPT_TOLERANCE_BASE = 0.10;  // tolerancia base a un trade ligeramente desfavorable, escala con bid_aggressiveness
 const CPU_OFFER_CHANCE = 0.05;       // probabilidad diaria de que un equipo CPU genere una oferta al usuario
@@ -36,12 +39,63 @@ function evaluateTradeForTeam(evaluatingTeamId, trade) {
   return (incomingValue + cashIn) - (outgoingValue + cashOut);
 }
 
-function shouldCpuAcceptTrade(cpuTeam, trade) {
+// Margen del trade para la CPU: cuanto le sobra (>= 0) o le falta (< 0) para aceptarlo.
+function acceptanceMargin(cpuTeam, trade) {
   const netValue = evaluateTradeForTeam(cpuTeam.id, trade);
   const totalValue = trade.items.reduce((s, i) => s + evaluatePlayerValue(i.player), 0) || 1;
   // mas agresivo = mas tolerante a un trade ligeramente desfavorable (arriesga mas)
   const tolerance = ACCEPT_TOLERANCE_BASE * (1 + cpuTeam.bid_aggressiveness);
-  return netValue >= -tolerance * totalValue;
+  return { margin: netValue + tolerance * totalValue, totalValue };
+}
+
+function shouldCpuAcceptTrade(cpuTeam, trade) {
+  return acceptanceMargin(cpuTeam, trade).margin >= 0;
+}
+
+const AGE_RISK_FROM = 34;
+const CASH_HINT_STEP = 50_000;
+
+// Por que la CPU acepta/rechaza una propuesta del usuario, con datos del propio calculo de
+// valor (para el mensaje del GM). Puro. cpuRoster: jugadores MAJOR activos de la CPU.
+// El efectivo NO cuenta en totalValue, asi que cashNeeded es exacto (redondeado hacia arriba).
+function explainTradeDecision(cpuTeam, trade, cpuRoster = []) {
+  const { margin, totalValue } = acceptanceMargin(cpuTeam, trade);
+  const accepted = margin >= 0;
+  const incoming = trade.items.filter((i) => i.from_team_id !== cpuTeam.id).map((i) => i.player);
+  const outgoing = trade.items.filter((i) => i.from_team_id === cpuTeam.id).map((i) => i.player);
+
+  // "caro" = cobra por punto de destreza mas del doble que la mediana de la plantilla CPU
+  const perSkill = (p) => Number(p.salary ?? 0) / Math.max(1, p.current_skill);
+  const rosterRates = cpuRoster.map(perSkill).sort((a, b) => a - b);
+  const medianRate = rosterRates.length ? rosterRates[Math.floor(rosterRates.length / 2)] : null;
+
+  const concerns = [];
+  for (const p of incoming) {
+    if (p.age > AGE_RISK_FROM) concerns.push({ type: 'veterano', player: p });
+    else if (medianRate && perSkill(p) > medianRate * 2) concerns.push({ type: 'caro', player: p });
+  }
+  for (const p of outgoing) {
+    const samePos = cpuRoster.filter((r) => r.position === p.position);
+    const isStarter = samePos.every((r) => r.id === p.id || r.current_skill <= p.current_skill);
+    if (isStarter) concerns.push({ type: 'titular', player: p });
+  }
+  if (Number(trade.cash_requested) > 0) concerns.push({ type: 'pides_efectivo', amount: Number(trade.cash_requested) });
+
+  // Posicion mas floja de la CPU (peor titular) si el usuario no ofrece a nadie ahi.
+  const bestByPos = {};
+  for (const r of cpuRoster) {
+    if (!bestByPos[r.position] || r.current_skill > bestByPos[r.position]) bestByPos[r.position] = r.current_skill;
+  }
+  const weakest = Object.entries(bestByPos).sort((a, b) => a[1] - b[1])[0]?.[0] ?? null;
+  const needPosition = weakest && !incoming.some((p) => p.position === weakest) ? weakest : null;
+
+  // El valor de un jugador puede ser negativo (salario), asi que la escala es la suma de |valores|.
+  const scale = trade.items.reduce((s, i) => s + Math.abs(evaluatePlayerValue(i.player)), 0) || 1;
+  const gapRatio = accepted ? 0 : -margin / scale;
+  const closeness = accepted ? null : gapRatio < 0.1 ? 'cerca' : gapRatio < 0.3 ? 'lejos' : 'muy_lejos';
+  const cashNeeded = accepted ? 0 : Math.ceil(-margin / CASH_HINT_STEP) * CASH_HINT_STEP;
+
+  return { accepted, closeness, cashNeeded, concerns, needPosition };
 }
 
 // Reglas compartidas por la ruta de propuesta/aceptacion y por la aceptacion automatica de CPU.
@@ -146,6 +200,19 @@ async function executeTrade(client, trade, season) {
   );
 }
 
+// Reemplaza el mensaje de plantilla de una oferta CPU por el de la IA, solo si sigue pendiente.
+// Devuelve la promesa (los tests la esperan); nunca rechaza.
+function rewriteOfferMessage(tradeId, opts) {
+  return composeOfferMessage({ ...opts, timeoutMs: 20_000 })
+    .then(({ message, source }) => (source === 'ai'
+      ? prisma.trade.updateMany({ where: { id: tradeId, status: 'pending' }, data: { gm_message: message } })
+      : null))
+    .catch((err) => {
+      console.warn(`[trades] mensaje IA de la oferta ${tradeId} fallido: ${err.message}`);
+      return null;
+    });
+}
+
 async function expireStaleTrades(tx, season) {
   const client = tx || prisma;
   await client.trade.updateMany({
@@ -162,8 +229,9 @@ async function generateCpuTradeOffers(tx, season) {
 
   const cpuTeams = await client.team.findMany({
     where: { is_user_team: false },
-    select: { id: true, name: true, budget: true },
+    select: { id: true, name: true, budget: true, bid_aggressiveness: true },
   });
+  let userTeamName = null;
 
   for (const cpuTeam of cpuTeams) {
     if (Math.random() >= CPU_OFFER_CHANCE) continue;
@@ -190,6 +258,7 @@ async function generateCpuTradeOffers(tx, season) {
     const weakestEntries = Object.values(weakestByPosition).sort((a, b) => a.current_skill - b.current_skill);
 
     let targetPlayer = null;
+    let needPosition = null;
     for (const weak of weakestEntries) {
       const candidate = await client.player.findFirst({
         where: {
@@ -200,7 +269,7 @@ async function generateCpuTradeOffers(tx, season) {
         },
         orderBy: { current_skill: 'asc' },
       });
-      if (candidate) { targetPlayer = candidate; break; }
+      if (candidate) { targetPlayer = candidate; needPosition = weak.position; break; }
     }
     if (!targetPlayer) continue;
 
@@ -237,8 +306,17 @@ async function generateCpuTradeOffers(tx, season) {
         cash_requested: 0,
         created_day: season.current_day,
         expires_day: season.current_day + TRADE_OFFER_EXPIRY_DAYS,
+        gm_message: offerPitchMessage({ needPosition, targetPlayer, surplusPlayer, cashOffered }),
       },
     });
+
+    // La IA reescribe el mensaje en segundo plano (no retrasa el avance de dia).
+    if (aiEnabled()) {
+      userTeamName ??= (await client.team.findUnique({ where: { id: USER_TEAM_ID }, select: { name: true } }))?.name ?? 'tu equipo';
+      rewriteOfferMessage(trade.id, {
+        cpuTeam, userTeamName, needPosition, targetPlayer, surplusPlayer, cashOffered, seasonId: season.id,
+      });
+    }
 
     await client.tradeItem.createMany({
       data: [
@@ -259,9 +337,12 @@ async function generateCpuTradeOffers(tx, season) {
 module.exports = {
   evaluatePlayerValue,
   evaluateTradeForTeam,
+  acceptanceMargin,
   shouldCpuAcceptTrade,
+  explainTradeDecision,
   validateTrade,
   executeTrade,
   expireStaleTrades,
   generateCpuTradeOffers,
+  rewriteOfferMessage,
 };

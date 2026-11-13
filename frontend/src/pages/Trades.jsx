@@ -79,6 +79,7 @@ function ProposeTradeSection({ myPlayers, cpuTeams, onProposed }) {
   const [requestedIds, setRequestedIds] = useState(new Set());
   const [cashAdjustment, setCashAdjustment] = useState('');
   const [message, setMessage] = useState('');
+  const [gmReply, setGmReply] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -108,6 +109,7 @@ function ProposeTradeSection({ myPlayers, cpuTeams, onProposed }) {
 
   async function handlePropose() {
     setMessage('');
+    setGmReply(null);
     if (offeredIds.size === 0 || requestedIds.size === 0) {
       setMessage('Selecciona al menos un jugador de cada equipo.');
       return;
@@ -126,6 +128,7 @@ function ProposeTradeSection({ myPlayers, cpuTeams, onProposed }) {
         cashRequested
       );
       setMessage(res.accepted ? '¡El equipo rival aceptó tu propuesta!' : 'El equipo rival rechazó tu propuesta.');
+      setGmReply(res.gmMessage ? { text: res.gmMessage, team: res.trade?.recipient_team?.name, accepted: res.accepted } : null);
       setOfferedIds(new Set());
       setRequestedIds(new Set());
       setCashAdjustment('');
@@ -191,6 +194,7 @@ function ProposeTradeSection({ myPlayers, cpuTeams, onProposed }) {
           </div>
 
           {message && <p className="text-sm">{message}</p>}
+          {gmReply && <GmMessage text={gmReply.text} team={gmReply.team} tone={gmReply.accepted ? 'good' : 'bad'} />}
 
           <button
             onClick={handlePropose}
@@ -202,6 +206,17 @@ function ProposeTradeSection({ myPlayers, cpuTeams, onProposed }) {
         </>
       )}
     </div>
+  );
+}
+
+// Mensaje del GM de la CPU (respuesta a tu propuesta o explicacion de su oferta).
+function GmMessage({ text, team, tone = 'neutral' }) {
+  const border = tone === 'good' ? 'border-green-400' : tone === 'bad' ? 'border-red-400' : 'border-blue-400';
+  return (
+    <blockquote className={`border-l-4 ${border} bg-gray-50 rounded-r px-3 py-2 text-sm text-gray-700`}>
+      <p className="italic">“{text}”</p>
+      {team && <footer className="text-xs text-gray-500 mt-1">— GM de {team}</footer>}
+    </blockquote>
   );
 }
 
@@ -285,6 +300,14 @@ function TradeCard({ trade, myTeamId, onAccept, onReject, onCancel }) {
           {cashToMe > 0 && <p className="text-xs text-green-700 mt-1">Recibes: ${cashToMe.toLocaleString()}</p>}
         </div>
       </div>
+
+      {trade.gm_message && (
+        <GmMessage
+          text={trade.gm_message}
+          team={otherTeam?.name}
+          tone={trade.status === 'accepted' ? 'good' : trade.status === 'rejected' && !isReceived ? 'bad' : 'neutral'}
+        />
+      )}
 
       {trade.status === 'pending' && (
         <div className="flex gap-2 justify-end pt-1">

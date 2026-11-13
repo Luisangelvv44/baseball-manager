@@ -1,4 +1,7 @@
-jest.mock('../services/aiService', () => ({ generateText: jest.fn() }));
+jest.mock('../services/aiService', () => ({
+  generateText: jest.fn(),
+  hasAlteredName: jest.requireActual('../services/aiService').hasAlteredName,
+}));
 
 const { generateText } = require('../services/aiService');
 const {

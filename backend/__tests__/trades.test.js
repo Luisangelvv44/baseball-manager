@@ -153,5 +153,38 @@ describe('POST /api/trades acceptance flow', () => {
     expect(prisma.team.update).toHaveBeenCalledWith({ where: { id: 2 }, data: { budget: { increment: 10000 } } });
     expect(prisma.finance.create).toHaveBeenCalled();
     expect(prisma.trade.update).toHaveBeenCalledWith({ where: { id: 100 }, data: { status: 'accepted', resolved_day: mockSeason.current_day } });
+    // mensaje del GM (plantilla: la IA esta apagada en Jest) guardado y devuelto
+    expect(res.body.gmMessage).toMatch(/Trato hecho/);
+    expect(prisma.trade.update).toHaveBeenCalledWith({ where: { id: 100 }, data: { gm_message: res.body.gmMessage } });
+  });
+
+  it('rejects an unfavorable offer with a GM message that explains why and hints', async () => {
+    const weakUserPlayer = { ...userPlayer, id: 11, current_skill: 30, age: 37, salary: 3000000, contract_years_remaining: 2 };
+    const starCpu = { ...cpuPlayer, id: 22, position: 'SS', current_skill: 90 };
+    prisma.season.findFirst.mockResolvedValue(mockSeason);
+    prisma.team.findUnique.mockImplementation(teamById);
+    prisma.player.findMany.mockResolvedValue([weakUserPlayer, starCpu]);
+    prisma.trade.create.mockResolvedValue({ id: 102 });
+    prisma.trade.findUnique.mockResolvedValue({
+      id: 102, proposer_team_id: 1, recipient_team_id: 2, cash_offered: 0, cash_requested: 0, status: 'pending',
+      proposer_team: { id: 1, name: 'Test Team' }, recipient_team: { id: 2, name: 'CPU Team' },
+      items: [
+        { id: 1, trade_id: 102, player_id: 11, from_team_id: 1, player: weakUserPlayer },
+        { id: 2, trade_id: 102, player_id: 22, from_team_id: 2, player: starCpu },
+      ],
+    });
+    prisma.trade.update.mockResolvedValue({});
+
+    const res = await request(app).post('/api/trades').send({
+      recipientTeamId: 2, offeredPlayerIds: [11], requestedPlayerIds: [22],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.accepted).toBe(false);
+    expect(prisma.trade.update).toHaveBeenCalledWith({ where: { id: 102 }, data: { status: 'rejected', resolved_day: mockSeason.current_day } });
+    expect(res.body.gmMessage).toMatch(/37 años/);
+    expect(res.body.gmMessage).toMatch(/lo volvemos a hablar/);
+    expect(prisma.trade.update).toHaveBeenCalledWith({ where: { id: 102 }, data: { gm_message: res.body.gmMessage } });
+    expect(prisma.player.update).not.toHaveBeenCalled();
   });
 });

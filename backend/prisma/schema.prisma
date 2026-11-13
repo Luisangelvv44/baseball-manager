@@ -574,6 +574,7 @@ model Trade {
   created_day       Int
   expires_day       Int?
   resolved_day      Int?
+  gm_message        String?  @db.Text // mensaje del GM CPU (plantilla o IA, ver tradeAi.js)
   created_at        DateTime @default(now())
 
   season         Season      @relation(fields: [season_id], references: [id])
