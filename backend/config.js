@@ -26,6 +26,13 @@ module.exports = {
   LUXURY_TAX_PROJECTION_DAY: 60, // mitad de temporada (90 dias de juego / 105 dias totales con pre-temporada)
   TRADE_DEADLINE_DAY: 75, // dos tercios de la temporada regular (15 + 60 de 90 dias de juego)
   TRADE_OFFER_EXPIRY_DAYS: 5,
+  // Valor de traspaso (tradeService.evaluatePlayerValue), por anio de contrato restante hasta el
+  // retiro y descontado al futuro: SKILL_WEIGHT x salario de referencia de su destreza proyectada
+  // (salaryCurve.js) - SALARY_WEIGHT x salario. La produccion pesa mas que lo que cobra.
+  TRADE_VALUE_SKILL_WEIGHT: 3,
+  TRADE_VALUE_SALARY_WEIGHT: 0.25,
+  TRADE_VALUE_YEAR_DISCOUNT: 0.85,
+  TRADE_VALUE_RETIREMENT_AGE: 40, // retiredPlayer.js retira a los 40: los anios siguientes no valen nada
   DERBY_SWINGS_PER_ENTRY: 10,
   DERBY_BASE_HR_PROB: 0.15,
   DERBY_SKILL_COEFFICIENT: 0.006,

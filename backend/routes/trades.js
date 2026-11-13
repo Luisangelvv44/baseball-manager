@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const { USER_TEAM_ID, TRADE_OFFER_EXPIRY_DAYS } = require('../config');
-const { validateTrade, executeTrade, shouldCpuAcceptTrade } = require('../services/tradeService');
+const { validateTrade, executeTrade, explainTradeDecision } = require('../services/tradeService');
+const { composeDecisionMessage } = require('../services/tradeAi');
 
 function tradeInclude() {
   return {
@@ -144,22 +145,44 @@ router.post('/', async (req, res) => {
       include: { items: { include: { player: true } } },
     });
 
-    const shouldAccept = shouldCpuAcceptTrade(recipientTeam, resolvedTrade);
-    if (shouldAccept) {
+    const cpuRoster = await prisma.player.findMany({
+      where: { team_id: recipientTeamId, status: 'active', level: 'MAJOR' },
+      select: { id: true, position: true, current_skill: true, salary: true },
+    });
+    const explanation = explainTradeDecision(recipientTeam, resolvedTrade, cpuRoster);
+
+    let accepted = false;
+    if (explanation.accepted) {
       const revalidation = await validateTrade(prisma, resolvedTrade, season);
       if (revalidation.ok) {
         await executeTrade(prisma, resolvedTrade, season);
-        const finalTrade = await prisma.trade.findUnique({ where: { id: created.id }, include: tradeInclude() });
-        return res.json({ success: true, accepted: true, trade: finalTrade });
+        accepted = true;
       }
     }
+    if (!accepted) {
+      await prisma.trade.update({
+        where: { id: created.id },
+        data: { status: 'rejected', resolved_day: season.current_day },
+      });
+    }
 
-    await prisma.trade.update({
-      where: { id: created.id },
-      data: { status: 'rejected', resolved_day: season.current_day },
-    });
+    // Mensaje del GM (IA con respaldo de plantilla). Si la CPU queria aceptar pero la
+    // revalidacion fallo, el motivo ya no es el valor: sin mensaje.
+    let gmMessage = null;
+    if (accepted || !explanation.accepted) {
+      const userTeam = await prisma.team.findUnique({ where: { id: USER_TEAM_ID }, select: { name: true } });
+      gmMessage = (await composeDecisionMessage({
+        cpuTeam: recipientTeam,
+        userTeamName: userTeam?.name ?? 'tu equipo',
+        trade: resolvedTrade,
+        explanation,
+        seasonId: season.id,
+      })).message;
+      await prisma.trade.update({ where: { id: created.id }, data: { gm_message: gmMessage } });
+    }
+
     const finalTrade = await prisma.trade.findUnique({ where: { id: created.id }, include: tradeInclude() });
-    res.json({ success: true, accepted: false, trade: finalTrade });
+    res.json({ success: true, accepted, trade: finalTrade, gmMessage });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al proponer el traspaso' });
