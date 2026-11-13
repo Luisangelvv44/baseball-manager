@@ -7,6 +7,13 @@ jest.mock('../services/rivalryService', () => ({
 jest.mock('../services/broadcastService', () => ({
   getTeamBroadcasts: jest.fn().mockResolvedValue({ 1: [] }),
 }));
+jest.mock('../services/aiService', () => ({ isEnabled: jest.fn().mockReturnValue(false) }));
+jest.mock('../services/pressAi', () => ({
+  enrichQuestions: jest.fn().mockResolvedValue(null),
+  aiHeadline: jest.fn().mockResolvedValue(null),
+}));
+const { isEnabled: aiEnabled } = require('../services/aiService');
+const { enrichQuestions, aiHeadline } = require('../services/pressAi');
 
 const prisma = require('../db/prisma');
 const { createNews } = require('../services/newsService');
@@ -21,6 +28,8 @@ const {
   maybeCreateAfterGroupStage,
   answerConference,
   skipConference,
+  createConference,
+  enrichConference,
   settlePressSeason,
 } = require('../services/pressConferenceService');
 const {
@@ -267,5 +276,63 @@ describe('settlePressSeason', () => {
     const result = await settlePressSeason(season);
     expect(result.bonuses).toEqual([]);
     expect(prisma.finance.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('IA en las ruedas de prensa', () => {
+  const ctx = { teamName: 'Halcones', opponentName: 'Rival 4' };
+  const conf = {
+    id: 11, season_id: 7, reporter_name: 'Valeria Prieto',
+    questions: [{ id: 'q1', mood: 'good', rival: true, options: [{ tone: 'humilde', quote: 'Calma.' }] }],
+  };
+  const aiQuestions = [{ ...conf.questions[0], text: 'Pregunta IA', source: 'ai' }];
+
+  afterEach(() => aiEnabled.mockReturnValue(false));
+
+  it('sin IA no consulta nada y la rueda queda con plantillas', async () => {
+    expect(await enrichConference(conf, ctx, null)).toBeNull();
+    expect(enrichQuestions).not.toHaveBeenCalled();
+    expect(prisma.pressConference.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('guarda las preguntas reescritas solo si la rueda sigue pendiente', async () => {
+    aiEnabled.mockReturnValue(true);
+    prisma.broadcastRelation.findUnique.mockResolvedValue({ satisfaction: 30 });
+    enrichQuestions.mockResolvedValueOnce({ questions: aiQuestions, replaced: 1 });
+
+    await enrichConference(conf, ctx, { id: 9, name: 'Canal 9', type: 'TV' });
+    expect(enrichQuestions).toHaveBeenCalledWith(expect.objectContaining({
+      host: { id: 9, name: 'Canal 9', type: 'TV', satisfaction: 30 }, reporter: 'Valeria Prieto', seasonId: 7,
+    }));
+    expect(prisma.pressConference.updateMany).toHaveBeenCalledWith({
+      where: { id: 11, status: 'pending' }, data: { questions: aiQuestions },
+    });
+  });
+
+  it('crear la rueda no falla aunque la IA lance un error', async () => {
+    aiEnabled.mockReturnValue(true);
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    enrichQuestions.mockRejectedValueOnce(new Error('timeout'));
+    const games = schedule(3, 9);
+    prisma.gameSchedule.findMany.mockResolvedValue(games);
+    const created = await createConference({
+      season, day: 30, trigger: 'series', opponentId: 4, series: { wins: 3, losses: 0 }, awaitAi: true,
+    });
+    expect(created.status).toBe('pending');
+    expect(created.questions.length).toBeGreaterThan(0);
+    console.warn.mockRestore();
+  });
+
+  it('usa el titular de la IA si lo hay y la plantilla si no', async () => {
+    const pending = { ...conf, day: 30, opponent_team_id: 4, host_company_id: null, status: 'pending' };
+    prisma.pressConference.findUnique.mockResolvedValue(pending);
+    aiEnabled.mockReturnValue(true);
+    aiHeadline.mockResolvedValueOnce('Titular escrito por la IA');
+    await answerConference(11, [{ questionId: 'q1', tone: 'humilde' }]);
+    expect(createNews).toHaveBeenLastCalledWith('press', 'Titular escrito por la IA', 30, 7, { teamId: USER_TEAM_ID });
+
+    aiHeadline.mockResolvedValueOnce(null);
+    await answerConference(11, [{ questionId: 'q1', tone: 'humilde' }]);
+    expect(createNews).toHaveBeenLastCalledWith('press', expect.stringContaining('pide calma'), 30, 7, { teamId: USER_TEAM_ID });
   });
 });

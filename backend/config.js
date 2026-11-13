@@ -172,6 +172,8 @@ module.exports = {
   PRESS_SATISFACTION_REFUSE_BELOW: 20, // por debajo, esa cadena no le ofrece contrato al usuario
   PRESS_SATISFACTION_SEASON_DECAY: 0.25, // fraccion de la distancia a 50 que se pierde cada temporada
   PRESS_RIVALRY_PROVOKE_BONUS: 5,
+  // La IA (services/pressAi.js) reescribe preguntas/respuestas y el titular; si falla, plantillas.
+  PRESS_AI_ENABLED: true,
 
   // ----- Rivalidades (ver services/rivalryService.js) -----
   RIVALRY_DIVISION_SEED: 15, // intensidad inicial si comparten division, al crear el primer registro
@@ -299,4 +301,20 @@ module.exports = {
   PLAYOFF_MARKET_MAX_SIGNINGS_PER_TEAM: 3, // refuerzos (y pujas ganando a la vez) por equipo
   PLAYOFF_MARKET_CPU_MIN_UPGRADE: 5, // la CPU solo puja si mejora a su titular por >= N de skill
   PLAYOFF_MARKET_CPU_BID_PROB: 0.6, // prob. diaria de que la CPU puje por cada candidato
+
+  // ----- IA de texto (ver services/aiService.js) -----
+  // Solo redacta texto; nunca decide mecanicas. Cadena: principal (pago) -> respaldo (gratis) ->
+  // null (el llamador usa sus plantillas). La clave va en backend/.env: OPENROUTER_API_KEY.
+  // Los modelos se pueden sobreescribir con AI_PRIMARY_MODEL / AI_FALLBACK_MODEL en .env.
+  AI_PRIMARY_MODEL: 'deepseek/deepseek-v4.1-flash-1017',
+  AI_FALLBACK_MODEL: 'nvidia/nemotron-3.5-super-vl:free',
+  AI_SEASON_BUDGET_USD: 0.10, // al llegar al tope se salta el modelo de pago (sigue el gratis)
+  AI_TIMEOUT_MS: 20_000,
+  AI_DEFAULT_MAX_TOKENS: 600,
+  AI_DEFAULT_TEMPERATURE: 0.8,
+  // USD por token, por si OpenRouter no devuelve usage.cost
+  AI_MODEL_PRICING: {
+    'deepseek/deepseek-v4.1-flash-1017': { input: 0.038e-6, output: 0.5e-6 },
+    'nvidia/nemotron-3.5-super-vl:free': { input: 0, output: 0 },
+  },
 };

@@ -15,7 +15,10 @@ const {
   PRESS_SATISFACTION_BASE,
   PRESS_AUDIENCE_BONUS_MAX_PCT,
   PRESS_SATISFACTION_SEASON_DECAY,
+  PRESS_AI_ENABLED,
 } = require('../config');
+const { isEnabled: aiEnabled } = require('./aiService');
+const { enrichQuestions, aiHeadline } = require('./pressAi');
 const { createNews } = require('./newsService');
 const { computeTrailingStreak } = require('./newsDetection');
 const { getRivalryIntensity, adjustRivalryIntensity } = require('./rivalryService');
@@ -29,7 +32,7 @@ const {
 } = require('./pressTemplates');
 
 // ---------------------------------------------------------------------------------------------
-// Ruedas de prensa del usuario (solo plantillas, sin IA):
+// Ruedas de prensa del usuario (plantillas; la IA solo reescribe el texto, ver pressAi.js):
 //  - Temporada regular: una cada PRESS_SERIES_INTERVAL series, al terminar el ultimo partido.
 //  - Playoffs: al cerrar cada serie del usuario (cuartos en adelante) y al terminar la liguilla.
 //  - La organiza una cadena con contrato vigente (alternando TV/radio). Las respuestas mueven la
@@ -172,10 +175,43 @@ async function buildContext({ season, day, trigger, opponentId, series = null, p
   };
 }
 
-async function createConference({ season, day, trigger, opponentId, series, playoff, rng = Math.random }) {
+function pressAiOn() {
+  return PRESS_AI_ENABLED && aiEnabled();
+}
+
+async function hostWithSatisfaction(host) {
+  if (!host) return null;
+  const rel = await prisma.broadcastRelation.findUnique({
+    where: { company_id_team_id: { company_id: host.id, team_id: USER_TEAM_ID } },
+  });
+  return { ...host, satisfaction: rel?.satisfaction ?? PRESS_SATISFACTION_BASE };
+}
+
+// Reescribe con IA las preguntas de una rueda recien creada. Solo guarda si sigue pendiente
+// (si el usuario ya respondio con las plantillas, no se toca). Devuelve lo generado o null.
+async function enrichConference(conf, ctx, host) {
+  if (!pressAiOn()) return null;
+  const enriched = await enrichQuestions({
+    ctx,
+    questions: conf.questions,
+    host: await hostWithSatisfaction(host),
+    reporter: conf.reporter_name,
+    seasonId: conf.season_id,
+  });
+  if (!enriched) return null;
+  await prisma.pressConference.updateMany({
+    where: { id: conf.id, status: 'pending' },
+    data: { questions: enriched.questions },
+  });
+  return enriched;
+}
+
+// La rueda se crea al instante con plantillas y la IA la reescribe en segundo plano, para no
+// retrasar la simulacion del partido (opts.awaitAi espera, para tests/scripts).
+async function createConference({ season, day, trigger, opponentId, series, playoff, rng = Math.random, awaitAi = false }) {
   const ctx = await buildContext({ season, day, trigger, opponentId, series, playoff });
   const host = await pickHost(season.id);
-  return prisma.pressConference.create({
+  const conf = await prisma.pressConference.create({
     data: {
       season_id: season.id,
       day,
@@ -187,6 +223,33 @@ async function createConference({ season, day, trigger, opponentId, series, play
       questions: pickQuestions(ctx, rng),
     },
   });
+  const task = enrichConference(conf, ctx, host).catch((err) => {
+    console.warn(`[press] IA no disponible para la rueda ${conf.id}: ${err.message}`);
+    return null;
+  });
+  if (awaitAi) await task;
+  return conf;
+}
+
+// Titular con IA; null si no hay IA o falla (el llamador usa la plantilla).
+async function headlineWithAi(conf, perQuestion, names, fallback) {
+  if (!pressAiOn()) return null;
+  try {
+    const host = conf.host_company_id
+      ? await prisma.broadcastCompany.findUnique({ where: { id: conf.host_company_id }, select: { id: true, name: true, type: true } })
+      : null;
+    return await aiHeadline({
+      perQuestion,
+      questions: conf.questions,
+      names,
+      host: await hostWithSatisfaction(host),
+      seasonId: conf.season_id,
+      fallback,
+    });
+  } catch (err) {
+    console.warn(`[press] titular IA fallido: ${err.message}`);
+    return null;
+  }
 }
 
 async function addAudience(delta) {
@@ -247,7 +310,9 @@ async function answerConference(id, answers) {
   if (applied.rivalry) await adjustRivalryIntensity(USER_TEAM_ID, conf.opponent_team_id, applied.rivalry);
 
   const names = await teamNames(conf);
-  await createNews('press', pressHeadline(computed.perQuestion, names), conf.day, conf.season_id, { teamId: USER_TEAM_ID });
+  const fallback = pressHeadline(computed.perQuestion, names);
+  const headline = (await headlineWithAi(conf, computed.perQuestion, names, fallback)) ?? fallback;
+  await createNews('press', headline, conf.day, conf.season_id, { teamId: USER_TEAM_ID });
 
   return prisma.pressConference.update({
     where: { id },
@@ -473,6 +538,8 @@ module.exports = {
   audienceBonus,
   pickHost,
   buildContext,
+  createConference,
+  enrichConference,
   answerConference,
   skipConference,
   expirePendingConferences,
