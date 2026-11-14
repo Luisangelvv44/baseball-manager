@@ -2,6 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/* --- Versión de escritorio (Electron, clase puesta por desktop/preload.js) ---
+   La ventana no tiene barra de Windows: el encabezado del Navbar se arrastra para mover
+   la ventana (doble clic = maximizar) y deja sitio a la derecha para los botones nativos
+   de minimizar/maximizar/cerrar, que Electron pinta encima con los colores del juego.
+   El Navbar queda fijo arriba para que esos botones nunca floten sobre el contenido. */
+.desktop-app .desktop-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.desktop-app .desktop-titlebar {
+  -webkit-app-region: drag;
+  user-select: none;
+  /* 144px = 3 botones nativos de ~46px, menos el margen que ya deja max-w-7xl (80rem) */
+  padding-right: max(1rem, calc(144px - (100vw - 80rem) / 2));
+}
+.desktop-app .desktop-titlebar :is(a, button, input, select, textarea, label, [role="button"], [tabindex], .absolute) {
+  -webkit-app-region: no-drag;
+}
+.desktop-app .desktop-titlebar img { -webkit-user-drag: none; }
+
 /* --- Animación de intro de partido (GameIntro) --- */
 @keyframes gi-in-left   { from { transform: translateX(-101%); } to { transform: translateX(0); } }
 @keyframes gi-in-right  { from { transform: translateX(101%);  } to { transform: translateX(0); } }
