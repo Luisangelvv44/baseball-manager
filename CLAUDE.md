@@ -31,6 +31,7 @@ npm run build      # prepare-db (SQLite schema + client + migrations check) + st
 npm run dev        # build + open the Electron window
 npm run dist       # build + Windows installer in desktop/dist/
 npm run migration:new -- <name>   # new desktop SQLite migration after a backend schema change
+npm run icon       # only if frontend/public/logo.svg changes: regenerates the committed desktop/build/icon.ico (icon-gen)
 ```
 **Every backend schema change needs a desktop migration too:** after `npx prisma migrate dev` in `backend/`, run
 `npm run migration:new -- <name>` in `desktop/` and commit `desktop/migrations/` (the new `NNNN_<name>/migration.sql` and

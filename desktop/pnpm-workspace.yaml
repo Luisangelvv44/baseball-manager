@@ -4,4 +4,5 @@ allowBuilds:
   prisma: true
   electron: true
   electron-winstaller: true
+  sharp: true
 nodeLinker: hoisted

@@ -8,6 +8,7 @@
   "scripts": {
     "prepare-db": "node scripts/gen-schema.js && prisma generate --schema=prisma/schema.prisma && node scripts/check-migrations.js",
     "migration:new": "node scripts/migration-new.js",
+    "icon": "icon-gen -i ../frontend/public/logo.svg -o build --ico --ico-name icon --ico-sizes 16,24,32,48,64,128,256 -r",
     "stage": "node scripts/stage.js",
     "build": "npm run prepare-db && npm run stage",
     "dev": "npm run build && electron .",
@@ -23,6 +24,7 @@
   "devDependencies": {
     "electron": "^38.0.0",
     "electron-builder": "^26.0.0",
+    "icon-gen": "^5.0.0",
     "prisma": "6.19.3"
   },
   "build": {
@@ -30,7 +32,8 @@
     "productName": "Baseball Manager",
     "asar": false,
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "build"
     },
     "files": [
       "main.js",
@@ -38,15 +41,23 @@
       "app/**/*",
       "prisma-client/**/*",
       "migrations/**/migration.sql",
+      "build/icon.ico",
       "node_modules/**/*",
       "package.json"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Baseball Manager"
     }
   }
 }

@@ -103,6 +103,8 @@ function createWindow(port) {
     minWidth: 1024,
     minHeight: 700,
     title: 'Baseball Manager',
+    // En el .exe empaquetado Windows ya usa el icono del ejecutable; esto cubre `npm run dev`.
+    icon: path.join(ROOT, 'build', 'icon.ico'),
     autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,
