@@ -47,9 +47,9 @@ export default function Navbar() {
   const rep = myTeam ? `Rep: ${myTeam.reputation}` : '-';
 
   return (
-    <div className="bg-gray-900 text-white">
-      {/* Main header */}
-      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
+    <div className="desktop-navbar bg-gray-900 text-white">
+      {/* Main header (en escritorio también es la barra de la ventana: ver index.css) */}
+      <div className="desktop-titlebar max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
         <Link to="/" className="flex items-center gap-2 font-bold text-lg shrink-0">
           <img src="/logo.svg" alt="" className="h-9 w-9" />
           Baseball Manager

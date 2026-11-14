@@ -37,6 +37,7 @@
     },
     "files": [
       "main.js",
+      "preload.js",
       "migrator.js",
       "app/**/*",
       "prisma-client/**/*",

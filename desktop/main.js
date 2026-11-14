@@ -96,6 +96,9 @@ function startServer() {
   });
 }
 
+// Alto del encabezado principal del Navbar (h-14 = 56px).
+const TITLE_BAR_HEIGHT = 56;
+
 function createWindow(port) {
   const win = new BrowserWindow({
     width: 1440,
@@ -106,9 +109,20 @@ function createWindow(port) {
     // En el .exe empaquetado Windows ya usa el icono del ejecutable; esto cubre `npm run dev`.
     icon: path.join(ROOT, 'build', 'icon.ico'),
     autoHideMenuBar: true,
+    // Sin barra de título de Windows: el encabezado del juego hace de barra y los botones
+    // nativos (minimizar/maximizar/cerrar, con snap layouts) se pintan encima con sus
+    // colores. Debe coincidir con bg-gray-900 / h-14 del Navbar.
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#111827',
+      symbolColor: '#9ca3af',
+      height: TITLE_BAR_HEIGHT,
+    },
+    backgroundColor: '#111827',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      preload: path.join(ROOT, 'preload.js'),
     },
   });
 
