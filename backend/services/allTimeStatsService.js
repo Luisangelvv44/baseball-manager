@@ -19,21 +19,25 @@ const { USER_TEAM_ID, HISTORICAL_CPU_STAT_DIVISOR } = require('../config');
 // castigaría a las leyendas retiradas del propio usuario.
 // Innings lanzados y carreras limpias NO se ponderan: la EFE de carrera y su piso
 // de innings mínimos siguen siendo una tasa/umbral reales.
+//
+// SQL portable (Postgres y SQLite de la versión desktop): SQLite no tiene FLOOR ni
+// `::numeric`, así que el piso de valores >= 0 se calcula como ROUND(x - 0.499999999)
+// y la división no entera como `x * 1.0 / DIV`.
 async function recalculateCareerStats() {
   const now = new Date();
   const DIV = HISTORICAL_CPU_STAT_DIVISOR;
 
   await prisma.$executeRaw`
-    UPDATE "Player" p
-    SET career_hits = FLOOR(COALESCE(archived.hits, 0) + COALESCE(live.hits, 0)),
-        career_home_runs = FLOOR(COALESCE(archived.hr, 0) + COALESCE(live.hr, 0)),
-        career_rbi = FLOOR(COALESCE(archived.rbi, 0) + COALESCE(live.rbi, 0)),
+    UPDATE "Player" AS p
+    SET career_hits = ROUND(COALESCE(archived.hits, 0) + COALESCE(live.hits, 0) - 0.499999999),
+        career_home_runs = ROUND(COALESCE(archived.hr, 0) + COALESCE(live.hr, 0) - 0.499999999),
+        career_rbi = ROUND(COALESCE(archived.rbi, 0) + COALESCE(live.rbi, 0) - 0.499999999),
         career_stats_updated_at = ${now}
     FROM (
       SELECT player_id,
-             SUM(CASE WHEN team_id = ${USER_TEAM_ID} THEN hits ELSE hits / ${DIV}::numeric END) AS hits,
-             SUM(CASE WHEN team_id = ${USER_TEAM_ID} THEN home_runs ELSE home_runs / ${DIV}::numeric END) AS hr,
-             SUM(CASE WHEN team_id = ${USER_TEAM_ID} THEN rbi ELSE rbi / ${DIV}::numeric END) AS rbi
+             SUM(CASE WHEN team_id = ${USER_TEAM_ID} THEN hits ELSE hits * 1.0 / ${DIV} END) AS hits,
+             SUM(CASE WHEN team_id = ${USER_TEAM_ID} THEN home_runs ELSE home_runs * 1.0 / ${DIV} END) AS hr,
+             SUM(CASE WHEN team_id = ${USER_TEAM_ID} THEN rbi ELSE rbi * 1.0 / ${DIV} END) AS rbi
       FROM player_season_records
       GROUP BY player_id
     ) archived
@@ -57,9 +61,9 @@ async function recalculateCareerStats() {
     WITH archived_pitching AS (
       SELECT player_id,
              SUM(pitching_outs) AS outs,
-             SUM(CASE WHEN team_id = ${USER_TEAM_ID} THEN pitching_strikeouts ELSE pitching_strikeouts / ${DIV}::numeric END) AS so,
+             SUM(CASE WHEN team_id = ${USER_TEAM_ID} THEN pitching_strikeouts ELSE pitching_strikeouts * 1.0 / ${DIV} END) AS so,
              SUM(earned_runs) AS er,
-             SUM(CASE WHEN team_id = ${USER_TEAM_ID} THEN wins ELSE wins / ${DIV}::numeric END) AS wins
+             SUM(CASE WHEN team_id = ${USER_TEAM_ID} THEN wins ELSE wins * 1.0 / ${DIV} END) AS wins
       FROM player_season_records
       WHERE pitching_games > 0
       GROUP BY player_id
@@ -91,9 +95,9 @@ async function recalculateCareerStats() {
       JOIN schedule s ON s.id = pg.game_id
       GROUP BY pg.player_id
     )
-    UPDATE "Player" p
-    SET career_wins = FLOOR(COALESCE(ap.wins, 0) + COALESCE(lpw.wins, 0)),
-        career_strikeouts = FLOOR(COALESCE(ap.so, 0) + COALESCE(lp.so, 0)),
+    UPDATE "Player" AS p
+    SET career_wins = ROUND(COALESCE(ap.wins, 0) + COALESCE(lpw.wins, 0) - 0.499999999),
+        career_strikeouts = ROUND(COALESCE(ap.so, 0) + COALESCE(lp.so, 0) - 0.499999999),
         career_innings_pitched = (COALESCE(ap.outs, 0) + COALESCE(lp.outs, 0)) / 3.0,
         career_earned_runs = COALESCE(ap.er, 0) + COALESCE(lp.er, 0),
         career_stats_updated_at = ${now}

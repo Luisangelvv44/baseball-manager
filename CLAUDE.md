@@ -24,6 +24,27 @@ node tools/dev-proxy.js   # Port 80 proxy: http://baseball.localhost -> Vite 517
 ```
 `frontend/src/api.js` picks `http://api.baseball.localhost/api` when the page is opened on `baseball.localhost` (else `localhost:4000`; `VITE_API_URL` overrides). `localhost:5173` keeps working. `.claude/launch.json` has `backend`, `frontend` and `proxy` entries.
 
+### Desktop (run from `desktop/`)
+```
+pnpm install       # once (hoisted node_modules, see desktop/pnpm-workspace.yaml)
+npm run build      # prepare-db (SQLite schema + client + init.sql) + stage (copy backend, build frontend)
+npm run dev        # build + open the Electron window
+npm run dist       # build + Windows installer in desktop/dist/
+```
+Electron + SQLite version of the game. `desktop/scripts/gen-schema.js` derives `desktop/prisma/schema.prisma`
+(SQLite, client output `desktop/prisma-client`) from `backend/prisma/schema.prisma` (drops `@db.*`, scalar lists → `Json`,
+fails on enums). `scripts/stage.js` copies `backend/` to `desktop/app/backend` replacing only `db/prisma.js` with
+`desktop/db-override/prisma.js`, and builds the frontend to `desktop/app/web` with `VITE_API_URL=/api`. `main.js` keeps the
+save in `%APPDATA%\Baseball Manager\save.db` (creates it from `prisma/init.sql` + `seed()` on first run, warns if the schema
+hash changed — there are no SQLite migrations yet; optional `.env` there for `OPENROUTER_API_KEY`), mounts the backend app plus
+the static frontend on `127.0.0.1:<random port>` and opens the window. `BM_SMOKE_DIR=<dir> electron .` = headless start check.
+Everything generated under `desktop/` is gitignored.
+
+**Backend code must stay portable to SQLite:** raw SQL without `::casts`, `FLOOR`, `ILIKE` or other Postgres-only functions
+(see `allTimeStatsService.js`); normalize raw aggregate results with `Number()` (SQLite returns `BigInt`); no
+`skipDuplicates`; `mode: 'insensitive'` only when `prisma.isPostgres !== false` (`routes/players.js`). Only import Prisma
+through `db/prisma.js`, never `@prisma/client` directly.
+
 ### Database
 ```
 npx prisma migrate dev    # Apply migrations (from backend/)

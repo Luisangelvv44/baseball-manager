@@ -1,0 +1,6 @@
+# Todo esto se genera con `npm run build` / `npm run dist`
+node_modules/
+app/
+dist/
+prisma/
+prisma-client/

@@ -1,0 +1,51 @@
+{
+  "name": "baseball-manager-desktop",
+  "productName": "Baseball Manager",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Baseball Manager - versión de escritorio (Electron + SQLite)",
+  "main": "main.js",
+  "scripts": {
+    "prepare-db": "node scripts/gen-schema.js && prisma generate --schema=prisma/schema.prisma && node scripts/build-init-sql.js",
+    "stage": "node scripts/stage.js",
+    "build": "npm run prepare-db && npm run stage",
+    "dev": "npm run build && electron .",
+    "start": "electron .",
+    "dist": "npm run build && electron-builder --win nsis"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.0",
+    "prisma": "6.19.3"
+  },
+  "build": {
+    "appId": "com.baseballmanager.desktop",
+    "productName": "Baseball Manager",
+    "asar": false,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "app/**/*",
+      "prisma-client/**/*",
+      "prisma/init.sql",
+      "prisma/schema.hash",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

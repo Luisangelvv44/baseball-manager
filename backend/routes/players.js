@@ -28,12 +28,14 @@ router.get('/search', async (req, res) => {
 
   try {
     const terms = q.split(/\s+/).filter(Boolean);
+    // SQLite (desktop) no soporta `mode`, y su `contains` ya ignora mayúsculas ASCII.
+    const insensitive = prisma.isPostgres === false ? {} : { mode: 'insensitive' };
     const players = await prisma.player.findMany({
       where: {
         AND: terms.map((term) => ({
           OR: [
-            { first_name: { contains: term, mode: 'insensitive' } },
-            { last_name: { contains: term, mode: 'insensitive' } },
+            { first_name: { contains: term, ...insensitive } },
+            { last_name: { contains: term, ...insensitive } },
           ],
         })),
       },

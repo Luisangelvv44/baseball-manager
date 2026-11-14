@@ -17,12 +17,15 @@ router.get('/', async (req, res) => {
       take: pageSize,
     });
 
-    const summary = await prisma.$queryRaw`
+    const summaryRows = await prisma.$queryRaw`
       SELECT type, SUM(amount) as total
       FROM finances
       WHERE team_id = ${USER_TEAM_ID}
       GROUP BY type
     `;
+    // Postgres devuelve Decimal y SQLite (desktop) puede devolver BigInt, que no se
+    // serializa a JSON: normalizar a número.
+    const summary = summaryRows.map((row) => ({ type: row.type, total: Number(row.total) }));
 
     const [totals] = await prisma.$queryRaw`
       SELECT
