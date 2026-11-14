@@ -119,6 +119,8 @@ function createWindow(port) {
       height: TITLE_BAR_HEIGHT,
     },
     backgroundColor: '#111827',
+    // Se muestra ya maximizada (ver ready-to-show), sin parpadear al tamaño 1440×900.
+    show: false,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -130,6 +132,13 @@ function createWindow(port) {
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (!url.startsWith(`http://127.0.0.1:${port}`)) shell.openExternal(url);
     return { action: 'deny' };
+  });
+
+  // Arranca maximizada (ocupa toda la pantalla sin tapar la barra de tareas y conserva
+  // los botones de la ventana); al restaurar vuelve a 1440×900.
+  win.once('ready-to-show', () => {
+    win.maximize();
+    win.show();
   });
 
   win.loadURL(`http://127.0.0.1:${port}/`);
