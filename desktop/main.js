@@ -1,6 +1,6 @@
 // Proceso principal de Electron: levanta el backend Express (con SQLite) dentro de la
 // app, sirve el frontend compilado desde el mismo servidor y abre la ventana.
-const { app, BrowserWindow, dialog, shell } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
@@ -119,7 +119,7 @@ function createWindow(port) {
       height: TITLE_BAR_HEIGHT,
     },
     backgroundColor: '#111827',
-    // Se muestra ya maximizada (ver ready-to-show), sin parpadear al tamaño 1440×900.
+    // Se muestra ya en pantalla completa (ver ready-to-show), sin parpadear a 1440×900.
     show: false,
     webPreferences: {
       contextIsolation: true,
@@ -134,15 +134,38 @@ function createWindow(port) {
     return { action: 'deny' };
   });
 
-  // Arranca maximizada (ocupa toda la pantalla sin tapar la barra de tareas y conserva
-  // los botones de la ventana); al restaurar vuelve a 1440×900.
+  // Arranca en pantalla completa (como F11: sin barra de tareas). Se maximiza antes para
+  // que al salir de pantalla completa quede maximizada y no a 1440×900.
   win.once('ready-to-show', () => {
     win.maximize();
+    win.setFullScreen(true);
     win.show();
   });
 
+  // F11 alterna pantalla completa / ventana, como en un navegador.
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.type === 'keyDown' && input.key === 'F11') {
+      event.preventDefault();
+      win.setFullScreen(!win.isFullScreen());
+    }
+  });
+
+  // En pantalla completa Windows oculta los botones nativos de la ventana: la página
+  // muestra los suyos (preload.js + WindowControls del Navbar) según este estado.
+  const sendFullScreen = () => {
+    if (!win.isDestroyed()) win.webContents.send('window:fullscreen', win.isFullScreen());
+  };
+  win.on('enter-full-screen', sendFullScreen);
+  win.on('leave-full-screen', sendFullScreen);
+  win.webContents.on('did-finish-load', sendFullScreen);
+
   win.loadURL(`http://127.0.0.1:${port}/`);
 }
+
+// Botones propios de la página (solo visibles en pantalla completa).
+ipcMain.on('window:minimize', (e) => BrowserWindow.fromWebContents(e.sender)?.minimize());
+ipcMain.on('window:exit-fullscreen', (e) => BrowserWindow.fromWebContents(e.sender)?.setFullScreen(false));
+ipcMain.on('window:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close());
 
 async function runSmoke(port) {
   let failed = false;

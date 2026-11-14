@@ -9,6 +9,7 @@ import { useTeam } from '../context/TeamContext.jsx';
 import TeamBadge from './TeamBadge.jsx';
 import AlertsBell from './AlertsBell.jsx';
 import PlayerSearch from './PlayerSearch.jsx';
+import WindowControls from './WindowControls.jsx';
 
 const LINKS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -61,6 +62,7 @@ export default function Navbar() {
           <span>{rep}</span>
           <AlertsBell />
           <PlayerSearch />
+          <WindowControls />
         </div>
       </div>
 
