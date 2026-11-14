@@ -6,7 +6,8 @@
   "description": "Baseball Manager - versión de escritorio (Electron + SQLite)",
   "main": "main.js",
   "scripts": {
-    "prepare-db": "node scripts/gen-schema.js && prisma generate --schema=prisma/schema.prisma && node scripts/build-init-sql.js",
+    "prepare-db": "node scripts/gen-schema.js && prisma generate --schema=prisma/schema.prisma && node scripts/check-migrations.js",
+    "migration:new": "node scripts/migration-new.js",
     "stage": "node scripts/stage.js",
     "build": "npm run prepare-db && npm run stage",
     "dev": "npm run build && electron .",
@@ -33,10 +34,10 @@
     },
     "files": [
       "main.js",
+      "migrator.js",
       "app/**/*",
       "prisma-client/**/*",
-      "prisma/init.sql",
-      "prisma/schema.hash",
+      "migrations/**/migration.sql",
       "node_modules/**/*",
       "package.json"
     ],

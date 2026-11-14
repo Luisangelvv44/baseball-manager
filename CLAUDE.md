@@ -27,18 +27,29 @@ node tools/dev-proxy.js   # Port 80 proxy: http://baseball.localhost -> Vite 517
 ### Desktop (run from `desktop/`)
 ```
 pnpm install       # once (hoisted node_modules, see desktop/pnpm-workspace.yaml)
-npm run build      # prepare-db (SQLite schema + client + init.sql) + stage (copy backend, build frontend)
+npm run build      # prepare-db (SQLite schema + client + migrations check) + stage (copy backend, build frontend)
 npm run dev        # build + open the Electron window
 npm run dist       # build + Windows installer in desktop/dist/
+npm run migration:new -- <name>   # new desktop SQLite migration after a backend schema change
 ```
+**Every backend schema change needs a desktop migration too:** after `npx prisma migrate dev` in `backend/`, run
+`npm run migration:new -- <name>` in `desktop/` and commit `desktop/migrations/` (the new `NNNN_<name>/migration.sql` and
+the updated `_snapshot.prisma`). `prepare-db` fails while it is missing. Review the SQL: a NOT NULL column without
+`@default` on a table with rows must be given a value by hand. Never edit an already committed migration.
 Electron + SQLite version of the game. `desktop/scripts/gen-schema.js` derives `desktop/prisma/schema.prisma`
 (SQLite, client output `desktop/prisma-client`) from `backend/prisma/schema.prisma` (drops `@db.*`, scalar lists → `Json`,
 fails on enums). `scripts/stage.js` copies `backend/` to `desktop/app/backend` replacing only `db/prisma.js` with
 `desktop/db-override/prisma.js`, and builds the frontend to `desktop/app/web` with `VITE_API_URL=/api`. `main.js` keeps the
-save in `%APPDATA%\Baseball Manager\save.db` (creates it from `prisma/init.sql` + `seed()` on first run, warns if the schema
-hash changed — there are no SQLite migrations yet; optional `.env` there for `OPENROUTER_API_KEY`), mounts the backend app plus
-the static frontend on `127.0.0.1:<random port>` and opens the window. `BM_SMOKE_DIR=<dir> electron .` = headless start check.
-Everything generated under `desktop/` is gitignored.
+save in `%APPDATA%\Baseball Manager\save.db` (optional `.env` there for `OPENROUTER_API_KEY`), runs `migrator.js` on start,
+mounts the backend app plus the static frontend on `127.0.0.1:<random port>` and opens the window.
+`BM_SMOKE_DIR=<dir> electron .` = headless start check.
+`migrator.js` applies pending `desktop/migrations/NNNN_*/migration.sql` in order and records them in `_desktop_migrations`:
+a new save gets all of them (then `seed()`), a v1 save (has `_desktop_meta`, created before migrations) is marked as
+`0001_init`. Before migrating an existing save it copies it to `save.db.bak-<date>`; each migration runs in a transaction with
+`foreign_keys` off, checked with `PRAGMA foreign_key_check`, and rolls back on error. It uses its own one-connection Prisma
+client (`connection_limit=1`, needed for BEGIN/COMMIT/PRAGMA); the game keeps the normal pool (one connection is >2× slower).
+Migrations recorded in the save but unknown to the app (opened with a newer version) only show a warning.
+Generated files under `desktop/` are gitignored; `desktop/migrations/` is committed.
 
 **Backend code must stay portable to SQLite:** raw SQL without `::casts`, `FLOOR`, `ILIKE` or other Postgres-only functions
 (see `allTimeStatsService.js`); normalize raw aggregate results with `Number()` (SQLite returns `BigInt`); no
