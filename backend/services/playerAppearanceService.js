@@ -37,9 +37,9 @@ async function syncMissingAppearances(client = prisma) {
   });
   if (missing.length === 0) return 0;
 
+  // Sin skipDuplicates (SQLite no lo soporta): `missing` ya excluye a quien tiene fila.
   await client.playerAppearance.createMany({
     data: missing.map((p) => randomAppearanceData(p.id)),
-    skipDuplicates: true,
   });
   return missing.length;
 }

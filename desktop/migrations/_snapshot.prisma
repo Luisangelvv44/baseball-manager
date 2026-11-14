@@ -1,0 +1,954 @@
+// GENERADO por desktop/scripts/gen-schema.js a partir de backend/prisma/schema.prisma.
+// No editar a mano.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../prisma-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Division {
+  id    Int    @id @default(autoincrement())
+  name  String
+  teams Team[]
+}
+
+model Team {
+  id                     Int       @id @default(autoincrement())
+  name                   String   
+  division_id            Int?
+  is_user_team           Boolean   @default(false)
+  budget                 Decimal   @default(0)
+  reputation             Int       @default(50)
+  wins                   Int       @default(0)
+  losses                 Int       @default(0)
+  runs_scored            Int       @default(0)
+  runs_allowed           Int       @default(0)
+  bid_aggressiveness     Float     @default(0.10)
+  player_investment_rate Float     @default(0.1)
+  desperation_index      Float     @default(0)
+  min_growth_threshold   Float     @default(1.5)
+  fan_base               Int       @default(0)
+  min_fan_base_season    Int?
+  max_fan_base_season    Int?
+  stadium_floors         Int       @default(1)
+  field_level            Int       @default(1)
+  lights_level           Int       @default(1)
+  board_level            Int       @default(1)
+  medical_level          Int       @default(1)
+  facade_entrance_level  Int       @default(1)
+  facade_sign_level      Int       @default(1)
+  facade_plaza_level     Int       @default(1)
+  facade_shop_level      Int       @default(1)
+  alerts_seen_at         DateTime?
+  press_audience         Int       @default(50)
+
+  division              Division?             @relation(fields: [division_id], references: [id])
+  players               Player[]
+  former_players        Player[]              @relation("PlayerLastTeam")
+  finances              Finance[]
+  scouts                Scout[]
+  coaches               Coach[]
+  stadium_sections      StadiumSection[]
+  home_games            GameSchedule[]        @relation("HomeTeam")
+  away_games            GameSchedule[]        @relation("AwayTeam")
+  game_lineups          GameLineup[]
+  team_lineups          TeamLineup[]
+  batting_events        GameEvent[]           @relation("BattingTeam")
+  won_auctions          FreeAgentAuction[]    @relation("AuctionWinner")
+  auction_bids          AuctionBid[]
+  broadcast_offers      BroadcastOffer[]
+  broadcast_contracts   BroadcastContract[]
+  playoff_home          PlayoffSeries[]       @relation("PlayoffHome")
+  playoff_away          PlayoffSeries[]       @relation("PlayoffAway")
+  playoff_won           PlayoffSeries[]       @relation("PlayoffWinner")
+  trades_proposed       Trade[]               @relation("TradeProposer")
+  trades_received       Trade[]               @relation("TradeRecipient")
+  derby_entries         DerbyEntry[]
+  luxury_tax_records    LuxuryTaxRecord[]
+  season_awards         SeasonAward[]
+  player_season_records PlayerSeasonRecord[]
+  toddler_contributions ToddlerContribution[]
+  loans                 Loan[]
+  rivalries_as_a        Rivalry[]             @relation("RivalryTeamA")
+  rivalries_as_b        Rivalry[]             @relation("RivalryTeamB")
+  contracts             Contract[]
+  hall_of_fame_members  HallOfFameCandidate[]
+  retired_numbers       RetiredNumber[]
+  playoff_loans_out     PlayoffLoan[]         @relation("PlayoffLoanFrom")
+  playoff_loans_in      PlayoffLoan[]         @relation("PlayoffLoanTo")
+  playoff_loan_bids     PlayoffLoanBid[]
+  broadcast_relations   BroadcastRelation[]
+}
+
+model Rivalry {
+  id                     Int      @id @default(autoincrement())
+  team_a_id              Int
+  team_b_id              Int
+  wins_a                 Int      @default(0)
+  wins_b                 Int      @default(0)
+  intensity              Float    @default(0)
+  last_winner_id         Int?
+  streak_len             Int      @default(0)
+  last_meeting_day       Int?
+  last_meeting_season_id Int?
+  updated_at             DateTime @updatedAt
+
+  team_a Team @relation("RivalryTeamA", fields: [team_a_id], references: [id])
+  team_b Team @relation("RivalryTeamB", fields: [team_b_id], references: [id])
+
+  @@unique([team_a_id, team_b_id])
+  @@map("rivalries")
+}
+
+model Player {
+  id                       Int       @id @default(autoincrement())
+  first_name               String   
+  last_name                String   
+  age                      Int
+  position                 String   
+  potential_coefficient    Int
+  growth_age               Int
+  current_skill            Int
+  salary                   Decimal  
+  demand_factor            Decimal   @default(1.5)
+  contract_years_remaining Int       @default(1)
+  rookie_contract          Boolean   @default(false)
+  rookie_seasons           Int       @default(0)
+  team_id                  Int?
+  last_team_id             Int?
+  status                   String    @default("active")
+  injury_days_remaining    Int       @default(0)
+  level                    String    @default("MAJOR")
+  toddler_program_id       Int?
+  parent_id                Int? // padre leyenda (herederos, ver legacyService.js)
+  jersey_number            Int? // dorsal 0-99 (ver jerseyService.js)
+  jersey_team_id           Int? // equipo para el que se asigno el dorsal; != team_id -> hay que reasignar
+  on_loan_from_team_id     Int? // cedido solo para playoffs (ver playoffMarketService.js): equipo al que vuelve
+  career_home_runs         Int       @default(0)
+  career_hits              Int       @default(0)
+  career_rbi               Int       @default(0)
+  career_wins              Int       @default(0)
+  career_strikeouts        Int       @default(0)
+  career_innings_pitched   Decimal   @default(0)
+  career_earned_runs       Int       @default(0)
+  career_stats_updated_at  DateTime?
+
+  team                   Team?                @relation(fields: [team_id], references: [id])
+  last_team              Team?                @relation("PlayerLastTeam", fields: [last_team_id], references: [id])
+  coach                  Coach?
+  appearance             PlayerAppearance?
+  auctions               FreeAgentAuction[]
+  game_lineups           GameLineup[]
+  team_lineups           TeamLineup[]
+  game_events            GameEvent[]          @relation("PlayerEvent")
+  trade_items            TradeItem[]
+  derby_entries          DerbyEntry[]
+  draft_prospect_sources DraftProspect[]
+  season_awards          SeasonAward[]
+  player_season_records  PlayerSeasonRecord[]
+  contracts              Contract[]
+  hall_of_fame           HallOfFameCandidate?
+  parent                 Player?              @relation("Lineage", fields: [parent_id], references: [id])
+  children               Player[]             @relation("Lineage")
+  retired_numbers        RetiredNumber[]
+  playoff_loans          PlayoffLoan[]
+
+  @@index([team_id])
+  @@index([last_team_id])
+  @@index([status])
+  @@index([team_id, level])
+  @@index([toddler_program_id])
+  @@index([parent_id])
+}
+
+// Apariencia visual (PlayerSprite): IDs de los componentes elegidos al crear el
+// jugador (cabeza/ojos/rostro/tono de piel), 1:1 con Player. El uniforme no vive
+// aca: se resuelve en el momento a partir de team_id / last_team_id / status.
+model PlayerAppearance {
+  player_id   Int @id
+  head_number Int
+  eye_type    Int
+  face_type   Int
+  skin_tone   Int
+
+  player Player @relation(fields: [player_id], references: [id], onDelete: Cascade)
+
+  @@map("player_appearances")
+}
+
+model Season {
+  id          Int    @id @default(autoincrement())
+  year        Int
+  current_day Int    @default(1)
+  total_days  Int    @default(0)
+  status      String @default("active")
+
+  schedule              GameSchedule[]
+  auctions              FreeAgentAuction[]
+  broadcast_offers      BroadcastOffer[]
+  broadcast_contracts   BroadcastContract[]
+  playoff_series        PlayoffSeries[]
+  draft                 Draft?
+  season_record         SeasonRecord?
+  trades                Trade[]
+  derby_events          HomeRunDerbyEvent[]
+  luxury_tax_records    LuxuryTaxRecord[]
+  season_awards         SeasonAward[]
+  player_season_records PlayerSeasonRecord[]
+  loans                 Loan[]
+  contracts_started     Contract[]           @relation("ContractStartSeason")
+  contracts_ended       Contract[]           @relation("ContractEndSeason")
+  playoff_market        PlayoffMarket?
+}
+
+model SeasonRecord {
+  id            Int     @id @default(autoincrement())
+  season_id     Int     @unique
+  year          Int
+  champion_name String?
+  standings     Json
+
+  season Season @relation(fields: [season_id], references: [id])
+
+  @@map("season_records")
+}
+
+model GameSchedule {
+  id                Int     @id @default(autoincrement())
+  season_id         Int?
+  day_number        Int
+  home_team_id      Int?
+  away_team_id      Int?
+  home_score        Int?
+  away_score        Int?
+  status            String  @default("scheduled")
+  is_user_game      Boolean @default(false)
+  playoff_series_id Int?
+
+  season         Season?        @relation(fields: [season_id], references: [id])
+  home_team      Team?          @relation("HomeTeam", fields: [home_team_id], references: [id])
+  away_team      Team?          @relation("AwayTeam", fields: [away_team_id], references: [id])
+  playoff_series PlayoffSeries? @relation(fields: [playoff_series_id], references: [id])
+  game_lineups   GameLineup[]
+  game_events    GameEvent[]
+
+  @@index([season_id, day_number])
+  @@map("schedule")
+}
+
+model PlayoffSeries {
+  id           Int    @id @default(autoincrement())
+  season_id    Int
+  round        Int
+  series_order Int
+  home_team_id Int
+  away_team_id Int
+  home_wins    Int    @default(0)
+  away_wins    Int    @default(0)
+  wins_needed  Int    @default(2)
+  status       String @default("active")
+  winner_id    Int?
+
+  season    Season         @relation(fields: [season_id], references: [id])
+  home_team Team           @relation("PlayoffHome", fields: [home_team_id], references: [id])
+  away_team Team           @relation("PlayoffAway", fields: [away_team_id], references: [id])
+  winner    Team?          @relation("PlayoffWinner", fields: [winner_id], references: [id])
+  games     GameSchedule[]
+
+  @@map("playoff_series")
+}
+
+model StadiumSection {
+  id               Int     @id @default(autoincrement())
+  team_id          Int?
+  row_pos          Int
+  col_pos          Int
+  section_type     String 
+  label            String?
+  price_per_ticket Decimal @default(0)
+  upgrade_level    Int     @default(0)
+  capacity         Int     @default(0)
+
+  team Team? @relation(fields: [team_id], references: [id])
+
+  @@index([team_id])
+  @@map("stadium_sections")
+}
+
+model Finance {
+  id          Int      @id @default(autoincrement())
+  team_id     Int?
+  season_day  Int?
+  type        String  
+  amount      Decimal 
+  description String?
+  created_at  DateTime @default(now())
+
+  team Team? @relation(fields: [team_id], references: [id])
+
+  @@index([team_id])
+  @@map("finances")
+}
+
+model LuxuryTaxRecord {
+  id                           Int      @id @default(autoincrement())
+  season_id                    Int
+  team_id                      Int
+  day                          Int
+  charged                      Boolean  @default(false)
+  payroll                      Decimal 
+  threshold                    Decimal 
+  league_median_cost_per_skill Decimal 
+  cost_per_skill               Decimal 
+  ratio                        Float
+  extra_points                 Float
+  bracket_tax                  Decimal 
+  inefficiency_tax             Decimal 
+  total_tax                    Decimal 
+  created_at                   DateTime @default(now())
+
+  season Season @relation(fields: [season_id], references: [id])
+  team   Team   @relation(fields: [team_id], references: [id])
+
+  @@index([season_id, team_id])
+  @@index([team_id])
+  @@map("luxury_tax_records")
+}
+
+model Scout {
+  id              Int     @id @default(autoincrement())
+  team_id         Int?
+  name            String?
+  skill_level     Int     @default(50)
+  budget_assigned Decimal @default(0)
+  active_mission  Boolean @default(false)
+  mission_end_day Int?
+  target_position String?
+
+  team Team? @relation(fields: [team_id], references: [id])
+
+  @@map("scouts")
+}
+
+model GameLineup {
+  id            Int     @id @default(autoincrement())
+  game_id       Int?
+  team_id       Int?
+  player_id     Int?
+  batting_order Int?
+  position      String?
+
+  game   GameSchedule? @relation(fields: [game_id], references: [id])
+  team   Team?         @relation(fields: [team_id], references: [id])
+  player Player?       @relation(fields: [player_id], references: [id])
+
+  @@index([player_id])
+  @@map("game_lineups")
+}
+
+model GameEvent {
+  id              Int     @id @default(autoincrement())
+  game_id         Int?
+  inning          Int?
+  half            String?
+  batting_team_id Int?
+  player_id       Int?
+  result          String?
+  outs_after      Int?
+  runs_scored     Int     @default(0)
+  event_order     Int?
+
+  game         GameSchedule? @relation(fields: [game_id], references: [id])
+  batting_team Team?         @relation("BattingTeam", fields: [batting_team_id], references: [id])
+  player       Player?       @relation("PlayerEvent", fields: [player_id], references: [id])
+
+  @@index([game_id])
+  @@index([player_id])
+  @@map("game_events")
+}
+
+model TeamLineup {
+  id            Int     @id @default(autoincrement())
+  team_id       Int
+  player_id     Int
+  batting_order Int?
+  is_pitcher    Boolean @default(false)
+  rotation_slot Int?
+
+  team   Team   @relation(fields: [team_id], references: [id])
+  player Player @relation(fields: [player_id], references: [id])
+
+  @@index([team_id])
+  @@map("team_lineup")
+}
+
+model FreeAgentAuction {
+  id              Int      @id @default(autoincrement())
+  player_id       Int
+  season_id       Int
+  status          String   @default("active")
+  start_day       Int
+  last_bid_day    Int?
+  closes_on_day   Int?
+  winning_team_id Int?
+  created_at      DateTime @default(now())
+
+  player       Player       @relation(fields: [player_id], references: [id])
+  season       Season       @relation(fields: [season_id], references: [id])
+  winning_team Team?        @relation("AuctionWinner", fields: [winning_team_id], references: [id])
+  bids         AuctionBid[]
+
+  @@index([status])
+  @@index([closes_on_day])
+  @@map("free_agent_auctions")
+}
+
+model AuctionBid {
+  id         Int      @id @default(autoincrement())
+  auction_id Int
+  team_id    Int
+  amount     Decimal 
+  years      Int      @default(1)
+  season_day Int
+  created_at DateTime @default(now())
+
+  auction FreeAgentAuction @relation(fields: [auction_id], references: [id])
+  team    Team             @relation(fields: [team_id], references: [id])
+
+  @@index([auction_id])
+  @@map("auction_bids")
+}
+
+model BroadcastCompany {
+  id              Int     @id @default(autoincrement())
+  name            String 
+  type            String 
+  price_per_fan   Decimal
+  money           Decimal @default(0)
+  season_earnings Decimal @default(0)
+
+  offers    BroadcastOffer[]
+  contracts BroadcastContract[]
+  relations BroadcastRelation[]
+
+  @@map("broadcast_companies")
+}
+
+model BroadcastOffer {
+  id              Int      @id @default(autoincrement())
+  company_id      Int
+  team_id         Int
+  season_id       Int
+  seasons         Int
+  price_per_fan   Decimal 
+  status          String  
+  expires_day     Int
+  total_value     Decimal?
+  annual_payment  Decimal?
+  last_raised_day Int?
+  created_at      DateTime @default(now())
+
+  company BroadcastCompany @relation(fields: [company_id], references: [id])
+  team    Team             @relation(fields: [team_id], references: [id])
+  season  Season           @relation(fields: [season_id], references: [id])
+
+  @@index([team_id])
+  @@index([status])
+  @@map("broadcast_offers")
+}
+
+model BroadcastContract {
+  id                Int      @id @default(autoincrement())
+  company_id        Int
+  team_id           Int
+  seasons_total     Int
+  seasons_remaining Int
+  price_per_fan     Decimal 
+  signed_season_id  Int
+  total_value       Decimal?
+  annual_payment    Decimal?
+  created_at        DateTime @default(now())
+
+  company BroadcastCompany @relation(fields: [company_id], references: [id])
+  team    Team             @relation(fields: [team_id], references: [id])
+  season  Season           @relation(fields: [signed_season_id], references: [id])
+
+  @@index([team_id])
+  @@map("broadcast_contracts")
+}
+
+// Satisfaccion persistente de una cadena con un equipo (hoy solo el del usuario), movida por las
+// ruedas de prensa. Ajusta las ofertas de renovacion (ver broadcastService.applySatisfactionToOffer).
+model BroadcastRelation {
+  id           Int @id @default(autoincrement())
+  company_id   Int
+  team_id      Int
+  satisfaction Int @default(50)
+
+  company BroadcastCompany @relation(fields: [company_id], references: [id])
+  team    Team             @relation(fields: [team_id], references: [id])
+
+  @@unique([company_id, team_id])
+  @@map("broadcast_relations")
+}
+
+// Rueda de prensa del usuario (cada PRESS_SERIES_INTERVAL series, o al cerrar una serie de playoffs).
+// Todo el texto sale de plantillas (services/pressTemplates.js).
+model PressConference {
+  id               Int      @id @default(autoincrement())
+  season_id        Int
+  day              Int
+  trigger          String   // series | playoff_group | playoff_series
+  opponent_team_id Int?
+  host_company_id  Int?
+  reporter_name    String  
+  status           String   @default("pending") // pending | answered | skipped
+  questions        Json
+  answers          Json?
+  effects          Json?
+  created_at       DateTime @default(now())
+
+  @@index([season_id, status])
+  @@map("press_conferences")
+}
+
+model Coach {
+  id                 Int    @id @default(autoincrement())
+  team_id            Int
+  name               String
+  specialty          String
+  skill_level        Int
+  salary             Int
+  assigned_player_id Int?   @unique
+
+  team            Team    @relation(fields: [team_id], references: [id])
+  assigned_player Player? @relation(fields: [assigned_player_id], references: [id])
+
+  @@index([team_id])
+  @@map("coaches")
+}
+
+model Draft {
+  id           Int    @id @default(autoincrement())
+  season_id    Int    @unique
+  status       String @default("active")
+  current_pick Int    @default(1)
+  pick_order   Json
+
+  season    Season          @relation(fields: [season_id], references: [id])
+  prospects DraftProspect[]
+
+  @@map("drafts")
+}
+
+model DraftProspect {
+  id                    Int    @id @default(autoincrement())
+  draft_id              Int
+  name                  String
+  position              String
+  age                   Int
+  current_skill         Int
+  potential_coefficient Int
+  growth_age            Int
+  picked_by_team_id     Int?
+  pick_number           Int?
+  source_player_id      Int?
+
+  draft         Draft   @relation(fields: [draft_id], references: [id])
+  source_player Player? @relation(fields: [source_player_id], references: [id])
+
+  @@index([draft_id])
+  @@index([source_player_id])
+  @@map("draft_prospects")
+}
+
+model Trade {
+  id                Int      @id @default(autoincrement())
+  season_id         Int
+  proposer_team_id  Int
+  recipient_team_id Int
+  status            String   @default("pending") // pending | accepted | rejected | cancelled | expired
+  cash_offered      Decimal  @default(0) // proposer -> recipient
+  cash_requested    Decimal  @default(0) // recipient -> proposer
+  created_day       Int
+  expires_day       Int?
+  resolved_day      Int?
+  gm_message        String?  // mensaje del GM CPU (plantilla o IA, ver tradeAi.js)
+  created_at        DateTime @default(now())
+
+  season         Season      @relation(fields: [season_id], references: [id])
+  proposer_team  Team        @relation("TradeProposer", fields: [proposer_team_id], references: [id])
+  recipient_team Team        @relation("TradeRecipient", fields: [recipient_team_id], references: [id])
+  items          TradeItem[]
+
+  @@index([status])
+  @@index([recipient_team_id])
+  @@index([proposer_team_id])
+  @@map("trades")
+}
+
+model TradeItem {
+  id           Int @id @default(autoincrement())
+  trade_id     Int
+  player_id    Int
+  from_team_id Int // equipo dueño del jugador al momento de proponer
+
+  trade  Trade  @relation(fields: [trade_id], references: [id])
+  player Player @relation(fields: [player_id], references: [id])
+
+  @@index([trade_id])
+  @@index([player_id])
+  @@map("trade_items")
+}
+
+model NewsItem {
+  id         Int      @id @default(autoincrement())
+  type       String  
+  headline   String  
+  season_day Int      @default(0)
+  season_id  Int?
+  team_id    Int?
+  alert      Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  @@index([season_day])
+  @@index([season_id])
+  @@index([team_id])
+  @@map("news_items")
+}
+
+model HomeRunDerbyEvent {
+  id              Int      @id @default(autoincrement())
+  season_id       Int
+  day             Int
+  status          String   @default("pending") // pending | completed
+  winner_entry_id Int?     @unique
+  created_at      DateTime @default(now())
+
+  season  Season       @relation(fields: [season_id], references: [id])
+  entries DerbyEntry[]
+  swings  DerbySwing[]
+
+  @@index([season_id])
+  @@map("home_run_derby_events")
+}
+
+model DerbyEntry {
+  id            Int     @id @default(autoincrement())
+  event_id      Int
+  team_id       Int
+  player_id     Int
+  reward_amount Decimal
+  home_runs     Int     @default(0)
+
+  event  HomeRunDerbyEvent @relation(fields: [event_id], references: [id])
+  team   Team              @relation(fields: [team_id], references: [id])
+  player Player            @relation(fields: [player_id], references: [id])
+  swings DerbySwing[]
+
+  @@index([event_id])
+  @@map("derby_entries")
+}
+
+model DerbySwing {
+  id          Int     @id @default(autoincrement())
+  event_id    Int
+  entry_id    Int
+  turn_number Int
+  is_home_run Boolean
+
+  event HomeRunDerbyEvent @relation(fields: [event_id], references: [id])
+  entry DerbyEntry        @relation(fields: [entry_id], references: [id])
+
+  @@index([entry_id])
+  @@map("derby_swings")
+}
+
+model SeasonAward {
+  id         Int      @id @default(autoincrement())
+  season_id  Int
+  category   String   // MVP | CY_YOUNG | ROOKIE_OF_YEAR | SEASON_HR_RECORD | SEASON_ERA_RECORD | SEASON_WIN_STREAK_RECORD
+  player_id  Int? // null para logros de equipo (p.ej. SEASON_WIN_STREAK_RECORD)
+  team_id    Int?
+  value      Float
+  created_at DateTime @default(now())
+
+  season Season  @relation(fields: [season_id], references: [id])
+  player Player? @relation(fields: [player_id], references: [id])
+  team   Team?   @relation(fields: [team_id], references: [id])
+
+  @@index([season_id])
+  @@map("season_awards")
+}
+
+// Resumen congelado de bateo/pitcheo de un jugador para una temporada+equipo ya
+// finalizada. Se crea una vez al terminar la temporada (ver seasonArchiveService.js),
+// junto con el borrado de los game_events/game_lineups de esa temporada: mantiene
+// el historico de carrera consultable sin acumular indefinidamente filas de juego a
+// juego. Una temporada con traspaso de por medio genera una fila por (season, team).
+model PlayerSeasonRecord {
+  id        Int  @id @default(autoincrement())
+  season_id Int
+  year      Int
+  team_id   Int?
+  player_id Int
+  first_day Int // dia minimo del stint, para desempatar orden dentro de la misma temporada (traspasos)
+
+  // bateo
+  games      Int @default(0)
+  at_bats    Int @default(0)
+  hits       Int @default(0)
+  home_runs  Int @default(0)
+  walks      Int @default(0)
+  strikeouts Int @default(0)
+  rbi        Int @default(0)
+
+  // pitcheo (pitching_games = 0 significa que no lanzo en este stint)
+  pitching_games      Int @default(0)
+  pitching_outs       Int @default(0)
+  earned_runs         Int @default(0)
+  pitching_strikeouts Int @default(0)
+  pitching_walks      Int @default(0)
+  hits_allowed        Int @default(0)
+  wins                Int @default(0)
+  losses              Int @default(0)
+
+  season Season @relation(fields: [season_id], references: [id])
+  team   Team?  @relation(fields: [team_id], references: [id])
+  player Player @relation(fields: [player_id], references: [id])
+
+  @@unique([season_id, team_id, player_id])
+  @@index([player_id])
+  @@index([season_id])
+  @@map("player_season_records")
+}
+
+// Programa de Toddlers: cada fila es un ciclo de 10 temporadas. Se crea un pool de
+// 32 futuros jugadores (Player.status = 'toddler_program', edad 8, current_skill = -15,
+// que en el programa es % de desarrollo del potencial, no skill real) que
+// los equipos mejoran aportando dinero. Al cumplir 10 temporadas el ciclo pasa a
+// 'selecting': cada equipo elige 2 toddlers en orden del total aportado, y arranca
+// automaticamente el siguiente ciclo. Ver services/toddlerProgramService.js.
+model ToddlerProgram {
+  id              Int      @id @default(autoincrement())
+  cycle_number    Int      @default(1)
+  seasons_elapsed Int      @default(0) // 0..10, +1 en cada fin de temporada
+  budget          Decimal  @default(0)
+  status          String   @default("active") // active | selecting | completed
+  pick_order      Json? // [teamId, teamId, ...] largo 32 (cada equipo dos veces, consecutivo), congelado al madurar
+  current_pick    Int      @default(1) // 1..32 durante 'selecting'
+  created_at      DateTime @default(now())
+
+  contributions ToddlerContribution[]
+
+  @@map("toddler_programs")
+}
+
+// Aporte acumulado de un equipo a un ciclo del programa. Define el orden de eleccion.
+model ToddlerContribution {
+  id         Int     @id @default(autoincrement())
+  program_id Int
+  team_id    Int
+  amount     Decimal @default(0)
+
+  program ToddlerProgram @relation(fields: [program_id], references: [id])
+  team    Team           @relation(fields: [team_id], references: [id])
+
+  @@unique([program_id, team_id])
+  @@index([program_id])
+  @@map("toddler_contributions")
+}
+
+// Banco central del juego: fila unica (id=1). "Personalidad" del banco = base_interest_rate
+// (tasa antes de primas de riesgo/liquidez) + su propio balance finito, que sube con el
+// impuesto de lujo (luxuryTaxService.js) y los intereses cobrados, y baja al emitir prestamos.
+// Ver services/bankService.js.
+model Bank {
+  id                       Int      @id @default(autoincrement())
+  balance                  Decimal  @default(0)
+  initial_capital          Decimal  // capital de referencia para el ratio de liquidez
+  base_interest_rate       Float    @default(0.08)
+  total_loaned             Decimal  @default(0) // suma historica de principal desembolsado
+  total_interest_collected Decimal  @default(0) // reconocido al saldar cada prestamo
+  total_tax_funded         Decimal  @default(0) // suma historica recibida de luxury_tax
+  total_defaulted          Decimal  @default(0) // saldo condonado por mora, historico
+  created_at               DateTime @default(now())
+
+  @@map("bank")
+}
+
+// Prestamo de un equipo (CPU o usuario) al Banco. balance_remaining incluye interes
+// (interes simple no compuesto, fijado al emitir: balance_remaining inicial =
+// principal * (1 + interest_rate)). Un equipo solo puede tener un prestamo 'active' a
+// la vez (ver bankService.checkLoanEligibility).
+model Loan {
+  id                Int       @id @default(autoincrement())
+  team_id           Int
+  season_id         Int
+  day_issued        Int
+  principal         Decimal  
+  interest_rate     Float
+  balance_remaining Decimal  
+  total_paid        Decimal   @default(0)
+  status            String    @default("active") // active | paid | defaulted
+  missed_payments   Int       @default(0) // racha de temporadas consecutivas sin cubrir la cuota completa
+  paid_at           DateTime?
+  defaulted_at      DateTime?
+  created_at        DateTime  @default(now())
+
+  team   Team   @relation(fields: [team_id], references: [id])
+  season Season @relation(fields: [season_id], references: [id])
+
+  @@index([team_id])
+  @@index([status])
+  @@map("loans")
+}
+
+// Contrato formal de un jugador con un equipo (actual + historico). Player.salary /
+// contract_years_remaining / rookie_contract siguen siendo lo que lee el resto del juego;
+// esta tabla se mantiene sincronizada con ellos (ver services/contractService.js) y es la
+// base del historial del CV: cada temporada cubierta por un contrato aparece aunque el
+// jugador no haya jugado. start_season_id null = firmado en offseason, se fija al iniciar
+// la proxima temporada; end_season_id null mientras esta activo.
+model Contract {
+  id                Int       @id @default(autoincrement())
+  player_id         Int
+  team_id           Int?
+  start_season_id   Int?
+  end_season_id     Int?
+  is_rookie         Boolean   @default(false)
+  annual_salary     Decimal  
+  total_years       Int
+  years_remaining   Int
+  total_value       Decimal   // annual_salary * total_years
+  achievement_bonus Decimal   @default(0) // pago por cada logro
+  bonus_paid_season Decimal   @default(0) // se resetea al cerrar temporada (tope)
+  bonus_paid_total  Decimal   @default(0)
+  status            String    @default("active") // active | expired | replaced | released | traded | retired
+  is_reconstructed  Boolean   @default(false) // creado por el backfill historico (datos aproximados)
+  jersey_number     Int? // dorsal que uso con este equipo (lo escribe jerseyService.js)
+  signed_at         DateTime  @default(now())
+  ended_at          DateTime?
+
+  player       Player  @relation(fields: [player_id], references: [id], onDelete: Cascade)
+  team         Team?   @relation(fields: [team_id], references: [id])
+  start_season Season? @relation("ContractStartSeason", fields: [start_season_id], references: [id])
+  end_season   Season? @relation("ContractEndSeason", fields: [end_season_id], references: [id])
+
+  @@index([player_id, status])
+  @@index([team_id, status])
+  @@map("contracts")
+}
+
+// Salon de la Fama: una fila por jugador retirado ya evaluado (ver services/legacyService.js).
+// Al retirarse se congela su legacy_score y se compara (percentil, por rol) contra los demas
+// retirados con carrera suficiente: los mejores entran a la papeleta ('candidate') y se votan
+// cada fin de temporada desde la siguiente al retiro, hasta entrar ('inducted', >= 75%), caer
+// por debajo del 5% o agotar los 10 intentos ('dropped'). El resto queda 'not_qualified'.
+model HallOfFameCandidate {
+  id                  Int      @id @default(autoincrement())
+  player_id           Int      @unique
+  role                String   // BATTER | PITCHER
+  legacy_score        Float
+  seasons_played      Int
+  career_totals       Json // totales reales (sin ponderar) para la placa
+  primary_team_id     Int? // equipo con mas temporadas
+  evaluated_season_id Int // temporada en que se retiro / se evaluo
+  status              String   @default("candidate") // not_qualified | candidate | inducted | dropped
+  years_on_ballot     Int      @default(0)
+  last_vote_pct       Float?
+  vote_history        Json? // [{ season_id, pct }]
+  inducted_season_id  Int?
+  bio                 String?  // biografia escrita por la IA al ser exaltado (ver hofBio.js); null = se muestra la de plantilla
+  created_at          DateTime @default(now())
+
+  player       Player @relation(fields: [player_id], references: [id])
+  primary_team Team?  @relation(fields: [primary_team_id], references: [id])
+
+  @@index([status])
+  @@index([role])
+  @@map("hall_of_fame_candidates")
+}
+
+// Numero retirado por un equipo en honor a un jugador: nadie mas del equipo puede usarlo,
+// salvo un hijo del homenajeado (heredero). Lo decide el usuario para su equipo; los CPU lo
+// retiran solos al exaltar a una leyenda propia al Salon de la Fama. Ver jerseyService.js.
+model RetiredNumber {
+  id         Int      @id @default(autoincrement())
+  team_id    Int
+  player_id  Int
+  number     Int
+  season_id  Int?
+  created_at DateTime @default(now())
+
+  team   Team   @relation(fields: [team_id], references: [id])
+  player Player @relation(fields: [player_id], references: [id])
+
+  @@unique([team_id, number])
+  @@unique([team_id, player_id])
+  @@map("retired_numbers")
+}
+
+// Mercado de playoffs (ver services/playoffMarketService.js): al terminar la temporada regular,
+// los jugadores de los equipos eliminados se subastan durante PLAYOFF_MARKET_DAYS dias como
+// refuerzos solo para los playoffs. Al terminar los playoffs vuelven a su equipo.
+model PlayoffMarket {
+  id                 Int      @id @default(autoincrement())
+  season_id          Int      @unique
+  status             String   @default("open") // open | closed
+  opened_day         Int
+  closes_on_day      Int
+  qualified_team_ids Json
+  created_at         DateTime @default(now())
+
+  season   Season        @relation(fields: [season_id], references: [id])
+  listings PlayoffLoan[]
+
+  @@map("playoff_markets")
+}
+
+model PlayoffLoan {
+  id                      Int       @id @default(autoincrement())
+  market_id               Int
+  player_id               Int
+  from_team_id            Int
+  to_team_id              Int?
+  status                  String    @default("open") // open | signed | unsold | returned
+  pct                     Decimal?  // fraccion del salario pagada (0.50-1.50)
+  amount                  Decimal? 
+  signed_day              Int?
+  original_jersey_number  Int?
+  original_jersey_team_id Int?
+  returned_at             DateTime?
+
+  market    PlayoffMarket    @relation(fields: [market_id], references: [id])
+  player    Player           @relation(fields: [player_id], references: [id])
+  from_team Team             @relation("PlayoffLoanFrom", fields: [from_team_id], references: [id])
+  to_team   Team?            @relation("PlayoffLoanTo", fields: [to_team_id], references: [id])
+  bids      PlayoffLoanBid[]
+
+  @@index([market_id, status])
+  @@index([player_id])
+  @@map("playoff_loans")
+}
+
+model PlayoffLoanBid {
+  id         Int      @id @default(autoincrement())
+  loan_id    Int
+  team_id    Int
+  pct        Decimal 
+  amount     Decimal 
+  season_day Int
+  created_at DateTime @default(now())
+
+  loan PlayoffLoan @relation(fields: [loan_id], references: [id])
+  team Team        @relation(fields: [team_id], references: [id])
+
+  @@index([loan_id])
+  @@map("playoff_loan_bids")
+}
