@@ -23,6 +23,19 @@
 }
 .desktop-app .desktop-titlebar img { -webkit-user-drag: none; }
 
+/* Scrollbars finas con los colores del juego (página y contenedores con scroll).
+   Sin scrollbar-width/scrollbar-color: si se definen, Chromium ignora ::-webkit-scrollbar. */
+.desktop-app ::-webkit-scrollbar { width: 6px; height: 6px; }
+.desktop-app ::-webkit-scrollbar-track,
+.desktop-app ::-webkit-scrollbar-corner { background: transparent; }
+.desktop-app ::-webkit-scrollbar-thumb {
+  background: #9ca3af; /* gray-400 */
+  border-radius: 9999px;
+}
+.desktop-app ::-webkit-scrollbar-thumb:hover { background: #2563eb; }  /* blue-600 */
+.desktop-app ::-webkit-scrollbar-thumb:active { background: #1d4ed8; } /* blue-700 */
+.desktop-app ::-webkit-scrollbar-button { display: none; }
+
 /* --- Animación de intro de partido (GameIntro) --- */
 @keyframes gi-in-left   { from { transform: translateX(-101%); } to { transform: translateX(0); } }
 @keyframes gi-in-right  { from { transform: translateX(101%);  } to { transform: translateX(0); } }
