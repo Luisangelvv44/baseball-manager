@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getTeamLogo } from '../utils/teamLogos.js';
+import { isNarratorMuted, setNarratorMuted } from '../utils/narratorPref.js';
 import BroadcastLogo from './BroadcastLogo.jsx';
 
 const TOTAL_MS = 7500; // duracion minima de la intro
@@ -96,6 +97,17 @@ function TeamSide({ team, side, broadcasts }) {
 export default function GameIntro({ homeTeam, awayTeam, broadcasts, narration, onFinish }) {
   const onFinishRef = useRef(onFinish);
   onFinishRef.current = onFinish;
+  const [muted, setMuted] = useState(isNarratorMuted);
+  const stopNarrationRef = useRef(null);
+
+  // Silenciar corta la narracion en curso (la intro termina al cumplir su duracion minima);
+  // reactivar aplica desde el proximo partido.
+  function toggleMute() {
+    const next = !muted;
+    setMuted(next);
+    setNarratorMuted(next);
+    if (next) stopNarrationRef.current?.();
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -119,6 +131,11 @@ export default function GameIntro({ homeTeam, awayTeam, broadcasts, narration, o
       timers.push(setTimeout(maybeFinish, delay));
     };
 
+    stopNarrationRef.current = () => {
+      if (audio) audio.pause();
+      endAudio();
+    };
+
     timers.push(setTimeout(() => { minDone = true; maybeFinish(); }, TOTAL_MS));
     timers.push(setTimeout(finish, MAX_MS));
 
@@ -135,6 +152,7 @@ export default function GameIntro({ homeTeam, awayTeam, broadcasts, narration, o
 
     return () => {
       cancelled = true;
+      stopNarrationRef.current = null;
       timers.forEach(clearTimeout);
       if (audio) {
         audio.pause();
@@ -158,6 +176,31 @@ export default function GameIntro({ homeTeam, awayTeam, broadcasts, narration, o
             'linear-gradient(to bottom, rgba(252,211,77,0) 0%, rgba(252,211,77,1) 50%, rgba(252,211,77,0) 100%)',
         }}
       />
+
+      {/* Silenciar narrador */}
+      <button
+        type="button"
+        onClick={toggleMute}
+        aria-pressed={muted}
+        title={muted ? 'Activar narrador' : 'Silenciar narrador'}
+        className="absolute right-4 top-4 z-30 flex items-center gap-2 rounded-full border border-white/20 bg-black/50 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white/80 transition hover:bg-black/70 hover:text-white"
+      >
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M11 5 6 9H2v6h4l5 4V5z" fill="currentColor" />
+          {muted ? (
+            <>
+              <line x1="23" y1="9" x2="17" y2="15" />
+              <line x1="17" y1="9" x2="23" y2="15" />
+            </>
+          ) : (
+            <>
+              <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+              <path d="M19 5a10 10 0 0 1 0 14" />
+            </>
+          )}
+        </svg>
+        <span className="hidden sm:inline">{muted ? 'Narrador apagado' : 'Narrador'}</span>
+      </button>
 
       {/* Badge VS */}
       <div className="pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">

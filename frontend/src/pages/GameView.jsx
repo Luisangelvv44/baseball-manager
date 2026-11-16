@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import TeamBadge from '../components/TeamBadge.jsx';
 import SkillTierBadge from '../components/SkillTierBadge.jsx';
 import GameIntro from '../components/GameIntro.jsx';
+import { isNarratorMuted } from '../utils/narratorPref.js';
 import { useTeam } from '../context/TeamContext.jsx';
 import { advanceDayAndRoute } from '../utils/advanceDayFlow.js';
 import { getTeamLogo } from '../utils/teamLogos.js';
@@ -440,7 +441,7 @@ export default function GameView() {
       } else {
         // recien llegado desde "Avanzar Dia": primero el mapa (viaje / Play Ball), luego la intro
         const travel = !!location.state?.travel;
-        if (!narrationRef.current) narrationRef.current = api.getIntroAudio(id);
+        if (!narrationRef.current && !isNarratorMuted()) narrationRef.current = api.getIntroAudio(id);
         setShowTravel(travel);
         setShowIntro(!travel);
         setTab('previa');
