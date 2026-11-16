@@ -57,6 +57,18 @@ export const api = {
 
   // Partidos
   getGame: (id) => request(`/games/${id}`),
+  // Narracion de la pantalla VS: object URL del mp3, o null si no hay narrador (204/error).
+  // Quien la pide debe liberar la URL con URL.revokeObjectURL.
+  getIntroAudio: async (id) => {
+    try {
+      const res = await fetch(`${BASE_URL}/games/${id}/intro-audio`);
+      if (res.status !== 200) return null;
+      const blob = await res.blob();
+      return blob.size ? URL.createObjectURL(blob) : null;
+    } catch {
+      return null;
+    }
+  },
   simulateGame: (id) => request(`/games/${id}/simulate`, { method: 'POST' }),
 
   // Finanzas

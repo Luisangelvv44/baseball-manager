@@ -324,4 +324,16 @@ module.exports = {
     'deepseek/deepseek-v4.1-flash-1017': { input: 0.038e-6, output: 0.5e-6 },
     'nvidia/nemotron-3.5-super-vl:free': { input: 0, output: 0 },
   },
+
+  // ----- Narrador de la intro VS (ver services/introNarration.js, gameIntroService.js, ttsService.js) -----
+  // Texto por plantillas (sin IA de texto) y voz con Kokoro via OpenRouter (~$0.62 / 1M caracteres,
+  // ~150 caracteres por partido). Usa la misma OPENROUTER_API_KEY; sin clave la intro sigue muda.
+  // Modelo y voz se pueden sobreescribir con TTS_MODEL / TTS_VOICE en .env.
+  TTS_INTRO_ENABLED: true,
+  TTS_MODEL: 'hexgrad/kokoro-82m',
+  TTS_VOICE: 'em_alex', // voces en espanol de Kokoro: em_alex, em_santa (hombre), ef_dora (mujer)
+  TTS_TIMEOUT_MS: 12_000,
+  TTS_CACHE_MAX: 20, // narraciones (mp3) guardadas en memoria
+  INTRO_STREAK_MIN: 3, // racha minima (victorias o derrotas) para mencionarla
+  INTRO_HR_MIN: 10, // jonrones minimos en la temporada para destacar a un bateador
 };

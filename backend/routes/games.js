@@ -13,6 +13,7 @@ const { getTeamBroadcasts } = require('../services/broadcastService');
 const { updateSeriesAfterGame } = require('../services/playoffService');
 const { RIVALRY_BADGE_THRESHOLD } = require('../config');
 const { simulateScheduledGamesForDay, simulateOtherActivePlayoffSeries } = require('../services/dayGamesSimulator');
+const { getIntroAudio } = require('../services/gameIntroService');
 
 function formatSavedLineup(rows, teamId) {
   const teamRows = rows.filter((r) => r.team_id === teamId);
@@ -107,6 +108,29 @@ router.get('/:id', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener el partido' });
+  }
+});
+
+// GET /api/games/:id/intro-audio -> mp3 del narrador de la pantalla VS (Kokoro via OpenRouter).
+// 204 si no hay narrador (sin clave, desactivado, partido terminado o fallo del TTS): la intro sigue muda.
+router.get('/:id/intro-audio', async (req, res) => {
+  try {
+    const game = await prisma.gameSchedule.findUnique({ where: { id: Number(req.params.id) } });
+    if (!game) return res.status(404).json({ error: 'Partido no encontrado' });
+
+    const result = await getIntroAudio(game);
+    if (!result) return res.status(204).end();
+
+    res.set({
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': result.audio.length,
+      'Cache-Control': 'private, max-age=3600',
+      'X-Narration-Text': encodeURIComponent(result.text),
+    });
+    res.send(result.audio);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al generar la narración' });
   }
 });
 

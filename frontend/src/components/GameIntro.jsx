@@ -1,8 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { getTeamLogo } from '../utils/teamLogos.js';
 import BroadcastLogo from './BroadcastLogo.jsx';
 
-const TOTAL_MS = 7500;
+const TOTAL_MS = 7500; // duracion minima de la intro
+const AUDIO_WAIT_MS = 4000; // si la narracion no llega antes, la intro sigue muda
+const AUDIO_TAIL_MS = 600; // respiro tras la ultima palabra del narrador
+const MAX_MS = 16000; // tope aunque el audio sea largo
 
 function TeamBroadcasts({ companies }) {
   if (!companies?.length) return null;
@@ -88,11 +91,58 @@ function TeamSide({ team, side, broadcasts }) {
   );
 }
 
-export default function GameIntro({ homeTeam, awayTeam, broadcasts, onFinish }) {
+// narration: Promise<objectURL|null> con el mp3 del narrador (opcional). La intro dura
+// TOTAL_MS o lo que tarde el narrador en terminar (con tope MAX_MS).
+export default function GameIntro({ homeTeam, awayTeam, broadcasts, narration, onFinish }) {
+  const onFinishRef = useRef(onFinish);
+  onFinishRef.current = onFinish;
+
   useEffect(() => {
-    const t = setTimeout(onFinish, TOTAL_MS);
-    return () => clearTimeout(t);
-  }, [onFinish]);
+    let cancelled = false;
+    let finished = false;
+    let minDone = false;
+    let audioDone = !narration;
+    let audio = null;
+    const timers = [];
+
+    const finish = () => {
+      if (finished || cancelled) return;
+      finished = true;
+      onFinishRef.current?.();
+    };
+    const maybeFinish = () => {
+      if (minDone && audioDone) finish();
+    };
+    const endAudio = (delay = 0) => {
+      if (audioDone) return;
+      audioDone = true;
+      timers.push(setTimeout(maybeFinish, delay));
+    };
+
+    timers.push(setTimeout(() => { minDone = true; maybeFinish(); }, TOTAL_MS));
+    timers.push(setTimeout(finish, MAX_MS));
+
+    if (narration) {
+      timers.push(setTimeout(() => { if (!audio) endAudio(); }, AUDIO_WAIT_MS));
+      narration.then((url) => {
+        if (cancelled || audioDone || !url) return endAudio();
+        audio = new Audio(url);
+        audio.addEventListener('ended', () => endAudio(AUDIO_TAIL_MS));
+        audio.addEventListener('error', () => endAudio());
+        audio.play().catch(() => endAudio()); // autoplay bloqueado u otro fallo: intro muda
+      });
+    }
+
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+      if (audio) {
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+      }
+    };
+  }, [narration]);
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden select-none">

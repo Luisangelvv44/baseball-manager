@@ -112,7 +112,7 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `players.js` | Team roster stats, free agents, promote/demote/renew, player stats |
 | `stadium.js` | Grandstand sections: pricing, upgrades (max level `GRANDSTAND_MAX_LEVEL` = 15), new builds, floor expansion; team facility upgrades (`POST /facilities/:key/upgrade`) |
 | `season.js` | Season status, start season, advance day, schedule |
-| `games.js` | Single game detail + simulate |
+| `games.js` | Single game detail + simulate; `GET /:id/intro-audio` = narrator mp3 for the VS screen (204 when unavailable) |
 | `finances.js` | Team finance ledger |
 | `scouts.js` | Scouts: list/hire, assign, collect scouting reports |
 | `auctions.js` | Free agent auctions: list/detail/bid |
@@ -167,6 +167,8 @@ Full-stack baseball management game: Express REST API + React SPA + PostgreSQL v
 | `pressTemplates.js` | Pure question/answer/headline template bank for press conferences, context-tagged (series result, playoffs, rivalry, streaks, standings, feats, injuries, trade deadline) |
 | `aiService.js` | Text AI via OpenRouter (`OPENROUTER_API_KEY` in `backend/.env`; optional). `generateText()` tries `AI_PRIMARY_MODEL` (DeepSeek V4.1 Flash, paid) then `AI_FALLBACK_MODEL` (Nemotron free), returns `null` on failure so callers fall back to templates; never throws. Reasoning disabled, per-season spend cap `AI_SEASON_BUDGET_USD` (in memory only) skips the paid model. Disabled under Jest unless `AI_ENABLE_IN_TESTS=1`. `scripts/aiSmokeTest.js` = manual live check. AI only writes text, never decides mechanics |
 | `pressAi.js` | AI layer for press conferences (`PRESS_AI_ENABLED`): conferences are created with templates and rewritten in the background (`enrichConference`, only while still pending) in the host broadcaster's voice (style from company id, mood from satisfaction); tones/mood/effects stay from templates. Each question is accepted whole or kept as template (validation rejects altered proper names, e.g. "del" for "de"). AI headline on answer (8 s timeout), else `pressHeadline()` |
+| `introNarration.js` | Pure narrator text for the VS screen: opener (city / playoff round) + matchup with starting pitchers + one hook (playoffs, rivalry, streak ≥ `INTRO_STREAK_MIN`, heir, HR leader ≥ `INTRO_HR_MIN`) + closer. Numbers spelled out in Spanish (`numberToSpanish`) for the TTS; `seededRng(gameId)` keeps the text stable per game |
+| `gameIntroService.js` / `ttsService.js` | Narrator voice: `getIntroFacts()` (read-only: lineups, streaks, season HR from `GameEvent`, heirs, rivalry, playoff round) → `introNarration` → `synthesizeSpeech()` = OpenRouter `/audio/speech` with Kokoro 82M (`TTS_*` in `config.js`, `TTS_MODEL`/`TTS_VOICE` overridable in `.env`, same `OPENROUTER_API_KEY`, off under Jest via `aiService.isEnabled()`). mp3 cached in memory per game + text (shared by prefetch and playback, failures not cached). Frontend: `GameView` prefetches it on load (during the travel overlay), `GameIntro` plays it and lasts until it ends (min 7.5 s, max 16 s, silent if it doesn't arrive within 4 s) |
 | `newsService.js` | Thin wrapper that creates `NewsItem` rows, used by other services to log league events |
 | `newsDetection.js` | Scans a simulated game's play-by-play for feats (no-hitters/perfect games, cycles, multi-HR games, extra-innings, win/loss streaks) to feed the news feed |
 
