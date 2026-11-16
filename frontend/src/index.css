@@ -23,6 +23,15 @@
 }
 .desktop-app .desktop-titlebar img { -webkit-user-drag: none; }
 
+/* Pantalla completa (F11): Windows oculta sus botones, así que no se reserva sitio ni se
+   arrastra la ventana, y se muestran los botones propios (WindowControls). */
+.desktop-window-controls { display: none; }
+.desktop-app.desktop-fullscreen .desktop-window-controls { display: flex; }
+.desktop-app.desktop-fullscreen .desktop-titlebar {
+  -webkit-app-region: no-drag;
+  padding-right: 1rem;
+}
+
 /* Scrollbars finas con los colores del juego (página y contenedores con scroll).
    Sin scrollbar-width/scrollbar-color: si se definen, Chromium ignora ::-webkit-scrollbar. */
 .desktop-app ::-webkit-scrollbar { width: 6px; height: 6px; }
