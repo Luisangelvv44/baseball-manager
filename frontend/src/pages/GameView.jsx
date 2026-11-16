@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import TeamBadge from '../components/TeamBadge.jsx';
 import SkillTierBadge from '../components/SkillTierBadge.jsx';
 import GameIntro from '../components/GameIntro.jsx';
+import { isNarratorMuted } from '../utils/narratorPref.js';
 import { useTeam } from '../context/TeamContext.jsx';
 import { advanceDayAndRoute } from '../utils/advanceDayFlow.js';
 import { getTeamLogo } from '../utils/teamLogos.js';
@@ -402,10 +403,16 @@ export default function GameView() {
   const [showTravel, setShowTravel] = useState(false);
   const [tab, setTab] = useState('previa');
   const timerRef = useRef(null);
+  // Promise<objectURL|null> de la narracion de la intro, pedida al cargar (durante el viaje del mapa)
+  const narrationRef = useRef(null);
 
   useEffect(() => {
     load();
-    return () => clearTimeout(timerRef.current);
+    return () => {
+      clearTimeout(timerRef.current);
+      narrationRef.current?.then((url) => url && URL.revokeObjectURL(url));
+      narrationRef.current = null;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -434,6 +441,7 @@ export default function GameView() {
       } else {
         // recien llegado desde "Avanzar Dia": primero el mapa (viaje / Play Ball), luego la intro
         const travel = !!location.state?.travel;
+        if (!narrationRef.current && !isNarratorMuted()) narrationRef.current = api.getIntroAudio(id);
         setShowTravel(travel);
         setShowIntro(!travel);
         setTab('previa');
@@ -555,7 +563,13 @@ export default function GameView() {
         </Suspense>
       )}
       {showIntro && homeTeam && awayTeam && (
-        <GameIntro homeTeam={homeTeam} awayTeam={awayTeam} broadcasts={broadcasts} onFinish={() => setShowIntro(false)} />
+        <GameIntro
+          homeTeam={homeTeam}
+          awayTeam={awayTeam}
+          broadcasts={broadcasts}
+          narration={narrationRef.current}
+          onFinish={() => setShowIntro(false)}
+        />
       )}
 
       <div className="flex items-center justify-between gap-3">

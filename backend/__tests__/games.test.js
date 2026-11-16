@@ -16,6 +16,9 @@ jest.mock('../services/rivalryService', () => ({
 jest.mock('../services/pressConferenceService', () => ({
   maybeCreateAfterUserGame: jest.fn().mockResolvedValue(null),
 }));
+jest.mock('../services/gameIntroService', () => ({
+  getIntroAudio: jest.fn().mockResolvedValue(null),
+}));
 
 const prisma = require('../db/prisma');
 const { playGame } = require('../services/gamePlay');
@@ -29,6 +32,33 @@ const app = require('../index');
 
 beforeEach(() => {
   jest.clearAllMocks();
+});
+
+describe('GET /api/games/:id/intro-audio', () => {
+  const { getIntroAudio } = require('../services/gameIntroService');
+
+  it('returns 404 when game not found', async () => {
+    prisma.gameSchedule.findUnique.mockResolvedValue(null);
+    const res = await request(app).get('/api/games/999/intro-audio');
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 204 when there is no narrator', async () => {
+    prisma.gameSchedule.findUnique.mockResolvedValue(mockGame);
+    getIntroAudio.mockResolvedValue(null);
+    const res = await request(app).get(`/api/games/${mockGame.id}/intro-audio`);
+    expect(res.status).toBe(204);
+  });
+
+  it('returns the mp3 with the narration text header', async () => {
+    prisma.gameSchedule.findUnique.mockResolvedValue(mockGame);
+    getIntroAudio.mockResolvedValue({ text: '¡Playball!', audio: Buffer.from('mp3data') });
+    const res = await request(app).get(`/api/games/${mockGame.id}/intro-audio`);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/audio\/mpeg/);
+    expect(decodeURIComponent(res.headers['x-narration-text'])).toBe('¡Playball!');
+    expect(res.headers['content-length']).toBe('7');
+  });
 });
 
 describe('GET /api/games/:id', () => {
