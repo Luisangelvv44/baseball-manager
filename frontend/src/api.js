@@ -17,6 +17,24 @@ async function request(path, options = {}) {
   return data;
 }
 
+// Narrador pregrabado: mp3 servidos por el frontend (frontend/public/audio/narrator, fuera de git).
+// VITE_NARRATOR_URL permite servirlos desde otro sitio (CDN/bucket) si la web se publica.
+const NARRATOR_URL = (import.meta.env.VITE_NARRATOR_URL ?? `${import.meta.env.BASE_URL}audio/narrator`)
+  .replace(/\/$/, '');
+
+// objectURL del clip, o null si no existe. Ojo: el dev server de Vite responde index.html (200)
+// a rutas inexistentes, por eso se exige un content-type de audio.
+async function fetchNarratorClip(clipId) {
+  try {
+    const res = await fetch(`${NARRATOR_URL}/${clipId}.mp3`);
+    if (!res.ok || !/^audio\//.test(res.headers.get('content-type') || '')) return null;
+    const blob = await res.blob();
+    return blob.size ? URL.createObjectURL(blob) : null;
+  } catch {
+    return null;
+  }
+}
+
 export const api = {
   // Nueva partida
   newGame: () => request('/newgame', { method: 'POST' }),
@@ -68,6 +86,31 @@ export const api = {
     } catch {
       return null;
     }
+  },
+  // Narrador de la pantalla VS: Promise<objectURL[]|null>, en orden de reproduccion.
+  // Primero los clips pregrabados (ElevenLabs, /audio/narrator/<id>.mp3); si falta el del
+  // enfrentamiento (p. ej. finales aun sin grabar) cae a la voz generada (getIntroAudio).
+  // Rondas/ganchos/cierres que falten se omiten. Liberar las URLs con URL.revokeObjectURL.
+  getIntroNarration: async (id) => {
+    const kokoro = async () => {
+      const url = await api.getIntroAudio(id);
+      return url ? [url] : null;
+    };
+    let clips = [];
+    try {
+      clips = (await request(`/games/${id}/intro-clips`)).clips || [];
+    } catch {
+      return kokoro();
+    }
+    if (!clips.length) return kokoro();
+
+    const urls = await Promise.all(clips.map(fetchNarratorClip));
+    const matchupIdx = clips.findIndex((c) => /^(matchup|final)__/.test(c));
+    if (matchupIdx === -1 || !urls[matchupIdx]) {
+      urls.forEach((u) => u && URL.revokeObjectURL(u));
+      return kokoro();
+    }
+    return urls.filter(Boolean);
   },
   simulateGame: (id) => request(`/games/${id}/simulate`, { method: 'POST' }),
 

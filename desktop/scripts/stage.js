@@ -38,3 +38,16 @@ execSync(`pnpm exec vite build --outDir "${WEB_OUT}" --emptyOutDir`, {
   env: { ...process.env, VITE_API_URL: '/api' },
 });
 console.log('stage: frontend compilado en app/web');
+
+// Narrador pregrabado: vive en frontend/public/audio/narrator (fuera de git) y Vite lo copia a app/web.
+// Si falta, el build sigue (el juego cae a la voz generada / silencio), pero se avisa.
+const NARRATOR_OUT = path.join(WEB_OUT, 'audio', 'narrator');
+const narratorClips = fs.existsSync(NARRATOR_OUT)
+  ? fs.readdirSync(NARRATOR_OUT).filter((f) => f.endsWith('.mp3')).length
+  : 0;
+if (narratorClips) {
+  console.log(`stage: narrador incluido (${narratorClips} mp3)`);
+} else {
+  console.warn('stage: AVISO sin audios del narrador (frontend/public/audio/narrator vacio). '
+    + 'Generalos con `npm run narration:audio` en backend/ o copia la carpeta.');
+}

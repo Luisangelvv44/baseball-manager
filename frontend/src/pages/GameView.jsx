@@ -403,14 +403,15 @@ export default function GameView() {
   const [showTravel, setShowTravel] = useState(false);
   const [tab, setTab] = useState('previa');
   const timerRef = useRef(null);
-  // Promise<objectURL|null> de la narracion de la intro, pedida al cargar (durante el viaje del mapa)
+  // Promise<objectURL[]|null> de la narracion de la intro (clips en orden), pedida al cargar
+  // (durante el viaje del mapa)
   const narrationRef = useRef(null);
 
   useEffect(() => {
     load();
     return () => {
       clearTimeout(timerRef.current);
-      narrationRef.current?.then((url) => url && URL.revokeObjectURL(url));
+      narrationRef.current?.then((urls) => urls?.forEach((url) => URL.revokeObjectURL(url)));
       narrationRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -441,7 +442,7 @@ export default function GameView() {
       } else {
         // recien llegado desde "Avanzar Dia": primero el mapa (viaje / Play Ball), luego la intro
         const travel = !!location.state?.travel;
-        if (!narrationRef.current && !isNarratorMuted()) narrationRef.current = api.getIntroAudio(id);
+        if (!narrationRef.current && !isNarratorMuted()) narrationRef.current = api.getIntroNarration(id);
         setShowTravel(travel);
         setShowIntro(!travel);
         setTab('previa');

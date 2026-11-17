@@ -9,12 +9,14 @@ const {
   INTRO_STREAK_MIN,
   INTRO_HR_MIN,
   RIVALRY_BADGE_THRESHOLD,
+  DIVISION_CONFERENCES,
 } = require('../config');
 const { getLineup } = require('./lineup');
 const { getRivalryIntensity } = require('./rivalryService');
 const { cityName } = require('./mapService');
 const { computeTrailingStreak } = require('./newsDetection');
 const { buildIntroText, seededRng } = require('./introNarration');
+const { buildNarratorClips } = require('./narratorClips');
 const { synthesizeSpeech } = require('./ttsService');
 const { isEnabled } = require('./aiService');
 
@@ -36,11 +38,13 @@ async function teamStreak(teamId, seasonId) {
   return computeTrailingStreak(games, teamId);
 }
 
+const teamSelect = { id: true, name: true, division: { select: { name: true } } };
+
 // Datos del partido para el narrador (solo lecturas).
 async function getIntroFacts(game) {
   const [homeTeam, awayTeam] = await Promise.all([
-    prisma.team.findUnique({ where: { id: game.home_team_id }, select: { id: true, name: true } }),
-    prisma.team.findUnique({ where: { id: game.away_team_id }, select: { id: true, name: true } }),
+    prisma.team.findUnique({ where: { id: game.home_team_id }, select: teamSelect }),
+    prisma.team.findUnique({ where: { id: game.away_team_id }, select: teamSelect }),
   ]);
   if (!homeTeam || !awayTeam) return null;
 
@@ -95,6 +99,8 @@ async function getIntroFacts(game) {
     city: cityName(homeTeam.name),
     homeName: homeTeam.name,
     awayName: awayTeam.name,
+    homeConference: DIVISION_CONFERENCES[homeTeam.division?.name] ?? null,
+    awayConference: DIVISION_CONFERENCES[awayTeam.division?.name] ?? null,
     homePitcher: fullName(homeLineup?.pitcher),
     awayPitcher: fullName(awayLineup?.pitcher),
     playoffRound: series ? series.round : null,
@@ -112,6 +118,19 @@ async function getIntroText(game) {
   const facts = await getIntroFacts(game);
   if (!facts) return null;
   return buildIntroText(facts, {
+    rng: seededRng(game.id),
+    streakMin: INTRO_STREAK_MIN,
+    hrMin: INTRO_HR_MIN,
+  });
+}
+
+// Clips del narrador pregrabado (ElevenLabs) para este partido, en orden. No depende de la IA:
+// los mp3 viven en el frontend. [] si el partido ya se jugo o faltan los equipos.
+async function getNarratorClips(game) {
+  if (game.status === 'finished') return [];
+  const facts = await getIntroFacts(game);
+  if (!facts) return [];
+  return buildNarratorClips(facts, {
     rng: seededRng(game.id),
     streakMin: INTRO_STREAK_MIN,
     hrMin: INTRO_HR_MIN,
@@ -151,4 +170,4 @@ async function getIntroAudio(game) {
   return { text, audio };
 }
 
-module.exports = { getIntroFacts, getIntroText, getIntroAudio, resetIntroAudioCache };
+module.exports = { getIntroFacts, getIntroText, getIntroAudio, getNarratorClips, resetIntroAudioCache };

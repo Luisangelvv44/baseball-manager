@@ -18,6 +18,7 @@ jest.mock('../services/pressConferenceService', () => ({
 }));
 jest.mock('../services/gameIntroService', () => ({
   getIntroAudio: jest.fn().mockResolvedValue(null),
+  getNarratorClips: jest.fn().mockResolvedValue([]),
 }));
 
 const prisma = require('../db/prisma');
@@ -32,6 +33,24 @@ const app = require('../index');
 
 beforeEach(() => {
   jest.clearAllMocks();
+});
+
+describe('GET /api/games/:id/intro-clips', () => {
+  const { getNarratorClips } = require('../services/gameIntroService');
+
+  it('returns 404 when game not found', async () => {
+    prisma.gameSchedule.findUnique.mockResolvedValue(null);
+    const res = await request(app).get('/api/games/999/intro-clips');
+    expect(res.status).toBe(404);
+  });
+
+  it('returns the ordered clip ids', async () => {
+    prisma.gameSchedule.findUnique.mockResolvedValue(mockGame);
+    getNarratorClips.mockResolvedValue(['matchup__a__at__b__v1', 'closer__v2']);
+    const res = await request(app).get(`/api/games/${mockGame.id}/intro-clips`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ clips: ['matchup__a__at__b__v1', 'closer__v2'] });
+  });
 });
 
 describe('GET /api/games/:id/intro-audio', () => {

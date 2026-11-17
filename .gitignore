@@ -2,3 +2,7 @@
 */.env
 .vscode
 dist
+# Narrador pregrabado (ElevenLabs): se genera con `npm run narration:audio` (backend/), no va a git.
+# Vite lo sirve en /audio/narrator y el build de desktop lo empaqueta desde frontend/public.
+frontend/public/audio/narrator/
+narration/voice-tests/
