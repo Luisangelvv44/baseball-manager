@@ -8,7 +8,7 @@
 const { availableHooks } = require('./introNarration');
 
 // Variantes grabadas por enfrentamiento (dentro de la conferencia) y por cruce Oeste vs Este (final).
-const MATCHUP_VARIANTS = 1;
+const MATCHUP_VARIANTS = 2;
 const FINAL_VARIANTS = 1;
 
 // Cuantos clips sueltos hay por categoria (el generador falla si sus plantillas no coinciden).

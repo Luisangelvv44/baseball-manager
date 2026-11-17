@@ -3,6 +3,8 @@ const {
   matchupClipId,
   finalClipId,
   SHARED_CLIP_COUNTS,
+  MATCHUP_VARIANTS,
+  FINAL_VARIANTS,
 } = require('../services/narratorClips');
 const { buildRows } = require('../scripts/generateNarrationScripts');
 const { TEAM_DIVISIONS } = require('../seeders/data/names');
@@ -27,7 +29,7 @@ describe('buildNarratorClips', () => {
   it('regular season without hooks: matchup + closer', () => {
     const clips = buildNarratorClips(baseFacts, opts);
     expect(clips).toHaveLength(2);
-    expect(clips[0]).toBe('matchup__thalgrove-miners__at__brisko-wolves__v1');
+    expect(clips[0]).toMatch(/^matchup__thalgrove-miners__at__brisko-wolves__v[1-2]$/);
     expect(clips[1]).toMatch(/^closer__v[1-5]$/);
   });
 
@@ -60,7 +62,7 @@ describe('buildNarratorClips', () => {
     const clips = buildNarratorClips({ ...baseFacts, playoffRound: 2, isRivalry: true }, opts);
     expect(clips).toHaveLength(3);
     expect(clips[0]).toMatch(/^round_semis__v[12]$/);
-    expect(clips[1]).toBe('matchup__thalgrove-miners__at__brisko-wolves__v1');
+    expect(clips[1]).toMatch(/^matchup__thalgrove-miners__at__brisko-wolves__v[1-2]$/);
   });
 
   it('cross-conference final uses the final clip', () => {
@@ -92,10 +94,12 @@ describe('narrator clips vs generated scripts', () => {
     for (const home of teams) {
       for (const away of teams) {
         if (home === away) continue;
-        const id = home.conf === away.conf
-          ? matchupClipId(away.name, home.name, 1)
-          : finalClipId(away.name, home.name, 1);
-        expect(ids.has(id)).toBe(true);
+        const same = home.conf === away.conf;
+        const count = same ? MATCHUP_VARIANTS : FINAL_VARIANTS;
+        for (let v = 1; v <= count; v++) {
+          const id = same ? matchupClipId(away.name, home.name, v) : finalClipId(away.name, home.name, v);
+          expect(ids.has(id)).toBe(true);
+        }
       }
     }
   });
