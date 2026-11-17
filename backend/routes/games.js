@@ -13,7 +13,7 @@ const { getTeamBroadcasts } = require('../services/broadcastService');
 const { updateSeriesAfterGame } = require('../services/playoffService');
 const { RIVALRY_BADGE_THRESHOLD } = require('../config');
 const { simulateScheduledGamesForDay, simulateOtherActivePlayoffSeries } = require('../services/dayGamesSimulator');
-const { getIntroAudio } = require('../services/gameIntroService');
+const { getIntroAudio, getNarratorClips } = require('../services/gameIntroService');
 
 function formatSavedLineup(rows, teamId) {
   const teamRows = rows.filter((r) => r.team_id === teamId);
@@ -108,6 +108,19 @@ router.get('/:id', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener el partido' });
+  }
+});
+
+// GET /api/games/:id/intro-clips -> { clips: [id, ...] } del narrador pregrabado (ElevenLabs), en orden.
+// El frontend los reproduce desde /audio/narrator/<id>.mp3; si falta el del enfrentamiento usa intro-audio.
+router.get('/:id/intro-clips', async (req, res) => {
+  try {
+    const game = await prisma.gameSchedule.findUnique({ where: { id: Number(req.params.id) } });
+    if (!game) return res.status(404).json({ error: 'Partido no encontrado' });
+    res.json({ clips: await getNarratorClips(game) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al preparar la narración' });
   }
 });
 

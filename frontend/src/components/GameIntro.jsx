@@ -6,7 +6,8 @@ import BroadcastLogo from './BroadcastLogo.jsx';
 const TOTAL_MS = 7500; // duracion minima de la intro
 const AUDIO_WAIT_MS = 4000; // si la narracion no llega antes, la intro sigue muda
 const AUDIO_TAIL_MS = 600; // respiro tras la ultima palabra del narrador
-const MAX_MS = 16000; // tope aunque el audio sea largo
+const CLIP_GAP_MS = 150; // silencio entre clips del narrador pregrabado
+const MAX_MS = 22000; // tope aunque el audio sea largo (enfrentamiento + gancho + cierre ~ 15 s)
 
 function TeamBroadcasts({ companies }) {
   if (!companies?.length) return null;
@@ -92,8 +93,9 @@ function TeamSide({ team, side, broadcasts }) {
   );
 }
 
-// narration: Promise<objectURL|null> con el mp3 del narrador (opcional). La intro dura
-// TOTAL_MS o lo que tarde el narrador en terminar (con tope MAX_MS).
+// narration: Promise<objectURL[]|null> con los mp3 del narrador en orden (opcional): clips
+// pregrabados o un unico audio generado. La intro dura TOTAL_MS o lo que tarde el narrador en
+// terminar (con tope MAX_MS).
 export default function GameIntro({ homeTeam, awayTeam, broadcasts, narration, onFinish }) {
   const onFinishRef = useRef(onFinish);
   onFinishRef.current = onFinish;
@@ -141,12 +143,31 @@ export default function GameIntro({ homeTeam, awayTeam, broadcasts, narration, o
 
     if (narration) {
       timers.push(setTimeout(() => { if (!audio) endAudio(); }, AUDIO_WAIT_MS));
-      narration.then((url) => {
-        if (cancelled || audioDone || !url) return endAudio();
-        audio = new Audio(url);
-        audio.addEventListener('ended', () => endAudio(AUDIO_TAIL_MS));
-        audio.addEventListener('error', () => endAudio());
-        audio.play().catch(() => endAudio()); // autoplay bloqueado u otro fallo: intro muda
+      narration.then((urls) => {
+        if (cancelled || audioDone || !urls?.length) return endAudio();
+        // Un solo <audio> que va cambiando de clip; un clip que falla se salta.
+        audio = new Audio();
+        let index = -1;
+        // `from` = clip que termino o fallo; evita avanzar dos veces cuando un fallo dispara
+        // a la vez el evento 'error' y el rechazo de play().
+        const playNext = (from) => {
+          if (cancelled || audioDone || from !== index) return;
+          index += 1;
+          if (index >= urls.length) return endAudio(AUDIO_TAIL_MS);
+          const current = index;
+          audio.src = urls[current];
+          audio.play().catch((err) => {
+            // autoplay bloqueado: intro muda; un clip roto: se salta
+            if (err?.name === 'NotAllowedError') endAudio();
+            else playNext(current);
+          });
+        };
+        audio.addEventListener('ended', () => {
+          const current = index;
+          timers.push(setTimeout(() => playNext(current), CLIP_GAP_MS));
+        });
+        audio.addEventListener('error', () => playNext(index));
+        playNext(-1);
       });
     }
 
