@@ -24,3 +24,8 @@ export const isNarratorMuted = () => readFlag(KEY);
 export const setNarratorMuted = (muted) => writeFlag(KEY, muted);
 export const isAmbienceMuted = () => readFlag(AMBIENCE_KEY);
 export const setAmbienceMuted = (muted) => writeFlag(AMBIENCE_KEY, muted);
+
+// Banda sonora de los menus (utils/gameMusic.js)
+const MUSIC_KEY = 'bm.musicMuted';
+export const isMusicMuted = () => readFlag(MUSIC_KEY);
+export const setMusicMuted = (muted) => writeFlag(MUSIC_KEY, muted);

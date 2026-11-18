@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
+import MusicPlayer from './components/MusicPlayer.jsx';
 import { TeamProvider } from './context/TeamContext.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import NewGame from './pages/NewGame.jsx';
@@ -67,6 +68,7 @@ export default function App() {
           <Route path="/derby/:id" element={<DerbyView />} />
         </Routes>
       </div>
+      <MusicPlayer />
     </div>
     </TeamProvider>
   );
