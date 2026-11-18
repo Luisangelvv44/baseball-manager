@@ -97,6 +97,36 @@
       "artist": "Old Timers' Day",
       "file": "track_15.mp3",
       "unlockable": true
+    },
+    {
+      "id": "track_16",
+      "title": "Walk-Off",
+      "artist": "Lil Dugout",
+      "file": "track_16.mp3"
+    },
+    {
+      "id": "track_17",
+      "title": "Ninety-Nine Heat",
+      "artist": "Radar Gun",
+      "file": "track_17.mp3"
+    },
+    {
+      "id": "track_18",
+      "title": "Bat Flip",
+      "artist": "Moonshot Mafia",
+      "file": "track_18.mp3"
+    },
+    {
+      "id": "track_19",
+      "title": "Under the Lights",
+      "artist": "Night Game Gang",
+      "file": "track_19.mp3"
+    },
+    {
+      "id": "track_20",
+      "title": "Run It Up",
+      "artist": "Bases Loaded",
+      "file": "track_20.mp3"
     }
   ],
   "calm": [
