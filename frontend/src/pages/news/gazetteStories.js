@@ -5,7 +5,7 @@
 export const SECTIONS = [
   { id: 'portada', label: 'Portada' },
   { id: 'partidos', label: 'Partidos', types: ['game', 'walkoff', 'extra_innings', 'streak', 'rivalry', 'press'] },
-  { id: 'hazanas', label: 'Hazañas', types: ['no_hitter', 'cycle', 'multi_hr', 'derby', 'awards'] },
+  { id: 'hazanas', label: 'Hazañas', types: ['no_hitter', 'cycle', 'multi_hr', 'derby', 'all_star', 'awards'] },
   { id: 'mercado', label: 'Mercado', types: ['auction', 'signing', 'trade'] },
   { id: 'enfermeria', label: 'Enfermería', types: ['injury'] },
   { id: 'finanzas', label: 'Finanzas', types: ['loan'] },
@@ -14,7 +14,7 @@ export const SECTIONS = [
 
 const KICKER = {
   game: 'Crónica', walkoff: 'Walk-off', extra_innings: 'Innings extra', streak: 'Rachas', rivalry: 'Rivalidad',
-  no_hitter: 'Joya monticular', cycle: 'El ciclo', multi_hr: 'Jonrones', derby: 'Home Run Derby', awards: 'Premios',
+  no_hitter: 'Joya monticular', cycle: 'El ciclo', multi_hr: 'Jonrones', derby: 'Home Run Derby', all_star: 'Juego de Estrellas', awards: 'Premios',
   auction: 'Subastas', signing: 'Movimientos', trade: 'Traspasos', injury: 'Parte médico', loan: 'El Banco',
   press: 'Sala de prensa',
 };
@@ -29,7 +29,7 @@ const REPORTERS = {
 
 // Peso para decidir qué va a portada. Las notas del equipo del usuario suben.
 const PRIORITY = {
-  no_hitter: 100, cycle: 90, awards: 85, derby: 80, walkoff: 70, auction: 60, trade: 55,
+  no_hitter: 100, cycle: 90, awards: 85, all_star: 82, derby: 80, walkoff: 70, auction: 60, trade: 55,
   extra_innings: 50, press: 48, rivalry: 45, multi_hr: 40, streak: 35, loan: 30, game: 10, signing: 20, injury: 5,
 };
 const MINE_BONUS = { game: 45, injury: 30 };
@@ -123,6 +123,7 @@ function deckFor(item, game) {
     case 'cycle': return 'Sencillo, doble, triple y jonrón en una misma tarde: una de las rarezas del juego.';
     case 'multi_hr': return 'Una tarde de poder que se quedará en el libro de récords de la temporada.';
     case 'derby': return 'El concurso de cuadrangulares ya tiene campeón.';
+    case 'all_star': return 'Las estrellas de ambas conferencias se vieron las caras en la pausa de mitad de temporada.';
     case 'awards': return 'La liga entregó sus distinciones de la temporada.';
     case 'streak': return h.includes('racha ganadora') ? 'La racha sigue viva.' : 'La caída no encuentra freno.';
     case 'trade': return 'Los términos del acuerdo pueden consultarse en la oficina de traspasos.';

@@ -41,6 +41,13 @@ module.exports = {
   DERBY_CPU_REWARD_MIN_PCT: 0.5,
   DERBY_CPU_REWARD_MAX_PCT: 1.0,
   DERBY_MAX_TIEBREAK_ROUNDS: 10,
+  // Pausa del Juego de Estrellas (services/allStarService.js): dos dias sin partidos entre las dos
+  // vueltas del calendario. Dia 1 de la pausa = Home Run Derby, dia 2 = Juego de Estrellas (Oeste vs Este).
+  // Con 15 dias de pre-temporada: derby dia 61, estrellas dia 62, la segunda vuelta arranca el 63.
+  ALL_STAR_BREAK_AFTER_GAME_DAY: 45, // ultimo dia de juego (1-90) de la primera vuelta
+  ALL_STAR_BREAK_DAYS: 2,
+  ALL_STAR_FAN_BONUS_PCT: 0.005, // +fan_base por cada jugador del equipo convocado al Juego de Estrellas
+  ALL_STAR_WIN_FAN_BONUS_PCT: 0.005, // +fan_base extra para los equipos de los convocados de la conferencia ganadora
   NEWS_NO_HITTER_MIN_INNINGS: 8,
   NEWS_PERFECT_GAME_MIN_INNINGS: 9,
   NEWS_MULTI_HR_THRESHOLD: 3,

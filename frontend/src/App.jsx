@@ -24,6 +24,7 @@ import TeamsOverview from './pages/TeamsOverview.jsx';
 import Trades from './pages/Trades.jsx';
 import Derby from './pages/Derby.jsx';
 import DerbyView from './pages/DerbyView.jsx';
+import AllStar from './pages/AllStar.jsx';
 import Jerseys from './pages/Jerseys.jsx';
 import Toddlers from './pages/Toddlers.jsx';
 import Bank from './pages/Bank.jsx';
@@ -66,6 +67,7 @@ export default function App() {
           <Route path="/map" element={<MapPage />} />
           <Route path="/derby" element={<Derby />} />
           <Route path="/derby/:id" element={<DerbyView />} />
+          <Route path="/all-star" element={<AllStar />} />
         </Routes>
       </div>
       <MusicPlayer />

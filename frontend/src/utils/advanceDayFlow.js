@@ -35,6 +35,15 @@ export async function advanceDayAndRoute({ navigate, refreshTeam, refreshAlerts,
     return navigate(`/game/${result.userGameId}`, { state: { travel: true } });
   }
 
+  if (result.allStarBreakEvent === 'derby') {
+    setMessage?.(`Dia ${result.day}. Pausa del Juego de Estrellas: hoy es el Home Run Derby.`);
+    return navigate('/derby');
+  }
+  if (result.allStarBreakEvent === 'all_star') {
+    setMessage?.(`Dia ${result.day}. ¡Hoy se juega el Juego de Estrellas!`);
+    return navigate('/all-star');
+  }
+
   setMessage?.(`Dia ${result.day}. Sin partido hoy. Se simularon ${result.simulated} partidos.`);
   if (onStay) return onStay();
   return navigate('/');

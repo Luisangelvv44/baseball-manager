@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useTeam } from '../context/TeamContext.jsx';
 import Pagination from '../components/Pagination.jsx';
@@ -19,6 +19,19 @@ export default function Derby() {
   const [events, setEvents] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [season, setSeason] = useState(null);
+  const [seasonEvent, setSeasonEvent] = useState(null);
+
+  useEffect(() => {
+    api.getSeason().then(async (s) => {
+      setSeason(s);
+      if (!s?.allStarBreak) return;
+      // El mas reciente: si es de esta temporada, el derby ya se armo
+      const data = await api.getDerbyEvents({ page: 1, pageSize: 1 });
+      const latest = data.events[0];
+      setSeasonEvent(latest && latest.season_id === s.id ? latest : null);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     api.getMyTeam().then((data) => {
@@ -72,6 +85,29 @@ export default function Derby() {
         los equipos CPU pagan entre 50% y 100% de lo maximo que estarian dispuestos a ofrecer.
       </div>
 
+      {season?.allStarBreak && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-900 space-y-1">
+          <p>
+            El Home Run Derby se juega una vez por temporada, el <b>día {season.allStarBreak.derbyDay}</b>, en la
+            pausa del Juego de Estrellas (que se juega el día {season.allStarBreak.allStarDay}).{' '}
+            <Link to="/all-star" className="font-semibold underline">Ver Juego de Estrellas</Link>
+          </p>
+          {season.status === 'active' && season.current_day === season.allStarBreak.derbyDay && !seasonEvent && (
+            <p>¡Es hoy! Inscribe a tu jugador. Si avanzas el día sin hacerlo, el derby se juega sin tu equipo.</p>
+          )}
+          {seasonEvent && (
+            <p>
+              El derby de esta temporada ya está armado.{' '}
+              <Link to={`/derby/${seasonEvent.id}`} className="font-semibold underline">
+                {seasonEvent.status === 'completed' ? 'Ver resultado' : 'Ir a simularlo'}
+              </Link>
+            </p>
+          )}
+        </div>
+      )}
+
+      {(!season?.allStarBreak ||
+        (season.status === 'active' && season.current_day === season.allStarBreak.derbyDay && !seasonEvent)) && (
       <div className="bg-white rounded-lg shadow p-4">
         <h3 className="font-bold mb-3">Nuevo Derby</h3>
         {myTeam && (
@@ -120,6 +156,7 @@ export default function Derby() {
           <p className="text-gray-400 text-xs mt-2">No tienes jugadores de posicion elegibles (Mayores, sin lesion).</p>
         )}
       </div>
+      )}
 
       <div className="bg-white rounded-lg shadow p-4">
         <h3 className="font-bold mb-2">Eventos anteriores</h3>
