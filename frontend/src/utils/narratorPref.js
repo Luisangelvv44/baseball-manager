@@ -1,19 +1,26 @@
-// Preferencia del usuario para silenciar al narrador de la pantalla VS (solo en este navegador).
+// Preferencias del usuario para silenciar al narrador y al ambiente (publico + musica) de la
+// pantalla VS (solo en este navegador).
 const KEY = 'bm.narratorMuted';
+const AMBIENCE_KEY = 'bm.ambienceMuted';
 
-export function isNarratorMuted() {
+function readFlag(key) {
   try {
-    return localStorage.getItem(KEY) === '1';
+    return localStorage.getItem(key) === '1';
   } catch {
     return false;
   }
 }
 
-export function setNarratorMuted(muted) {
+function writeFlag(key, on) {
   try {
-    if (muted) localStorage.setItem(KEY, '1');
-    else localStorage.removeItem(KEY);
+    if (on) localStorage.setItem(key, '1');
+    else localStorage.removeItem(key);
   } catch {
     // sin almacenamiento (modo privado, etc.): la preferencia dura solo esta sesion
   }
 }
+
+export const isNarratorMuted = () => readFlag(KEY);
+export const setNarratorMuted = (muted) => writeFlag(KEY, muted);
+export const isAmbienceMuted = () => readFlag(AMBIENCE_KEY);
+export const setAmbienceMuted = (muted) => writeFlag(AMBIENCE_KEY, muted);

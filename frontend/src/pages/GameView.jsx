@@ -4,7 +4,8 @@ import { api } from '../api.js';
 import TeamBadge from '../components/TeamBadge.jsx';
 import SkillTierBadge from '../components/SkillTierBadge.jsx';
 import GameIntro from '../components/GameIntro.jsx';
-import { isNarratorMuted } from '../utils/narratorPref.js';
+import { isNarratorMuted, isAmbienceMuted } from '../utils/narratorPref.js';
+import { startAmbience } from '../utils/introAmbience.js';
 import { useTeam } from '../context/TeamContext.jsx';
 import { advanceDayAndRoute } from '../utils/advanceDayFlow.js';
 import { getTeamLogo } from '../utils/teamLogos.js';
@@ -384,7 +385,7 @@ export default function GameView() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { refreshTeam, refreshAlerts } = useTeam();
+  const { myTeam, refreshTeam, refreshAlerts } = useTeam();
   const [game, setGame] = useState(null);
   const [homeTeam, setHomeTeam] = useState(null);
   const [awayTeam, setAwayTeam] = useState(null);
@@ -406,11 +407,25 @@ export default function GameView() {
   // Promise<objectURL[]|null> de la narracion de la intro (clips en orden), pedida al cargar
   // (durante el viaje del mapa)
   const narrationRef = useRef(null);
+  // Ambiente sonoro (publico + musica de la intro): nace con la pantalla VS y el publico sigue
+  // hasta que termina la reproduccion del partido o se sale de la pagina
+  const ambienceRef = useRef(null);
+
+  function startGameAmbience(gameRow) {
+    if (ambienceRef.current || isAmbienceMuted()) return;
+    ambienceRef.current = startAmbience({ playoff: !!gameRow?.playoff_series_id });
+  }
+
+  function stopGameAmbience() {
+    ambienceRef.current?.stop();
+    ambienceRef.current = null;
+  }
 
   useEffect(() => {
     load();
     return () => {
       clearTimeout(timerRef.current);
+      stopGameAmbience();
       narrationRef.current?.then((urls) => urls?.forEach((url) => URL.revokeObjectURL(url)));
       narrationRef.current = null;
     };
@@ -444,6 +459,7 @@ export default function GameView() {
         const travel = !!location.state?.travel;
         if (!narrationRef.current && !isNarratorMuted()) narrationRef.current = api.getIntroNarration(id);
         setShowTravel(travel);
+        if (!travel) startGameAmbience(info.game);
         setShowIntro(!travel);
         setTab('previa');
         setEvents([]);
@@ -459,6 +475,7 @@ export default function GameView() {
 
   function finishTravel() {
     setShowTravel(false);
+    startGameAmbience(game);
     setShowIntro(true);
     // quita la marca del historial para que recargar la pagina no repita el viaje
     navigate(location.pathname, { replace: true, state: null });
@@ -498,6 +515,15 @@ export default function GameView() {
     }
   }
 
+  // 'win' | 'loss' para tu equipo, null si no juega este partido
+  function userOutcome(homeScore, awayScore) {
+    const userId = myTeam?.id;
+    if (userId == null || homeScore === awayScore) return null;
+    if (userId === game?.home_team_id) return homeScore > awayScore ? 'win' : 'loss';
+    if (userId === game?.away_team_id) return awayScore > homeScore ? 'win' : 'loss';
+    return null;
+  }
+
   function playEvents(allEvents, finalHome, finalAway) {
     let idx = 0;
     let homeRuns = 0;
@@ -506,6 +532,9 @@ export default function GameView() {
     function step() {
       if (idx >= allEvents.length) {
         setScore({ home: finalHome, away: finalAway });
+        // ultimo out: reaccion del publico segun gane o pierda tu equipo; el ambiente se apaga
+        // cuando termina (salir de la pagina lo corta)
+        ambienceRef.current?.finale(userOutcome(finalHome, finalAway));
         return;
       }
       const ev = allEvents[idx];
@@ -569,7 +598,11 @@ export default function GameView() {
           awayTeam={awayTeam}
           broadcasts={broadcasts}
           narration={narrationRef.current}
-          onFinish={() => setShowIntro(false)}
+          ambience={ambienceRef.current}
+          onFinish={() => {
+            ambienceRef.current?.endIntro();
+            setShowIntro(false);
+          }}
         />
       )}
 
