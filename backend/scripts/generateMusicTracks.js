@@ -34,6 +34,13 @@ const BALLAD_STYLE =
   + 'slow and very melodic, acoustic and clean electric guitars building into a big distorted '
   + 'emotional chorus, warm bass, restrained drums, heartfelt male vocals. English lyrics.';
 
+// Baseball trap: rock y trap moderno energico mezclados
+const TRAP_STYLE =
+  'Modern energetic rock-trap hybrid like an original 2020s sports video game soundtrack, '
+  + 'booming 808 bass, crisp rolling trap hi-hats and snappy claps under loud distorted rock '
+  + 'guitar riffs and live drum fills, stadium hype energy, confident rap verses and a big sung '
+  + 'rock chorus, male vocals. English lyrics.';
+
 const TRACKS = [
   {
     id: 'track_01',
@@ -168,6 +175,57 @@ const TRACKS = [
       'Slow epic rock ballad, 70 bpm, piano and acoustic guitar intro growing into a soaring guitar '
       + 'solo, male vocals looking back on a lifetime with one franchise, twenty-five summers of wins, '
       + 'losses and friends who are gone, grateful and proud.',
+  },
+  // Baseball trap (rock + trap moderno)
+  {
+    id: 'track_16',
+    style: TRAP_STYLE,
+    title: 'Walk-Off',
+    artist: 'Lil Dugout',
+    prompt:
+      'Hard-hitting rock-trap banger, 145 bpm half-time feel, heavy palm-muted guitar riff over '
+      + 'distorted 808s, rapid hi-hat rolls, rap verses about stepping up with two outs in the ninth '
+      + 'and ending the game with one swing, explosive shouted chorus "walk-off!".',
+  },
+  {
+    id: 'track_17',
+    style: TRAP_STYLE,
+    title: 'Ninety-Nine Heat',
+    artist: 'Radar Gun',
+    prompt:
+      'Aggressive trap-metal flavored rock-trap, 150 bpm, dark detuned guitar riff, gritty 808 '
+      + 'slides, stuttering hi-hats, rap verses about a closer throwing fastballs at ninety-nine miles '
+      + 'per hour and striking out the side, chanted hook with crowd claps.',
+  },
+  {
+    id: 'track_18',
+    style: TRAP_STYLE,
+    title: 'Bat Flip',
+    artist: 'Moonshot Mafia',
+    prompt:
+      'Swaggering bouncy rock-trap, 140 bpm, catchy guitar lead melody, punchy 808 and claps, '
+      + 'confident rap verses about crushing a home run deep into the upper deck and flipping the bat, '
+      + 'anthemic sung rock chorus with stadium chants.',
+  },
+  {
+    id: 'track_19',
+    style: TRAP_STYLE,
+    title: 'Under the Lights',
+    artist: 'Night Game Gang',
+    prompt:
+      'Melodic emotional rock-trap, 138 bpm, atmospheric clean guitar arpeggios building into big '
+      + 'distorted power chords, deep 808s, auto-tuned melodic rap verses about grinding through the '
+      + 'minor leagues and finally playing under the big league lights, soaring rock chorus.',
+  },
+  {
+    id: 'track_20',
+    style: TRAP_STYLE,
+    title: 'Run It Up',
+    artist: 'Bases Loaded',
+    prompt:
+      'High-energy hype rock-trap, 155 bpm, fast punk-style guitar riff over booming 808s and '
+      + 'triplet hi-hats, call-and-response gang vocals, rap verses about a rally with the bases '
+      + 'loaded, piling on runs and the dugout going crazy, huge chorus "run it up!".',
   },
 ];
 
