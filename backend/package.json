@@ -7,6 +7,7 @@
     "start": "node index.js",
     "dev": "node index.js",
     "seed": "node seeders/run.js",
+    "season:all-star-break": "node scripts/addAllStarBreak.js",
     "seed:broadcast": "node seeders/seedBroadcast.js",
     "seed:stars": "node seeders/seedStarPlayers.js",
     "backfill:season-records": "node scripts/backfillPlayerSeasonRecords.js",

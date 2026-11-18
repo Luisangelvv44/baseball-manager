@@ -24,6 +24,7 @@ app.use('/api/news', require('./routes/news'));
 app.use('/api/history', require('./routes/history'));
 app.use('/api/trades', require('./routes/trades'));
 app.use('/api/derby', require('./routes/derby'));
+app.use('/api/all-star', require('./routes/allStar'));
 app.use('/api/toddlers', require('./routes/toddlers'));
 app.use('/api/bank', require('./routes/bank'));
 app.use('/api/rivalries', require('./routes/rivalries'));

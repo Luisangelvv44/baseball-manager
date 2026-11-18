@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import TeamBadge from '../components/TeamBadge.jsx';
 import { seasonLabel } from '../utils/seasonLabel.js';
@@ -92,9 +92,18 @@ export default function Schedule() {
   const isPast = (dd) => dd < currentDisplayDay;
   const isToday = (dd) => dd === currentDisplayDay;
 
-  // Nº de juego de temporada regular (1..90); null en pre-temporada y playoffs
-  const seasonGameNumber = (dd) =>
-    dd > preSeasonDays && dd <= totalRegularDays ? dd - preSeasonDays : null;
+  // Pausa del Juego de Estrellas (dia del Derby + dia del Juego de Estrellas), sin partidos
+  const allStarBreak = season.allStarBreak;
+  const breakEvent = (dd) =>
+    !allStarBreak ? null : dd === allStarBreak.derbyDay ? 'derby' : dd === allStarBreak.allStarDay ? 'all_star' : null;
+  const BREAK_LABELS = { derby: 'HR Derby', all_star: 'Estrellas' };
+
+  // Nº de juego de temporada regular (1..90); null en pre-temporada, pausa y playoffs
+  const seasonGameNumber = (dd) => {
+    if (dd <= preSeasonDays || dd > totalRegularDays || breakEvent(dd)) return null;
+    const breakDays = allStarBreak && dd > allStarBreak.allStarDay ? 2 : 0;
+    return dd - preSeasonDays - breakDays;
+  };
 
   const monthLabel = `Mes ${page + 1} de ${numPages} · Días ${pageStart}–${pageEnd}`;
 
@@ -158,6 +167,7 @@ export default function Schedule() {
             const today = isToday(dd);
             const gameCount = dayGames.length;
             const gameNum = seasonGameNumber(dd);
+            const breakDay = breakEvent(dd);
 
             let cellBg = 'bg-gray-50 hover:bg-gray-100';
             if (today) cellBg = 'bg-blue-600 text-white hover:bg-blue-700';
@@ -185,6 +195,11 @@ export default function Schedule() {
                   {preSeason && (
                     <span className="block text-center text-[9px] px-1 py-0.5 rounded bg-yellow-200 text-yellow-800 font-medium leading-tight truncate">
                       Pre-T
+                    </span>
+                  )}
+                  {breakDay && (
+                    <span className="block text-center text-[9px] px-1 py-0.5 rounded bg-amber-300 text-amber-900 font-medium leading-tight truncate">
+                      {BREAK_LABELS[breakDay]}
                     </span>
                   )}
                   {playoff && (
@@ -269,6 +284,20 @@ export default function Schedule() {
                   <p className="text-4xl mb-3">⚾</p>
                   <p className="font-medium">Día de pre-temporada</p>
                   <p className="text-sm mt-1">Sin partidos programados. La temporada comienza en el día {preSeasonDays + 1}.</p>
+                </div>
+              ) : breakEvent(selectedDay) ? (
+                <div className="px-5 py-8 text-center text-gray-600">
+                  <p className="text-4xl mb-3">{breakEvent(selectedDay) === 'derby' ? '💥' : '⭐'}</p>
+                  <p className="font-medium">
+                    {breakEvent(selectedDay) === 'derby' ? 'Home Run Derby' : 'Juego de Estrellas: Oeste vs Este'}
+                  </p>
+                  <p className="text-sm mt-1">Pausa de mitad de temporada, sin partidos de liga.</p>
+                  <Link
+                    to={breakEvent(selectedDay) === 'derby' ? '/derby' : '/all-star'}
+                    className="inline-block mt-3 text-sm font-semibold text-blue-600 hover:underline"
+                  >
+                    {breakEvent(selectedDay) === 'derby' ? 'Ir al Derby' : 'Ir al Juego de Estrellas'}
+                  </Link>
                 </div>
               ) : selectedGames.length === 0 ? (
                 <div className="px-5 py-8 text-center text-gray-500">

@@ -197,6 +197,7 @@ model Season {
   season_record         SeasonRecord?
   trades                Trade[]
   derby_events          HomeRunDerbyEvent[]
+  all_star_games        AllStarGame[]
   luxury_tax_records    LuxuryTaxRecord[]
   season_awards         SeasonAward[]
   player_season_records PlayerSeasonRecord[]
@@ -636,6 +637,27 @@ model HomeRunDerbyEvent {
 
   @@index([season_id])
   @@map("home_run_derby_events")
+}
+
+// Juego de Estrellas (services/allStarService.js): Oeste vs Este en la pausa de mitad de temporada.
+// Fuera de las estadisticas: los eventos se guardan aqui, no en GameEvent.
+model AllStarGame {
+  id              Int      @id @default(autoincrement())
+  season_id       Int      @unique
+  day             Int
+  home_conference String  
+  away_conference String  
+  home_score      Int
+  away_score      Int
+  final_inning    Int
+  mvp_player_id   Int?
+  rosters         Json // { [conference]: { pitcher: {...}, players: [{ id, first_name, last_name, position, current_skill, team_id, team_name }] } }
+  events          Json // eventos de simulateGame
+  created_at      DateTime @default(now())
+
+  season Season @relation(fields: [season_id], references: [id])
+
+  @@map("all_star_games")
 }
 
 model DerbyEntry {

@@ -262,6 +262,11 @@ export const api = {
     request('/derby', { method: 'POST', body: JSON.stringify({ playerId, rewardAmount }) }),
   simulateDerbyEvent: (id) => request(`/derby/${id}/simulate`, { method: 'POST' }),
 
+  // Juego de Estrellas
+  getAllStar: () => request('/all-star'),
+  getAllStarGame: (id) => request(`/all-star/${id}`),
+  playAllStar: () => request('/all-star/play', { method: 'POST' }),
+
   // Banco
   getBankStatus: () => request('/bank/status'),
   getBankLoans: (params = {}) => {

@@ -12,6 +12,7 @@ const {
 } = require('../config');
 const { createNews } = require('./newsService');
 const { effectiveSkill } = require('./skillCurve');
+const { getAllStarBreak } = require('./allStarService');
 
 // Probabilidad de jonron por swing en base a la destreza (current_skill) del bateador.
 // A diferencia de atBatSimulator (bateador vs pitcher), aqui no hay pitcher rival: el
@@ -47,9 +48,52 @@ function computeCpuReward(team) {
   return Math.round(maxWilling * pct);
 }
 
+// Con la pausa del Juego de Estrellas el derby solo se arma en su dia y una vez por temporada.
+// Temporadas sin pausa (creadas antes) mantienen el derby libre de siempre.
+async function assertDerbyDay(season) {
+  const brk = getAllStarBreak(season);
+  if (!brk) return;
+  if (season.current_day !== brk.derbyDay) {
+    throw new Error(`El Home Run Derby se juega el dia ${brk.derbyDay}, en la pausa del Juego de Estrellas`);
+  }
+  const existing = await prisma.homeRunDerbyEvent.findFirst({ where: { season_id: season.id } });
+  if (existing) throw new Error('El Home Run Derby de esta temporada ya fue creado');
+}
+
+async function cpuEntries() {
+  const cpuTeams = await prisma.team.findMany({ where: { is_user_team: false } });
+  const entries = [];
+  for (const team of cpuTeams) {
+    const entrant = await pickCpuEntrant(prisma, team.id);
+    if (!entrant) continue;
+    entries.push({ team_id: team.id, player_id: entrant.id, reward_amount: computeCpuReward(team) });
+  }
+  return entries;
+}
+
+function createEvent(season, entriesData) {
+  return prisma.homeRunDerbyEvent.create({
+    data: {
+      season_id: season.id,
+      day: season.current_day,
+      status: 'pending',
+      entries: { create: entriesData },
+    },
+    include: {
+      entries: {
+        include: {
+          team: { select: { id: true, name: true } },
+          player: { select: { id: true, first_name: true, last_name: true, current_skill: true } },
+        },
+      },
+    },
+  });
+}
+
 async function createDerbyEvent({ playerId, rewardAmount }) {
   const season = await prisma.season.findFirst({ where: { status: 'active' } });
   if (!season) throw new Error('No hay una temporada activa');
+  await assertDerbyDay(season);
 
   const userPlayer = await prisma.player.findUnique({ where: { id: playerId } });
   if (!userPlayer || userPlayer.team_id !== USER_TEAM_ID) {
@@ -68,36 +112,20 @@ async function createDerbyEvent({ playerId, rewardAmount }) {
     throw new Error('No tienes presupuesto suficiente para esa recompensa');
   }
 
-  const cpuTeams = await prisma.team.findMany({ where: { is_user_team: false } });
+  const entriesData = [{ team_id: USER_TEAM_ID, player_id: userPlayer.id, reward_amount: reward }, ...(await cpuEntries())];
+  return createEvent(season, entriesData);
+}
 
-  const entriesData = [{ team_id: USER_TEAM_ID, player_id: userPlayer.id, reward_amount: reward }];
-  for (const team of cpuTeams) {
-    const entrant = await pickCpuEntrant(prisma, team.id);
-    if (!entrant) continue;
-    entriesData.push({
-      team_id: team.id,
-      player_id: entrant.id,
-      reward_amount: computeCpuReward(team),
-    });
+// Al avanzar el dia del derby: si el usuario no inscribio a nadie se juega solo con la CPU
+// (no se gasta presupuesto del usuario sin su permiso); si quedo pendiente, se simula.
+async function runDerbyDay(season) {
+  let event = await prisma.homeRunDerbyEvent.findFirst({ where: { season_id: season.id }, orderBy: { id: 'desc' } });
+  if (!event) {
+    const entriesData = await cpuEntries();
+    if (entriesData.length === 0) return null;
+    event = await createEvent(season, entriesData);
   }
-
-  const event = await prisma.homeRunDerbyEvent.create({
-    data: {
-      season_id: season.id,
-      day: season.current_day,
-      status: 'pending',
-      entries: { create: entriesData },
-    },
-    include: {
-      entries: {
-        include: {
-          team: { select: { id: true, name: true } },
-          player: { select: { id: true, first_name: true, last_name: true, current_skill: true } },
-        },
-      },
-    },
-  });
-
+  if (event.status === 'pending') return simulateDerbyEvent(event.id);
   return event;
 }
 
@@ -218,4 +246,5 @@ module.exports = {
   computeCpuReward,
   createDerbyEvent,
   simulateDerbyEvent,
+  runDerbyDay,
 };

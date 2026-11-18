@@ -45,6 +45,8 @@ const {
 const { applySeasonDecay } = require('../services/rivalryService');
 const { getSeasonEdition } = require('../services/seasonEdition');
 const { maybeCreateAfterGroupStage, settlePressSeason } = require('../services/pressConferenceService');
+const { getAllStarBreak, toSeasonDay, playAllStarGame } = require('../services/allStarService');
+const { runDerbyDay } = require('../services/derbyService');
 
 // GET /api/season -> temporada activa (o null si no se ha iniciado)
 router.get('/', async (req, res) => {
@@ -55,7 +57,13 @@ router.get('/', async (req, res) => {
     });
     if (!season) return res.json(null);
     const edition = await getSeasonEdition(season.id);
-    res.json({ ...season, edition, preSeasonDays: PRE_SEASON_DAYS, auctionDeadlineDay: AUCTION_DEADLINE_DAY });
+    res.json({
+      ...season,
+      edition,
+      preSeasonDays: PRE_SEASON_DAYS,
+      auctionDeadlineDay: AUCTION_DEADLINE_DAY,
+      allStarBreak: getAllStarBreak(season),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener temporada' });
@@ -77,11 +85,12 @@ router.post('/start', async (req, res) => {
       select: { id: true, division_id: true, division: { select: { name: true } } },
     });
 
-    const games = generateSchedule(teams);
+    // Dias de juego 1..90 -> dias de temporada, con la pausa del Juego de Estrellas a mitad
+    const games = generateSchedule(teams).map((g) => ({ ...g, day_number: toSeasonDay(g.day_number) }));
     const totalDays = Math.max(...games.map((g) => g.day_number));
 
     const season = await prisma.season.create({
-      data: { year: new Date().getFullYear(), current_day: 1, total_days: totalDays + PRE_SEASON_DAYS, status: 'active' },
+      data: { year: new Date().getFullYear(), current_day: 1, total_days: totalDays, status: 'active' },
     });
     // Contratos firmados en el offseason (draft, graduaciones...) arrancan en esta temporada
     await assignPendingStartSeason(prisma, season.id);
@@ -89,7 +98,7 @@ router.post('/start', async (req, res) => {
     await prisma.gameSchedule.createMany({
       data: games.map((g) => ({
         season_id: season.id,
-        day_number: g.day_number + PRE_SEASON_DAYS,
+        day_number: g.day_number,
         home_team_id: g.home_team_id,
         away_team_id: g.away_team_id,
         status: 'scheduled',
@@ -446,6 +455,16 @@ router.post('/advance-day', async (req, res) => {
 
     const { simulated } = await simulateScheduledGamesForDay(season.id, day);
 
+    // Pausa del Juego de Estrellas: sin partidos; el derby / juego se resuelve al avanzar
+    // si el usuario no lo jugo antes desde su pantalla.
+    const allStarBreak = getAllStarBreak(season);
+    if (allStarBreak && day === allStarBreak.derbyDay) {
+      await runDerbyDay(season);
+    }
+    if (allStarBreak && day === allStarBreak.allStarDay) {
+      await playAllStarGame(season);
+    }
+
     await runCpuBidding(null, season);
     const auctionsClosed = await closeExpiredAuctions(null, season);
 
@@ -516,6 +535,10 @@ router.post('/advance-day', async (req, res) => {
       playoffMarket: marketOpened ? { open: true, daysLeft: PLAYOFF_MARKET_DAYS, signed: 0 } : null,
       auctionsClosed,
       userGameId: userGameToday ? userGameToday.id : null,
+      // El dia al que se llega es de la pausa: el frontend lleva al derby / Juego de Estrellas
+      allStarBreakEvent: !finished && allStarBreak
+        ? (newDay === allStarBreak.derbyDay ? 'derby' : newDay === allStarBreak.allStarDay ? 'all_star' : null)
+        : null,
     });
   } catch (err) {
     console.error(err);

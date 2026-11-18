@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Newspaper, Calendar, Users, Sprout, ClipboardList,
   ShoppingCart, ArrowLeftRight, Star, Zap, Landmark, Binoculars,
   UserCog, Wallet, Shield, Radio, Trophy, ListChecks, History,
-  Banknote, Shirt, Baby, Map as MapIcon, Handshake, Mic,
+  Banknote, Shirt, Baby, Map as MapIcon, Handshake, Mic, Sparkles,
 } from 'lucide-react';
 import { useTeam } from '../context/TeamContext.jsx';
 import TeamBadge from './TeamBadge.jsx';
@@ -23,6 +23,7 @@ const LINKS = [
   { to: '/trades', label: 'Traspasos', icon: ArrowLeftRight },
   { to: '/stars', label: 'Estrellas', icon: Star },
   { to: '/derby', label: 'Eventos', icon: Zap },
+  { to: '/all-star', label: 'Juego de Estrellas', icon: Sparkles },
   { to: '/stadium', label: 'Estadio', icon: Landmark },
   { to: '/scouts', label: 'Scouts', icon: Binoculars },
   { to: '/coaches', label: 'Coaches', icon: UserCog },

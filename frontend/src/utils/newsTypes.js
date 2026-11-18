@@ -14,6 +14,7 @@ export const TYPE_CONFIG = {
   streak:        { label: 'Racha',          bg: 'bg-amber-600',  border: 'border-amber-500',  text: 'text-amber-400'  },
   awards:        { label: 'Premio',         bg: 'bg-fuchsia-600',border: 'border-fuchsia-500',text: 'text-fuchsia-400'},
   derby:         { label: 'Derby',          bg: 'bg-lime-600',   border: 'border-lime-500',   text: 'text-lime-400'   },
+  all_star:      { label: 'Estrellas',      bg: 'bg-yellow-500', border: 'border-yellow-400', text: 'text-yellow-300' },
   loan:          { label: 'Préstamo',       bg: 'bg-emerald-600',border: 'border-emerald-500',text: 'text-emerald-400'},
   playoff_market:{ label: 'Refuerzo',       bg: 'bg-rose-600',   border: 'border-rose-500',   text: 'text-rose-400'   },
 };
