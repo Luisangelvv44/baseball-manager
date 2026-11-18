@@ -28,6 +28,11 @@ const LENGTH_MS = 120000;
 const STYLE =
   'Polished mid-2000s rock production like an original 2005 sports video game soundtrack, '
   + 'loud distorted guitars, punchy live drums, energetic and optimistic. English lyrics.';
+// Baladas: el mismo sonido de 2005 pero lento y melodico
+const BALLAD_STYLE =
+  'Polished mid-2000s rock ballad production like an original 2005 sports video game soundtrack, '
+  + 'slow and very melodic, acoustic and clean electric guitars building into a big distorted '
+  + 'emotional chorus, warm bass, restrained drums, heartfelt male vocals. English lyrics.';
 
 const TRACKS = [
   {
@@ -134,6 +139,36 @@ const TRACKS = [
       'Victorious melodic punk rock, 182 bpm, fast drums, whoa-oh backing vocals, triumphant male '
       + 'vocals about counting championship rings and building a legacy that will last forever.',
   },
+  // Baladas rock (lentas y melodicas)
+  {
+    id: 'track_13',
+    style: BALLAD_STYLE,
+    title: 'Rain Delay',
+    artist: 'Empty Bleachers',
+    prompt:
+      'Slow rock ballad, 72 bpm, gentle acoustic guitar intro with soft piano, male vocals about '
+      + 'waiting out the rain in an empty ballpark, thinking of someone far away, hoping the sky clears.',
+  },
+  {
+    id: 'track_14',
+    style: BALLAD_STYLE,
+    title: 'Long Way Home',
+    artist: 'The Late Innings',
+    prompt:
+      'Slow melodic rock ballad, 76 bpm, clean arpeggiated electric guitar, male vocals about long '
+      + 'road trips with the team, night buses, missing home and the lights of your own stadium.',
+  },
+  {
+    id: 'track_15',
+    unlockable: true,
+    style: BALLAD_STYLE,
+    title: 'Twenty-Five Summers',
+    artist: "Old Timers' Day",
+    prompt:
+      'Slow epic rock ballad, 70 bpm, piano and acoustic guitar intro growing into a soaring guitar '
+      + 'solo, male vocals looking back on a lifetime with one franchise, twenty-five summers of wins, '
+      + 'losses and friends who are gone, grateful and proud.',
+  },
 ];
 
 // Ambiente entre canciones: el reproductor elige por la hora local (dia 7-19 h, si no noche)
@@ -199,7 +234,7 @@ function generate(item, apiKey) {
     });
   }
   return post(MUSIC_API, apiKey, {
-    prompt: `${item.prompt} ${STYLE}`,
+    prompt: `${item.prompt} ${item.style || STYLE}`,
     music_length_ms: LENGTH_MS,
     model_id: 'music_v1',
     force_instrumental: false,
