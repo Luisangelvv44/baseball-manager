@@ -18,6 +18,8 @@
     "maintenance:calibrate": "node scripts/calibrateMaintenance.js",
     "narration:scripts": "node scripts/generateNarrationScripts.js",
     "narration:audio": "node scripts/generateNarrationAudio.js",
+    "ambience:audio": "node scripts/generateAmbienceAudio.js",
+    "music:audio": "node scripts/generateMusicTracks.js",
     "postinstall": "prisma generate --schema=prisma/schema.prisma",
     "test": "jest"
   },

@@ -1,0 +1,95 @@
+{
+  "tracks": [
+    {
+      "id": "track_01",
+      "title": "Extra Innings",
+      "artist": "The Dugout Kids",
+      "file": "track_01.mp3"
+    },
+    {
+      "id": "track_02",
+      "title": "Bottom of the Ninth",
+      "artist": "Seventh Inning Stretch",
+      "file": "track_02.mp3"
+    },
+    {
+      "id": "track_03",
+      "title": "Steal Home",
+      "artist": "Rally Caps",
+      "file": "track_03.mp3"
+    },
+    {
+      "id": "track_04",
+      "title": "Summer Never Ends",
+      "artist": "Foul Line Radio",
+      "file": "track_04.mp3"
+    },
+    {
+      "id": "track_05",
+      "title": "Grand Slam Generation",
+      "artist": "The Bullpen",
+      "file": "track_05.mp3"
+    },
+    {
+      "id": "track_06",
+      "title": "Opening Day",
+      "artist": "The Rookie Cards",
+      "file": "track_06.mp3",
+      "unlockable": true
+    },
+    {
+      "id": "track_07",
+      "title": "October Lights",
+      "artist": "Wild Card Weekend",
+      "file": "track_07.mp3",
+      "unlockable": true
+    },
+    {
+      "id": "track_08",
+      "title": "Champions Tonight",
+      "artist": "The Pennant Chasers",
+      "file": "track_08.mp3",
+      "unlockable": true
+    },
+    {
+      "id": "track_09",
+      "title": "Hang It in the Rafters",
+      "artist": "Last Call Heroes",
+      "file": "track_09.mp3",
+      "unlockable": true
+    },
+    {
+      "id": "track_10",
+      "title": "Dynasty",
+      "artist": "Back to Back",
+      "file": "track_10.mp3",
+      "unlockable": true
+    },
+    {
+      "id": "track_11",
+      "title": "Hall of Legends",
+      "artist": "The Immortals",
+      "file": "track_11.mp3",
+      "unlockable": true
+    },
+    {
+      "id": "track_12",
+      "title": "Fifteen Rings",
+      "artist": "The Ring Collectors",
+      "file": "track_12.mp3",
+      "unlockable": true
+    }
+  ],
+  "calm": [
+    {
+      "id": "calm_day",
+      "title": "Tarde en el estadio",
+      "file": "calm_day.mp3"
+    },
+    {
+      "id": "calm_night",
+      "title": "Noche en el estadio",
+      "file": "calm_night.mp3"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getTeamLogo } from '../utils/teamLogos.js';
-import { isNarratorMuted, setNarratorMuted } from '../utils/narratorPref.js';
+import { isNarratorMuted, setNarratorMuted, isAmbienceMuted, setAmbienceMuted } from '../utils/narratorPref.js';
 import BroadcastLogo from './BroadcastLogo.jsx';
 
 const TOTAL_MS = 7500; // duracion minima de la intro
@@ -8,6 +8,7 @@ const AUDIO_WAIT_MS = 4000; // si la narracion no llega antes, la intro sigue mu
 const AUDIO_TAIL_MS = 600; // respiro tras la ultima palabra del narrador
 const CLIP_GAP_MS = 150; // silencio entre clips del narrador pregrabado
 const MAX_MS = 22000; // tope aunque el audio sea largo (enfrentamiento + gancho + cierre ~ 15 s)
+const SILENT_CHEER_MS = TOTAL_MS - 2500; // sin narrador, la ovacion suena antes del final
 
 function TeamBroadcasts({ companies }) {
   if (!companies?.length) return null;
@@ -96,11 +97,22 @@ function TeamSide({ team, side, broadcasts }) {
 // narration: Promise<objectURL[]|null> con los mp3 del narrador en orden (opcional): clips
 // pregrabados o un unico audio generado. La intro dura TOTAL_MS o lo que tarde el narrador en
 // terminar (con tope MAX_MS).
-export default function GameIntro({ homeTeam, awayTeam, broadcasts, narration, onFinish }) {
+// ambience: control de utils/introAmbience.js creado por GameView (opcional). La intro lo usa para
+// el ducking y la ovacion; GameView apaga la musica al terminar y el publico sigue en el partido.
+export default function GameIntro({ homeTeam, awayTeam, broadcasts, narration, ambience = null, onFinish }) {
   const onFinishRef = useRef(onFinish);
   onFinishRef.current = onFinish;
   const [muted, setMuted] = useState(isNarratorMuted);
+  const [ambienceMuted, setAmbienceMutedState] = useState(isAmbienceMuted);
   const stopNarrationRef = useRef(null);
+
+  // Silenciar el ambiente lo corta con fundido; reactivarlo aplica desde el proximo partido.
+  function toggleAmbience() {
+    const next = !ambienceMuted;
+    setAmbienceMutedState(next);
+    setAmbienceMuted(next);
+    if (next) ambience?.stop();
+  }
 
   // Silenciar corta la narracion en curso (la intro termina al cumplir su duracion minima);
   // reactivar aplica desde el proximo partido.
@@ -130,8 +142,13 @@ export default function GameIntro({ homeTeam, awayTeam, broadcasts, narration, o
     const endAudio = (delay = 0) => {
       if (audioDone) return;
       audioDone = true;
+      // el narrador termino: sube la musica y el publico ovaciona
+      ambience?.duck(false);
+      ambience?.cheer();
       timers.push(setTimeout(maybeFinish, delay));
     };
+
+    if (ambience && !narration) timers.push(setTimeout(() => ambience.cheer(), SILENT_CHEER_MS));
 
     stopNarrationRef.current = () => {
       if (audio) audio.pause();
@@ -156,6 +173,7 @@ export default function GameIntro({ homeTeam, awayTeam, broadcasts, narration, o
           if (index >= urls.length) return endAudio(AUDIO_TAIL_MS);
           const current = index;
           audio.src = urls[current];
+          ambience?.duck(true);
           audio.play().catch((err) => {
             // autoplay bloqueado: intro muda; un clip roto: se salta
             if (err?.name === 'NotAllowedError') endAudio();
@@ -175,13 +193,15 @@ export default function GameIntro({ homeTeam, awayTeam, broadcasts, narration, o
       cancelled = true;
       stopNarrationRef.current = null;
       timers.forEach(clearTimeout);
+      // la musica la apaga GameView en onFinish (endIntro): aqui no, porque StrictMode desmonta y
+      // vuelve a montar el efecto en desarrollo
       if (audio) {
         audio.pause();
         audio.removeAttribute('src');
         audio.load();
       }
     };
-  }, [narration]);
+  }, [narration, ambience]);
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden select-none">
@@ -198,13 +218,14 @@ export default function GameIntro({ homeTeam, awayTeam, broadcasts, narration, o
         }}
       />
 
-      {/* Silenciar narrador */}
+      {/* Silenciar narrador / ambiente */}
+      <div className="absolute right-4 top-4 z-30 flex gap-2">
       <button
         type="button"
         onClick={toggleMute}
         aria-pressed={muted}
         title={muted ? 'Activar narrador' : 'Silenciar narrador'}
-        className="absolute right-4 top-4 z-30 flex items-center gap-2 rounded-full border border-white/20 bg-black/50 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white/80 transition hover:bg-black/70 hover:text-white"
+        className="flex items-center gap-2 rounded-full border border-white/20 bg-black/50 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white/80 transition hover:bg-black/70 hover:text-white"
       >
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M11 5 6 9H2v6h4l5 4V5z" fill="currentColor" />
@@ -222,6 +243,22 @@ export default function GameIntro({ homeTeam, awayTeam, broadcasts, narration, o
         </svg>
         <span className="hidden sm:inline">{muted ? 'Narrador apagado' : 'Narrador'}</span>
       </button>
+      <button
+        type="button"
+        onClick={toggleAmbience}
+        aria-pressed={ambienceMuted}
+        title={ambienceMuted ? 'Activar público y música' : 'Silenciar público y música'}
+        className="flex items-center gap-2 rounded-full border border-white/20 bg-black/50 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white/80 transition hover:bg-black/70 hover:text-white"
+      >
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M9 18V5l12-2v13" />
+          <circle cx="6" cy="18" r="3" fill="currentColor" />
+          <circle cx="18" cy="16" r="3" fill="currentColor" />
+          {ambienceMuted && <line x1="3" y1="3" x2="21" y2="21" />}
+        </svg>
+        <span className="hidden sm:inline">{ambienceMuted ? 'Ambiente apagado' : 'Ambiente'}</span>
+      </button>
+      </div>
 
       {/* Badge VS */}
       <div className="pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">

@@ -219,6 +219,9 @@ export const api = {
   getBroadcastCompanies: () => request('/broadcast/companies'),
 
   // Sala de prensa
+  // Banda sonora: canciones desbloqueadas por logros de la franquicia
+  getMusicUnlocks: () => request('/music/unlocks'),
+
   getPress: () => request('/press'),
   getPressConference: (id) => request(`/press/${id}`),
   answerPress: (id, answers) =>
