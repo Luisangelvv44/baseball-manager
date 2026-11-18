@@ -35,6 +35,7 @@ describe('evaluateUnlocks', () => {
     expect(byId.track_10).toMatchObject({ unlocked: true, progress: 5 });
     expect(byId.track_11).toMatchObject({ unlocked: false, progress: 0 });
     expect(byId.track_12).toMatchObject({ unlocked: false, progress: 12, goal: 15 });
+    expect(byId.track_15).toMatchObject({ unlocked: false, progress: 19, goal: 25 });
   });
 });
 

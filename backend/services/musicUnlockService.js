@@ -17,6 +17,7 @@ const MUSIC_UNLOCKS = [
   { trackId: 'track_10', stat: 'championships', goal: 5, hint: 'Gana 5 campeonatos' },
   { trackId: 'track_11', stat: 'hallOfFamers', goal: 1, hint: 'Lleva a un jugador de tu equipo al Salón de la Fama' },
   { trackId: 'track_12', stat: 'championships', goal: 15, hint: 'Gana 15 campeonatos' },
+  { trackId: 'track_15', stat: 'seasons', goal: 25, hint: 'Completa 25 temporadas con tu franquicia' },
 ];
 
 async function getFranchiseMilestones(teamId = USER_TEAM_ID) {
