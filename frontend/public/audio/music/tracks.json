@@ -1,32 +1,46 @@
-[
-  {
-    "id": "track_01",
-    "title": "Extra Innings",
-    "artist": "The Dugout Kids",
-    "file": "track_01.mp3"
-  },
-  {
-    "id": "track_02",
-    "title": "Bottom of the Ninth",
-    "artist": "Seventh Inning Stretch",
-    "file": "track_02.mp3"
-  },
-  {
-    "id": "track_03",
-    "title": "Steal Home",
-    "artist": "Rally Caps",
-    "file": "track_03.mp3"
-  },
-  {
-    "id": "track_04",
-    "title": "Summer Never Ends",
-    "artist": "Foul Line Radio",
-    "file": "track_04.mp3"
-  },
-  {
-    "id": "track_05",
-    "title": "Grand Slam Generation",
-    "artist": "The Bullpen",
-    "file": "track_05.mp3"
-  }
-]
+{
+  "tracks": [
+    {
+      "id": "track_01",
+      "title": "Extra Innings",
+      "artist": "The Dugout Kids",
+      "file": "track_01.mp3"
+    },
+    {
+      "id": "track_02",
+      "title": "Bottom of the Ninth",
+      "artist": "Seventh Inning Stretch",
+      "file": "track_02.mp3"
+    },
+    {
+      "id": "track_03",
+      "title": "Steal Home",
+      "artist": "Rally Caps",
+      "file": "track_03.mp3"
+    },
+    {
+      "id": "track_04",
+      "title": "Summer Never Ends",
+      "artist": "Foul Line Radio",
+      "file": "track_04.mp3"
+    },
+    {
+      "id": "track_05",
+      "title": "Grand Slam Generation",
+      "artist": "The Bullpen",
+      "file": "track_05.mp3"
+    }
+  ],
+  "calm": [
+    {
+      "id": "calm_day",
+      "title": "Tarde en el estadio",
+      "file": "calm_day.mp3"
+    },
+    {
+      "id": "calm_night",
+      "title": "Noche en el estadio",
+      "file": "calm_night.mp3"
+    }
+  ]
+}

@@ -1,15 +1,18 @@
-// Genera la banda sonora del juego (menus) con Eleven Music: canciones originales de punk rock /
-// rock melodico con sonido de videojuego de beisbol de mediados de los 2000. Las guarda en
-// frontend/public/audio/music/<id>.mp3 y escribe tracks.json (titulo/banda ficticios para el
-// "Now playing") con las que existen. Lo usa frontend/src/utils/gameMusic.js.
+// Genera la banda sonora del juego (menus) con ElevenLabs:
+//   track_*  -> canciones originales de punk rock / rock melodico con sonido de videojuego de
+//               beisbol de mediados de los 2000 (Eleven Music, con voz)
+//   calm_*   -> ambiente tranquilo de estadio vacio que suena en bucle entre canciones
+//               (Sound Effects, loop)
+// Las guarda en frontend/public/audio/music/<id>.mp3 y escribe tracks.json = { tracks, calm } con
+// las que existen (titulo/banda ficticios para el "Now playing"). Lo usa frontend/src/utils/gameMusic.js.
 //
 // Uso (desde backend/):
 //   npm run music:audio -- --dry-run        -> lista lo pendiente, no llama a la API
 //   npm run music:audio                     -> genera lo que falte
-//   npm run music:audio -- --only track_03 --force   -> regenera una
+//   npm run music:audio -- --only track_03 --force   -> regenera uno
 //
 // Reanudable y se detiene al primer error de creditos/permisos. Necesita ELEVENLABS_API_KEY con
-// permiso music_generation. Nada de nombres de bandas o canciones reales en los prompts.
+// permisos music_generation y sound_generation. Nada de nombres de bandas o canciones reales.
 
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const fs = require('fs');
@@ -17,6 +20,7 @@ const path = require('path');
 
 const OUT_DIR = path.resolve(__dirname, '../../frontend/public/audio/music');
 const MUSIC_API = 'https://api.elevenlabs.io/v1/music';
+const SFX_API = 'https://api.elevenlabs.io/v1/sound-generation';
 const OUTPUT_FORMAT = 'mp3_44100_128';
 const LENGTH_MS = 120000;
 
@@ -67,6 +71,33 @@ const TRACKS = [
   },
 ];
 
+// Ambiente entre canciones: el reproductor elige por la hora local (dia 7-19 h, si no noche)
+const CALM = [
+  {
+    id: 'calm_day',
+    title: 'Tarde en el estadio',
+    seconds: 22,
+    prompt:
+      'Seamless loop of a calm empty baseball stadium on a sunny afternoon: soft wind, distant birds, '
+      + 'faint lawn sprinklers on the outfield grass, a far-off bat crack from batting practice, '
+      + 'very peaceful and relaxing, no music, no voices',
+  },
+  {
+    id: 'calm_night',
+    title: 'Noche en el estadio',
+    seconds: 22,
+    prompt:
+      'Seamless loop of a quiet empty baseball stadium at night after the game: crickets, gentle '
+      + 'breeze, the soft electric hum of stadium lights, distant city traffic, very peaceful and '
+      + 'relaxing, no music, no voices',
+  },
+];
+
+const ALL = [
+  ...TRACKS.map((t) => ({ ...t, kind: 'song' })),
+  ...CALM.map((c) => ({ ...c, kind: 'calm' })),
+];
+
 function parseArgs(argv) {
   const args = { dryRun: false, force: false, only: null };
   for (let i = 0; i < argv.length; i++) {
@@ -79,16 +110,11 @@ function parseArgs(argv) {
   return args;
 }
 
-async function compose(track, apiKey) {
-  const res = await fetch(`${MUSIC_API}?output_format=${OUTPUT_FORMAT}`, {
+async function post(url, apiKey, body) {
+  const res = await fetch(`${url}?output_format=${OUTPUT_FORMAT}`, {
     method: 'POST',
     headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
-    body: JSON.stringify({
-      prompt: `${track.prompt} ${STYLE}`,
-      music_length_ms: LENGTH_MS,
-      model_id: 'music_v1',
-      force_instrumental: false,
-    }),
+    body: JSON.stringify(body),
   });
   if (res.ok) return Buffer.from(await res.arrayBuffer());
   const detail = (await res.text()).slice(0, 400);
@@ -97,37 +123,56 @@ async function compose(track, apiKey) {
   throw err;
 }
 
-// tracks.json = solo las canciones con mp3 (el reproductor no pide archivos inexistentes)
+function generate(item, apiKey) {
+  if (item.kind === 'calm') {
+    return post(SFX_API, apiKey, {
+      text: item.prompt,
+      duration_seconds: item.seconds,
+      prompt_influence: 0.5,
+      loop: true,
+      model_id: 'eleven_text_to_sound_v2',
+    });
+  }
+  return post(MUSIC_API, apiKey, {
+    prompt: `${item.prompt} ${STYLE}`,
+    music_length_ms: LENGTH_MS,
+    model_id: 'music_v1',
+    force_instrumental: false,
+  });
+}
+
+const exists = (item) => fs.existsSync(path.join(OUT_DIR, `${item.id}.mp3`));
+
+// tracks.json solo con los mp3 que existen (el reproductor no pide archivos inexistentes)
 function writeManifest() {
-  const list = TRACKS
-    .filter((t) => fs.existsSync(path.join(OUT_DIR, `${t.id}.mp3`)))
-    .map(({ id, title, artist }) => ({ id, title, artist, file: `${id}.mp3` }));
-  fs.writeFileSync(path.join(OUT_DIR, 'tracks.json'), `${JSON.stringify(list, null, 2)}\n`);
-  return list.length;
+  const tracks = TRACKS.filter(exists).map(({ id, title, artist }) => ({ id, title, artist, file: `${id}.mp3` }));
+  const calm = CALM.filter(exists).map(({ id, title }) => ({ id, title, file: `${id}.mp3` }));
+  fs.writeFileSync(path.join(OUT_DIR, 'tracks.json'), `${JSON.stringify({ tracks, calm }, null, 2)}\n`);
+  return `${tracks.length} canciones, ${calm.length} ambientes`;
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const pending = TRACKS
+  const pending = ALL
     .filter((t) => !args.only || t.id === args.only)
-    .filter((t) => args.force || !fs.existsSync(path.join(OUT_DIR, `${t.id}.mp3`)));
-  console.log(`${pending.length} canciones pendientes (${LENGTH_MS / 1000}s) -> ${OUT_DIR}`);
-  pending.forEach((t) => console.log(`  ${t.id}: "${t.title}" - ${t.artist}`));
+    .filter((t) => args.force || !exists(t));
+  console.log(`${pending.length} audios pendientes -> ${OUT_DIR}`);
+  pending.forEach((t) => console.log(`  ${t.id}: "${t.title}"${t.artist ? ` - ${t.artist}` : ` (ambiente ${t.seconds}s)`}`));
   if (args.dryRun) return;
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
   if (pending.length) {
     const apiKey = process.env.ELEVENLABS_API_KEY;
     if (!apiKey) throw new Error('Configura ELEVENLABS_API_KEY en backend/.env');
-    for (const track of pending) {
+    for (const item of pending) {
       try {
-        const audio = await compose(track, apiKey);
-        const file = path.join(OUT_DIR, `${track.id}.mp3`);
+        const audio = await generate(item, apiKey);
+        const file = path.join(OUT_DIR, `${item.id}.mp3`);
         fs.writeFileSync(`${file}.tmp`, audio);
         fs.renameSync(`${file}.tmp`, file);
-        console.log(`OK ${track.id}.mp3 (${Math.round(audio.length / 1024)} KB)`);
+        console.log(`OK ${item.id}.mp3 (${Math.round(audio.length / 1024)} KB)`);
       } catch (err) {
-        console.error(`ERROR ${track.id}: ${err.message}`);
+        console.error(`ERROR ${item.id}: ${err.message}`);
         process.exitCode = 1;
         if (err.fatal) {
           console.error('Detenido: sin creditos o sin permisos en la clave.');
@@ -136,7 +181,7 @@ async function main() {
       }
     }
   }
-  console.log(`tracks.json: ${writeManifest()} canciones.`);
+  console.log(`tracks.json: ${writeManifest()}.`);
 }
 
 main().catch((err) => {

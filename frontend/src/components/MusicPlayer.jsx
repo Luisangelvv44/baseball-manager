@@ -13,7 +13,7 @@ const SUPPRESS = [/^\/game\//];
 // juegos deportivos de los 2000. No se muestra si no hay canciones.
 export default function MusicPlayer() {
   const location = useLocation();
-  const [state, setState] = useState({ available: false, track: null, playing: false, muted: false });
+  const [state, setState] = useState({ available: false, mode: 'idle', track: null, calm: null, playing: false, muted: false });
   const [showTitle, setShowTitle] = useState(false);
   const hideTimer = useRef(null);
   const suppressed = SUPPRESS.some((re) => re.test(location.pathname));
@@ -22,8 +22,13 @@ export default function MusicPlayer() {
   useEffect(() => { initMusic(); }, []);
   useEffect(() => { setMusicSuppressed(suppressed); }, [suppressed]);
 
-  // Titulo desplegado unos segundos cada vez que empieza una cancion
-  const trackId = state.track?.id;
+  // Titulo desplegado unos segundos cada vez que empieza una cancion o el ambiente entre canciones
+  const nowPlaying = state.track
+    ? { key: `song:${state.track.id}`, label: 'Now playing', title: state.track.title, sub: state.track.artist }
+    : state.calm
+      ? { key: `calm:${state.calm.id}`, label: 'Entre canciones', title: state.calm.title, sub: 'ambiente' }
+      : null;
+  const trackId = nowPlaying?.key;
   useEffect(() => {
     if (!trackId || state.muted) return undefined;
     setShowTitle(true);
@@ -34,7 +39,7 @@ export default function MusicPlayer() {
 
   if (!state.available || suppressed) return null;
 
-  const expanded = showTitle && state.track && !state.muted;
+  const expanded = showTitle && nowPlaying && !state.muted;
 
   return (
     <div className="group fixed bottom-4 left-4 z-40 flex items-center gap-1 rounded-full border border-amber-400/40 bg-slate-900/90 py-1.5 pl-3 pr-1.5 text-white shadow-lg backdrop-blur">
@@ -44,16 +49,16 @@ export default function MusicPlayer() {
         <circle cx="18" cy="16" r="3" />
       </svg>
 
-      {state.track && !state.muted && (
+      {nowPlaying && !state.muted && (
         <div
           className={`overflow-hidden whitespace-nowrap transition-all duration-500 ${
             expanded ? 'max-w-xs' : 'max-w-0 group-hover:max-w-xs'
           }`}
         >
           <div className="px-2 leading-tight">
-            <div className="text-[0.55rem] font-bold uppercase tracking-[0.25em] text-amber-300/80">Now playing</div>
+            <div className="text-[0.55rem] font-bold uppercase tracking-[0.25em] text-amber-300/80">{nowPlaying.label}</div>
             <div className="text-xs font-semibold">
-              {state.track.title} <span className="font-normal text-white/60">· {state.track.artist}</span>
+              {nowPlaying.title} <span className="font-normal text-white/60">· {nowPlaying.sub}</span>
             </div>
           </div>
         </div>
@@ -63,7 +68,7 @@ export default function MusicPlayer() {
         <button
           type="button"
           onClick={skipTrack}
-          title="Siguiente canción"
+          title={state.mode === 'song' ? 'Siguiente canción' : 'Poner una canción ya'}
           className="rounded-full p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white"
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
