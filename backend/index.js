@@ -30,6 +30,7 @@ app.use('/api/rivalries', require('./routes/rivalries'));
 app.use('/api/map', require('./routes/map'));
 app.use('/api/playoff-market', require('./routes/playoffMarket'));
 app.use('/api/press', require('./routes/press'));
+app.use('/api/music', require('./routes/music'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

@@ -29,6 +29,55 @@
       "title": "Grand Slam Generation",
       "artist": "The Bullpen",
       "file": "track_05.mp3"
+    },
+    {
+      "id": "track_06",
+      "title": "Opening Day",
+      "artist": "The Rookie Cards",
+      "file": "track_06.mp3",
+      "unlockable": true
+    },
+    {
+      "id": "track_07",
+      "title": "October Lights",
+      "artist": "Wild Card Weekend",
+      "file": "track_07.mp3",
+      "unlockable": true
+    },
+    {
+      "id": "track_08",
+      "title": "Champions Tonight",
+      "artist": "The Pennant Chasers",
+      "file": "track_08.mp3",
+      "unlockable": true
+    },
+    {
+      "id": "track_09",
+      "title": "Hang It in the Rafters",
+      "artist": "Last Call Heroes",
+      "file": "track_09.mp3",
+      "unlockable": true
+    },
+    {
+      "id": "track_10",
+      "title": "Dynasty",
+      "artist": "Back to Back",
+      "file": "track_10.mp3",
+      "unlockable": true
+    },
+    {
+      "id": "track_11",
+      "title": "Hall of Legends",
+      "artist": "The Immortals",
+      "file": "track_11.mp3",
+      "unlockable": true
+    },
+    {
+      "id": "track_12",
+      "title": "Fifteen Rings",
+      "artist": "The Ring Collectors",
+      "file": "track_12.mp3",
+      "unlockable": true
     }
   ],
   "calm": [

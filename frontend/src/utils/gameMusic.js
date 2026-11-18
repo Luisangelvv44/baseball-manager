@@ -6,8 +6,12 @@
 // cancion. Las canciones van en orden aleatorio sin repetir hasta agotar la lista. En las pantallas
 // con audio propio (partido) todo se calla con fundido; el reloj sigue corriendo, y si la cancion
 // "cae" durante el partido suena al salir. Una cancion cortada por un partido sigue donde iba.
+// Canciones `unlockable`: solo suenan si GET /api/music/unlocks las da por desbloqueadas (logros de
+// la franquicia, derivados del historial). Una recien desbloqueada pasa al frente de la cola y se
+// anuncia (newUnlocks) una sola vez por navegador (localStorage).
 // Singleton para toda la app. Nunca lanza errores; sin archivos no hace nada.
 
+import { api } from '../api.js';
 import { isMusicMuted, setMusicMuted } from './narratorPref.js';
 
 const MUSIC_URL = (import.meta.env.VITE_MUSIC_URL ?? `${import.meta.env.BASE_URL}audio/music`).replace(/\/$/, '');
@@ -20,8 +24,16 @@ const SONG_GAP_MIN_MS = 10 * 60 * 1000;
 const SONG_GAP_MAX_MS = 15 * 60 * 1000;
 const DAY_START_HOUR = 7;
 const DAY_END_HOUR = 19;
+const UNLOCKS_REFRESH_MS = 20 * 1000; // como mucho una consulta cada 20 s (se pide al navegar)
+const SEEN_KEY = 'bm.musicUnlocksSeen';
 
-let tracks = [];
+let allTracks = []; // todas las del manifiesto
+let tracks = []; // las que pueden sonar (base + desbloqueadas)
+let unlockInfo = {}; // trackId -> { hint, goal, progress, unlocked }
+let unlockedIds = new Set();
+let lastUnlocksFetch = 0;
+let unlocksLoading = null;
+let newUnlocks = []; // recien desbloqueadas, pendientes de anunciar
 let calmList = [];
 let queue = [];
 let current = null; // cancion en curso (o la ultima, si mode === 'calm')
@@ -46,9 +58,27 @@ function emit() {
   listeners.forEach((fn) => fn(state));
 }
 
+// Lista para el panel de la banda sonora: todas las canciones con su estado de desbloqueo
+function songList() {
+  return allTracks.map((t) => {
+    const info = unlockInfo[t.id];
+    return {
+      id: t.id,
+      title: t.title,
+      artist: t.artist,
+      unlocked: !t.unlockable || unlockedIds.has(t.id),
+      hint: t.unlockable ? info?.hint ?? 'Logro de la franquicia' : null,
+      progress: info?.progress ?? 0,
+      goal: info?.goal ?? 1,
+    };
+  });
+}
+
 export function getMusicState() {
   return {
     available: tracks.length > 0,
+    songs: songList(),
+    newUnlocks,
     mode,
     track: mode === 'song' ? current : null,
     calm: mode === 'calm' ? calm : null,
@@ -75,12 +105,72 @@ function loadManifest() {
       .then((data) => {
         // formato antiguo: array de canciones
         const list = Array.isArray(data) ? data : data?.tracks;
-        tracks = Array.isArray(list) ? list.filter((t) => t?.file) : [];
+        allTracks = Array.isArray(list) ? list.filter((t) => t?.file) : [];
+        applyPlayable();
         calmList = Array.isArray(data?.calm) ? data.calm.filter((c) => c?.file) : [];
         emit();
       });
   }
   return loading;
+}
+
+function applyPlayable() {
+  tracks = allTracks.filter((t) => !t.unlockable || unlockedIds.has(t.id));
+  queue = queue.filter((t) => tracks.some((x) => x.id === t.id));
+}
+
+function readSeen() {
+  try {
+    const raw = localStorage.getItem(SEEN_KEY);
+    return raw ? new Set(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSeen(ids) {
+  try {
+    localStorage.setItem(SEEN_KEY, JSON.stringify([...ids]));
+  } catch {
+    // sin almacenamiento: se volveria a anunciar en la proxima sesion
+  }
+}
+
+// Pide los desbloqueos al backend (throttled). Las nuevas van al frente de la cola y se anuncian.
+export function refreshMusicUnlocks({ force = false } = {}) {
+  if (unlocksLoading) return unlocksLoading;
+  if (!force && Date.now() - lastUnlocksFetch < UNLOCKS_REFRESH_MS) return Promise.resolve();
+  lastUnlocksFetch = Date.now();
+  unlocksLoading = api.getMusicUnlocks()
+    .then((data) => {
+      unlockInfo = Object.fromEntries((data?.songs || []).map((s) => [s.trackId, s]));
+      unlockedIds = new Set(data?.unlocked || []);
+      return loadManifest();
+    })
+    .then(() => {
+      applyPlayable();
+      const seen = readSeen() || new Set();
+      const fresh = allTracks.filter((t) => t.unlockable && unlockedIds.has(t.id) && !seen.has(t.id));
+      if (fresh.length) {
+        newUnlocks = [...newUnlocks, ...fresh.filter((t) => !newUnlocks.some((n) => n.id === t.id))];
+        // suenan antes que el resto
+        queue = [...fresh, ...queue.filter((t) => !fresh.some((f) => f.id === t.id))];
+        writeSeen(new Set([...seen, ...fresh.map((t) => t.id)]));
+      }
+      emit();
+    })
+    .catch(() => {
+      // sin backend: solo suenan las canciones base
+    })
+    .finally(() => {
+      unlocksLoading = null;
+    });
+  return unlocksLoading;
+}
+
+export function dismissNewUnlocks() {
+  newUnlocks = [];
+  emit();
 }
 
 function nextTrack() {
@@ -229,7 +319,29 @@ if (songAudio) {
 export function initMusic() {
   if (started) return;
   started = true;
-  loadManifest().then(update);
+  // los desbloqueos antes de la primera cancion, para que una nueva suene primero
+  Promise.all([loadManifest(), refreshMusicUnlocks({ force: true })]).then(update);
+}
+
+// Reproduce ya una cancion concreta (panel de la banda sonora / aviso de desbloqueo)
+export function playTrackNow(id) {
+  const track = tracks.find((t) => t.id === id);
+  if (!track || suppressed) return;
+  if (muted) {
+    muted = false;
+    setMusicMuted(false);
+  }
+  queue = [track, ...queue.filter((t) => t.id !== id)];
+  songDue = true;
+  if (mode === 'song' && !songAudio.paused) {
+    fadeTo(songAudio, 0, FADE_MS, () => {
+      mode = 'calm';
+      update();
+    });
+  } else {
+    mode = mode === 'song' ? 'calm' : mode;
+    update();
+  }
 }
 
 // true en pantallas con audio propio (partido): todo se calla con fundido y vuelve al salir

@@ -4,7 +4,8 @@
 //   calm_*   -> ambiente tranquilo de estadio vacio que suena en bucle entre canciones
 //               (Sound Effects, loop)
 // Las guarda en frontend/public/audio/music/<id>.mp3 y escribe tracks.json = { tracks, calm } con
-// las que existen (titulo/banda ficticios para el "Now playing"). Lo usa frontend/src/utils/gameMusic.js.
+// las que existen (titulo/banda ficticios para el "Now playing"; `unlockable` = solo suena tras
+// desbloquearla, ver services/musicUnlockService.js). Lo usa frontend/src/utils/gameMusic.js.
 //
 // Uso (desde backend/):
 //   npm run music:audio -- --dry-run        -> lista lo pendiente, no llama a la API
@@ -68,6 +69,70 @@ const TRACKS = [
     prompt:
       'Upbeat punk rock with arena rock hooks, 170 bpm, handclaps, whoa-oh singalong backing vocals, '
       + 'male lead vocals about a young team rising to the top and swinging for the fences.',
+  },
+  // Desbloqueables con logros de la franquicia (condiciones en services/musicUnlockService.js)
+  {
+    id: 'track_06',
+    unlockable: true,
+    title: 'Opening Day',
+    artist: 'The Rookie Cards',
+    prompt:
+      'Bright pop-punk song, 172 bpm, jangly distorted guitars, catchy chorus, male vocals about the '
+      + 'first day of the season, fresh grass, big dreams and a brand new team.',
+  },
+  {
+    id: 'track_07',
+    unlockable: true,
+    title: 'October Lights',
+    artist: 'Wild Card Weekend',
+    prompt:
+      'Anthemic melodic rock, 138 bpm, soaring guitar leads, huge singalong chorus, male vocals about '
+      + 'making the playoffs, cold autumn nights and the whole city wearing your colors.',
+  },
+  {
+    id: 'track_08',
+    unlockable: true,
+    title: 'Champions Tonight',
+    artist: 'The Pennant Chasers',
+    prompt:
+      'Triumphant punk rock anthem, 176 bpm, gang vocals, fist-pumping chorus, male vocals about '
+      + 'winning the championship, champagne in the locker room and a parade downtown.',
+  },
+  {
+    id: 'track_09',
+    unlockable: true,
+    title: 'Hang It in the Rafters',
+    artist: 'Last Call Heroes',
+    prompt:
+      'Emotional melodic rock power ballad that builds into a big rock finale, 92 bpm then double time, '
+      + 'male vocals about a legend whose number will hang above the stadium forever.',
+  },
+  {
+    id: 'track_10',
+    unlockable: true,
+    title: 'Dynasty',
+    artist: 'Back to Back',
+    prompt:
+      'Heavy fast punk rock, 190 bpm, chugging riffs, shouted gang vocals, short guitar solo, lyrics '
+      + 'about a team that keeps winning year after year and nobody can stop them.',
+  },
+  {
+    id: 'track_11',
+    unlockable: true,
+    title: 'Hall of Legends',
+    artist: 'The Immortals',
+    prompt:
+      'Epic melodic rock, 120 bpm, big drums, harmonized lead guitars, stirring male vocals about a '
+      + 'great player entering the hall of fame, his plaque on the wall and memories that never fade.',
+  },
+  {
+    id: 'track_12',
+    unlockable: true,
+    title: 'Fifteen Rings',
+    artist: 'The Ring Collectors',
+    prompt:
+      'Victorious melodic punk rock, 182 bpm, fast drums, whoa-oh backing vocals, triumphant male '
+      + 'vocals about counting championship rings and building a legacy that will last forever.',
   },
 ];
 
@@ -145,7 +210,9 @@ const exists = (item) => fs.existsSync(path.join(OUT_DIR, `${item.id}.mp3`));
 
 // tracks.json solo con los mp3 que existen (el reproductor no pide archivos inexistentes)
 function writeManifest() {
-  const tracks = TRACKS.filter(exists).map(({ id, title, artist }) => ({ id, title, artist, file: `${id}.mp3` }));
+  const tracks = TRACKS.filter(exists).map(({ id, title, artist, unlockable }) => ({
+    id, title, artist, file: `${id}.mp3`, ...(unlockable ? { unlockable: true } : {}),
+  }));
   const calm = CALM.filter(exists).map(({ id, title }) => ({ id, title, file: `${id}.mp3` }));
   fs.writeFileSync(path.join(OUT_DIR, 'tracks.json'), `${JSON.stringify({ tracks, calm }, null, 2)}\n`);
   return `${tracks.length} canciones, ${calm.length} ambientes`;
